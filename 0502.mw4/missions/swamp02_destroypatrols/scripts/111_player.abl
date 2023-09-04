@@ -1,0 +1,87 @@
+
+//*********************************************************************************
+
+fsm playeraifsm : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+		static integer			path;		 				// Path for movie
+		static integer			piloting;		 		// Piloting skill
+		static integer			gunnery;		 		// Gunnery skill/chance to hit
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;	// My attack throttle
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+		path								= epa_PlayerPath;
+		piloting						= 75;
+		gunnery							= 90;
+		eliteLevel					= 90;
+		attackThrottle 			= 35;
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+		
+		trans go;
+	endstate;
+	
+	state go;
+		code
+		
+		//OrderMoveFollow(eve_Casey,-15,-15);
+		ordermoveto(path,65,move_nocycle,true,true);
+		
+		if not isdead(eve_Duncan_Burke) then
+			if PeekaBoo == True then
+				ordermovelookout;
+			endif;
+		endif;
+		
+	endstate;
+	
+  state deadState;
+		code
+  endstate;
+
+
+endfsm.
+//******************************************************************
+

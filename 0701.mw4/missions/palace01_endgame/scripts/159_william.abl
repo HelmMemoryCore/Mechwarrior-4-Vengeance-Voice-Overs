@@ -1,0 +1,210 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm William : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_Sentry:
+//   Stands still.  Moves to attack anything that comes near.
+//
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start shooting?
+		static integer			withdrawRange;		// At what range do I withdraw from combat completely?
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+		static integer			findTypes;			// What kind of enemies to look for
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+
+		static integer			takeOffDistance;	// My take-off distance if I'm an airplane (ignored if not an airplane)
+		static integer			mytime;
+		static locpoint			mystart;
+		static boolean			tauntoneplayed;
+		static boolean			taunttwoplayed;
+		
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 1000;
+		withdrawRange	= 3000;
+		takeOffDistance	= 150;
+
+		// driver settings
+		piloting		= 95;
+		gunnery			= 230;
+		minDelay		= 0.0;
+		maxDelay		= 0.5;
+		eliteLevel		= 100;
+		attackThrottle	= 100;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= AGRESSIVE_START;
+		findTypes		= FT_DEFAULT;
+		mytime = 60;
+		Getlocation(me,mystart);
+		
+		tauntoneplayed = false;
+		taunttwoplayed = false;
+		
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+		SetIgnoreFog			(ME,TRUE);
+		shutdown(me);	
+		setsensorvisibility(me,false);
+		teleporttohell(me);
+		trans WaitState;
+		
+
+endstate;											
+
+state WaitState;
+	code
+
+		if (billyup) then
+			teleport(me,mystart);
+			startup(me);
+			trans movestate;
+		endif;
+				
+endstate;
+
+state movestate;
+	code
+
+		if (ordermoveto(epa_billypath,600,move_nocycle,true,false)) then
+			clearmoveorder(me);
+			trans hangoutstate;
+		endif;
+				
+endstate;
+
+state hangoutstate;
+	code
+
+		ordermovelookout;												
+												
+		if (moviedone) then
+			setsensorvisibility(me,true);
+			trans lookoutstate;
+		endif;
+				
+endstate;
+
+
+state lookoutstate;
+	code
+		Ordermovelookout;
+
+		if ((iswithin(me,playermech,attackrange)) or (isshot(me))) then
+				settarget (me,playermech);
+				playvoiceover("VO\op7\MI1\nocando",talker_Wil);
+				starttimer(gti_timer_15);
+				trans AttackState;
+		endif;		
+
+endstate;
+
+//------------------------------------------------------------------
+//	AttackState: look for something to shoot
+//------------------------------------------------------------------
+
+state AttackState;
+	code
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans lookoutstate;
+		endif;
+		
+		if (not tauntoneplayed) then
+			if (timegreater(gti_timer_15,20)) then
+				playvoiceover("VO\op7\MI1\illburyyou",talker_Wil);
+				tauntoneplayed = true;
+			endif;
+		endif;
+		
+		if (not taunttwoplayed) then
+			if (timegreater(gti_timer_15,50)) then
+				playvoiceover("VO\op7\MI1\meetyourdaddy",talker_Wil);
+				taunttwoplayed = true;
+			endif;
+		endif;
+
+		OrderAttack(true);
+
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

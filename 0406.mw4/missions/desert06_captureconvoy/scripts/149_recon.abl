@@ -1,0 +1,105 @@
+
+
+//*********************************************************************************
+
+fsm RECON : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+  var
+
+		
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+	
+	 setTargetDesirability(me,-1);
+	
+		trans First;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+state first;
+			
+		code
+		
+  orderMoveto(epa_recon1,600,MOVE_NOCYCLE,true,false);
+
+	if reachnava == TRUE then	
+		trans	second;	
+	endif;
+	
+	if Convoy_Stopped == TRUE then	
+		trans	ImOut;	
+	endif;
+
+		
+	endstate;
+	
+	state second;
+			
+		code
+		
+  orderMoveto(epa_recon2,60,MOVE_NOCYCLE,true,false);
+
+	if Convoy_Stopped == TRUE then	
+		trans	ImOut;	
+	endif;
+		
+	endstate;
+
+	state ImOut;
+			
+code
+		
+if  (orderMoveto(epa_reconOut,600,MOVE_NOCYCLE,true,false) == TRUE) then	
+	shutdown(me);	
+endif;
+	
+	endstate;
+
+
+						
+endfsm.
+//******************************************************************
+															

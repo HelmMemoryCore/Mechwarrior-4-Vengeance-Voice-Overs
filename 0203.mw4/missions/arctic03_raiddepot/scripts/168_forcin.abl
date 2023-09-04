@@ -1,0 +1,94 @@
+
+//*********************************************************************************
+
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Turret must be changed to some other unique identifier
+fsm ForCin : integer;
+
+// This is the generic script for turrets of all sorts.
+// Memory integer 9 is reserved for settings in case multiple turret groups are using the same brain
+
+// Behavior: The turret sits and shoots, and that's it.
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+		
+
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,100,-1,100);
+		trans look;
+
+endstate;
+
+state deadState;
+	code
+	  orderDie;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state look;
+
+	code
+	
+if ForGo == true then
+	OrderMoveTo(epa_forpath,600,move_nocycle,false,false)
+endif;		
+
+if ForDead == true then
+	damnthe(me);
+endif;
+		
+endstate;
+
+
+
+endfsm.
+//******************************************************************
+
+
+

@@ -1,0 +1,141 @@
+
+//*********************************************************************************
+
+fsm condorambush : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer		detect;
+	static integer		gunnery;
+	static integer		piloting;
+	static real				mindelay;
+	static real				maxdelay;
+	static integer		level;
+	static boolean		soundplayed;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	detect = 550;
+	piloting = 30;
+	gunnery = 25;
+	
+  if (getmemoryinteger(me,1) == 1) then
+  	detect = 600;
+  endif;
+	
+	soundplayed = false;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,piloting,gunnery,30);
+		setEntropyMood (me,NEUTRAL_START);
+		setfiringdelay(me,0.1,0.5);
+//		setignorefriendlyfire(me,true);
+//		setshotradius(me,80);
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+
+			ordermovelookout;
+		
+		if (isshot(groupobjectid(6))) then
+			detect = 600;
+		endif;
+		
+		if (groupnumdead(groupobjectid(6))) >0 then
+			detect = 600;
+		endif;
+
+		if (setmytarget(detect)) then
+			trans attack;
+	 	endif;
+					
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+	  var
+		real		adjust;
+    real adjusteddetect;
+		integer	finaldetect;
+
+
+		code
+		
+		if (LeaveAttackState(detect*3/2)) then
+			orderstopattacking;				
+			trans sit;
+		endif;
+		
+    orderAttacktactic(tactic_rush,true);
+		
+
+ 		
+		if (isshot(groupobjectid(6))) then
+			detect = 600;
+		endif;
+		
+		if (groupnumdead(groupobjectid(6))) >0 then
+			detect = 600;
+		endif;
+					
+	endstate;
+
+
+endfsm.
+//******************************************************************
+

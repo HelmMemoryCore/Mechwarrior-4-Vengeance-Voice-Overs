@@ -1,0 +1,138 @@
+
+//*********************************************************************************
+
+fsm fighters : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer	gunnery;
+	static integer	attackrange;
+	static real			mindelay;
+	static real			maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+		attackrange = 500;				
+		piloting = 80;							
+		gunnery = 600;						
+		mindelay = 0.0;							
+		maxdelay = 0.5;									
+		elitelevel = 80;
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		setignorefriendlyfire(me,true);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		setfiringdelay(me,mindelay,maxdelay);		
+		trans holding;
+
+	endstate;
+
+  state holding;
+		code
+		if fightersgo == true then
+			if (OrderTakeOff(50) == TRUE) then
+				trans lineup;
+			endif;
+		endif;
+	endstate;
+	
+	state deadState;
+		code
+			orderDie;
+  endstate;
+	
+	state lineup;
+		code
+		 	
+//		switch (GetMemoryInteger(me,9))
+	if (orderformationmove(GroupObjectID(14),epa_FlyOver,600,MOVE_NOCYCLE,0,FORMTYPE_DENSE,FALSE) == true)
+		then trans blueangels;
+	endif;
+	
+	endstate;
+
+	state BlueAngels;
+		code		
+			if(FlyBy(playermech) == TRUE) then
+				trans StrafeFuel;
+		endif;
+	endstate;
+	
+	state StrafeFuel;
+		code
+		
+		settarget(me,ebu_Fuel1);
+		orderattack(true);
+		
+		if isdead(ebu_Fuel1) then
+// sound?			
+			trans StrafeTurret;
+		endif;
+	endstate;
+	
+	state StrafeTurret;
+		code
+				
+		settarget(me,etu_Turret4);
+		orderattack(true);
+		if isdead(etu_Turret4) then
+// sound?			
+			trans ByeBye;
+		endif;				
+	endstate;
+
+	state ByeBye;
+		code
+	//IF I NEED TO SEND THEM OUT OF PLAYER VIEW
+	
+	PlayVoiceOverOnce("VO\OP4\MI1\FighterDead",Talker_XRY);
+	PlayVoiceOverOnce("VO\OP4\MI1\FighterDead",Talker_RAT);
+	PlayVoiceOverOnce("VO\OP4\MI1\FighterDead",Talker_REC);
+	SelfDestruct(me);
+		
+	endstate;
+		
+endfsm.
+//******************************************************************
+
+

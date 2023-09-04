@@ -1,0 +1,277 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm UnarmedLU01 : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_UnarmedPatrol:
+//   Follows a path and runs from enemies.
+
+// NOTE: this script requires a CombatAI (or MechAI) to work properly!!!
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			fleeRange;			// At what range do I start running?
+		static integer			stopFleeingRange;	// At what range do I consider myself out of danger?
+		static integer			fleeSpeed;			// How fast I flee
+		
+		static integer			path;				// My path
+		static integer			moveType;			// How I move along the path
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real					minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real					maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+		static integer			speed;				// The speed at which I move along the path
+
+		//static integer			takeOffDistance;	// My take-off distance if I'm an airplane (ignored if not an airplane)
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		SetCombatLeash 					(me,Center,300);
+		fleeRange		= 500;
+		stopFleeingRange	= fleeRange + 500;
+		path			= -1;
+		moveType		= move_circle;
+		speed			= 50;
+		fleeSpeed		= 90;
+
+		//takeOffDistance	= 150;
+		
+		// driver settings
+		piloting		= 50;
+		gunnery			= 30;
+		minDelay		= 1.5;
+		maxDelay		= 3.0;
+		eliteLevel		= 30;
+		attackThrottle	= 50;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= 5;
+
+//endfunction;
+
+	
+	
+	//Use this to set different values for different units using the same brain
+	switch (GetMemoryInteger(me,9))
+
+		case 0:
+		
+		fleeRange		= 150;
+		stopFleeingRange	= fleeRange + 100;
+		path			= epa_RoadPath_zero;
+		gunnery = 30;					
+		mindelay = 1.0;			
+		maxdelay = 2.0;
+		elitelevel = 30;
+    isshotradius = 40;				
+		
+		endcase;
+	
+		case 2:
+										//EXTREAMLY LOW ELITE LEVEL = RAPID FIRE, LITTLE DAMAGE
+		fleeRange		= 150;
+		stopFleeingRange	= fleeRange + 100;
+		path			= epa_NorthPath_2;
+		gunnery = 30;					
+		mindelay = 1.0;			
+		maxdelay = 2.0;
+		elitelevel = 30;
+    isshotradius = 40;				
+		
+		endcase;
+		
+		case 3:
+		
+		fleeRange		= 150;
+		stopFleeingRange	= fleeRange + 100;
+		path			= epa_CraterPath_3;
+		gunnery = 30;					
+		mindelay = 1.0;			
+		maxdelay = 2.0;
+		elitelevel = 30;
+    isshotradius = 40;				
+		
+		endcase;
+		
+		case 4:
+		
+		fleeRange		= 150;
+		stopFleeingRange	= fleeRange + 100;
+		path			= epa_RearPath_4;
+		gunnery = 30;					
+		mindelay = 1.0;			
+		maxdelay = 2.0;
+		elitelevel = 30;
+    isshotradius = 40;				
+		
+		endcase;
+			
+	endswitch;
+
+endfunction;
+
+	
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay				(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius				(ME,isShotRadius);
+		SetEntropyMood				(ME,mood);
+		SetCurMood			 	 		(ME,mood);
+		SetSkillLevel					(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle			(ME,attackThrottle);
+				
+		//if (orderTakeOff(takeOffDistance) == true) then
+			trans FollowPathState;
+		//endif;
+
+endstate;
+
+
+//------------------------------------------------------------------
+//	FollowPathState: follow our path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state FollowPathState;
+	code
+		if (FindEnemy(fleeRange,FT_DEFAULT)) then
+			trans FleeState;
+		endif;
+
+		if (path <> -1) then
+			OrderMoveResumePatrol(path,speed,moveType,true,false);
+		else
+			OrderMoveLookOut;
+		endif;
+		
+		If (GetGlobalTrigger(12) == true) then
+		trans FallBack;
+		endif;
+
+endstate;
+
+//------------------------------------------------------------------
+//	FleeState: run away from my target
+//------------------------------------------------------------------
+
+state FleeState;
+	code
+		if (LeaveAttackState(stopFleeingRange)) then
+			ClearMoveOrder(ME);
+			SetTarget(ME,NO_UNIT);
+			trans FollowPathState;
+		endif;
+
+		OrderMoveFlee(GetTarget(ME),600);
+
+		//If (GetGlobalTrigger(12) == true) then
+		//trans FallBack;
+		//endif;
+		
+endstate;
+
+state FallBack;
+  var
+		Boolean resume_patrol_done;
+		
+	code
+		path = epa_RetreatPath;
+		moveType		= move_NoCycle;
+		resume_patrol_done = false;
+		
+		if (FindEnemy(fleeRange,FT_DEFAULT)) then
+			trans FleeState;
+		endif;
+
+		if (path <> -1) then
+			resume_patrol_done = OrderMoveResumePatrol(path,speed,moveType,true,false);
+		endif;
+		
+		if ((path == -1) OR (resume_patrol_done == true)) then
+			speed = 90;
+			path			= epa_RoadPath_zero;
+			trans Donestate;
+			//Speed = 85;
+			//SetCombatLeash 					(me,Units,200);
+			//settarget(me,playermech);					CASUE ERROR
+			//OrderMoveFlee(GetTarget(ME),50);	ACTUALLY CAUSE ERROR
+		endif;
+					
+endstate;
+
+state DoneState;
+	code
+		if (FindEnemy(fleeRange,FT_DEFAULT)) then
+			trans FleeState;
+		endif;
+
+		if (path <> -1) then
+			OrderMoveResumePatrol(path,speed,moveType,true,false);
+		else
+			OrderMoveLookOut;
+		endif;
+
+endstate;
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

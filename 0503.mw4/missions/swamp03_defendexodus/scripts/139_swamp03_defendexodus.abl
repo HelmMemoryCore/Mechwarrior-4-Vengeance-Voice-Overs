@@ -1,0 +1,694 @@
+
+//*********************************************************************************
+
+fsm swamp03 : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+			
+		eternal integer playermech;		
+		
+		static integer	cinema_cut;
+		
+	eternal integer	StartBombard;
+	eternal integer	boatassault;
+	eternal integer	boatattack;
+	eternal integer	CastOff;
+	eternal integer	fightersgo;
+	
+	eternal integer	refuge;
+	eternal boolean START;
+	eternal boolean FinalState;
+	
+	Static LocPoint Spot1;
+	Static LocPoint Spot2;
+	
+	Static Boolean ShotSound1;
+	Static Boolean ShotSound2;
+	Static Boolean DestSound;
+	Static Boolean PanicSound1;
+	Static Boolean PanicSound2;
+	Static Boolean RampageSound;
+	Static Boolean PatrolSound1;
+	Static Boolean PatrolSound2;
+	Static Boolean SinkingSound1;
+	Static Boolean SinkingSound2;
+
+	Static Boolean Way0;
+	Static Boolean Way1;
+	Static Boolean Way2;
+	
+	Static Boolean	Status1;
+	Static Boolean	Status2;
+	Static Boolean	Played;
+	Static Integer	DeadNum;				
+	
+	Eternal Boolean CaseyCheck;	
+	Eternal Boolean	ContactSound;
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+
+		 playermech = getplayervehicle(epl_player0);	
+ 	
+			GroupAddObject(GroupObjectID(2),eve_picket1);
+			GroupAddObject(GroupObjectID(2),eve_picket2);
+			GroupAddObject(GroupObjectID(2),eve_picket3);
+			GroupAddObject(GroupObjectID(2),eve_picket4);
+			GroupAddObject(GroupObjectID(2),eve_picket5);
+			SetGroupAI(groupobjectid(2),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectID(3),eve_Recon1);
+			GroupAddObject(GroupObjectID(3),eve_Recon2);
+			SetGroupAI(groupobjectid(3),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectID(4),eve_Fighter1);
+			GroupAddObject(GroupObjectID(4),eve_Fighter2);
+			GroupAddObject(GroupObjectID(4),eve_Fighter3);
+			GroupAddObject(GroupObjectID(4),eve_Fighter4);
+			GroupAddObject(GroupObjectID(4 ),eve_Fighter5);
+			SetGroupAI(groupobjectid(4),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectID(5),eve_Rampage1);
+			GroupAddObject(GroupObjectID(5),eve_Rampage2);
+			SetGroupAI(groupobjectid(5),GROUPAI_MOODSQUAD);
+
+			GroupAddObject(GroupObjectID(6),eve_boat1);
+			GroupAddObject(GroupObjectID(6),eve_boat2);
+			GroupAddObject(GroupObjectID(6),eve_boat3);
+			SetGroupAI(groupobjectid(6),GROUPAI_MOODSQUAD);
+			GroupAddObject(GroupObjectID(7),eve_boat4);
+			GroupAddObject(GroupObjectID(7),eve_boat5);
+			GroupAddObject(GroupObjectID(7),eve_boat6);
+			SetGroupAI(groupobjectid(7),GROUPAI_MOODSQUAD);
+	
+			GroupAddObject(GroupObjectID(8),eve_Refuge1);
+			GroupAddObject(GroupObjectID(8),eve_Refuge2);
+			SetGroupAI(groupobjectid(8),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectID(9),eve_ThunderChild);
+			GroupAddObject(GroupObjectID(9),eve_Indomitable);
+			SetGroupAI(groupobjectid(9),GROUPAI_NONE);
+
+			GroupAddObject(GroupObjectID(99),eve_picket1);
+			GroupAddObject(GroupObjectID(99),eve_picket2);
+			GroupAddObject(GroupObjectID(99),eve_picket3);
+			GroupAddObject(GroupObjectID(99),eve_picket4);
+			GroupAddObject(GroupObjectID(99),eve_picket5);
+			GroupAddObject(GroupObjectID(99),eve_Fighter1);
+			GroupAddObject(GroupObjectID(99),eve_Fighter2);
+			GroupAddObject(GroupObjectID(99),eve_Fighter3);
+			GroupAddObject(GroupObjectID(99),eve_Fighter4);
+			GroupAddObject(GroupObjectID(99),eve_Fighter5);
+			GroupAddObject(GroupObjectID(99),eve_Recon1);
+			GroupAddObject(GroupObjectID(99),eve_Recon2);
+			GroupAddObject(GroupObjectID(99),eve_Rampage1);
+			GroupAddObject(GroupObjectID(99),eve_Rampage2);
+			GroupAddObject(GroupObjectID(99),eve_boat1);
+			GroupAddObject(GroupObjectID(99),eve_boat2);
+			GroupAddObject(GroupObjectID(99),eve_boat3);
+			GroupAddObject(GroupObjectID(99),eve_boat4);
+			GroupAddObject(GroupObjectID(99),eve_boat5);
+			GroupAddObject(GroupObjectID(99),eve_boat6);
+			GroupAddObject(GroupObjectID(99),eve_ThunderChild);
+			GroupAddObject(GroupObjectID(99),eve_Indomitable);
+			SetGroupAI(groupobjectid(99),GROUPAI_NONE);
+		
+		
+		//For Capital Ships
+		StartBombard = 375;
+		//For Patrol Boats
+		boatassault = 410;
+		boatattack = 270;
+		//For Refugee	and everything going to attack on getaway
+		CastOff = 480;
+		//For Fighters
+		fightersgo = 120;
+
+		refuge = eve_refuge2;
+		cinema_cut = 0;
+		 			
+		
+		start = false;
+		FinalState = false;
+		
+		Spot1[0] = -763;
+		Spot1[1] = 0;		
+		Spot1[2] = 1585;
+
+		Spot2[0] = -783;
+		Spot2[1] = 0;		
+		Spot2[2] = 1575;
+		
+	ShotSound1 = false;
+	ShotSound2 = false;
+	DestSound = false;
+	PanicSound1 = false;
+	PanicSound2 = false;
+	RampageSound = false;
+	PatrolSound1 = false;
+	PatrolSound2 = false;
+	SinkingSound1 = false;
+	SinkingSound2 = false;
+	Way0 = false;
+	Way1 = false;
+	Way2 = false;
+	CaseyCheck = false;
+	ContactSound = false;
+	
+	Status1 = false;
+	Status2 = false;
+	Played = false;
+	DeadNum = 0;			
+	
+	SetTarget(ede_people_swamp_0065,ebu_townbldg2);
+	SetTarget(ede_people_swamp_0067,ebu_townbldg2);
+	SetTarget(ede_people_swamp_0083,ebu_aptbldg2);
+	SetTarget(ede_people_swamp_0089,ebu_aptbldg3_0001);
+	SetTarget(ede_people_swamp_0095,ebu_aptbldg2_0001);
+	SetTarget(ede_people_swamp_0097,ebu_aptbldg3);
+	SetTarget(ede_people_swamp_0099,ebu_aptbldg1);
+	SetTarget(ede_people_swamp_0101,ebu_aptbldg1_0001);
+	SetTarget(ede_people_swamp_0109,ebu_airportbldg_0003);
+	SetTarget(ede_people_swamp_0111,ebu_airportbldg_0001);
+	SetTarget(ede_people_swamp_0119,ebu_prisoner_barracks_0001);
+	SetTarget(ede_people_swamp_0121,ebu_prisoner_barracks);
+	SetTarget(ede_people_swamp_0131,ebu_bombfactory);
+	SetTarget(ede_people_swamp_0135,ebu_vehicle_hangar2_17);
+	SetTarget(ede_people_swamp_0136,ebu_weapon_warehouse_20);
+	SetTarget(ede_people_swamp_0150,ebu_factory5_0001);
+	SetTarget(ede_people_swamp_0154,ebu_target4_0001);
+	SetTarget(ede_people_swamp_0158,ebu_mech_repair_bldg);
+	SetTarget(ede_people_swamp_0168,ebu_mech_hanger);
+
+SetTarget(ede_creature_swamp_large_0015,ede_creature_swamp_large_0014);
+	SetTarget(ede_creature_swamp_small_0023,ede_creature_swamp_large_0014);
+	SetTarget(ede_creature_swamp_small_0024,ede_creature_swamp_large_0014);
+	SetTarget(ede_creature_swamp_small_0025,ede_creature_swamp_large_0014);
+	SetTarget(ede_creature_swamp_small_0026,ede_creature_swamp_large_0014);
+	SetTarget(ede_creature_swamp_small_0027,ede_creature_swamp_large_0014);
+
+	SetTarget(ede_creature_swamp_large_0019,ede_creature_swamp_large_0018);
+	SetTarget(ede_creature_swamp_small_0033,ede_creature_swamp_large_0018);
+	SetTarget(ede_creature_swamp_small_0034,ede_creature_swamp_large_0018);
+	SetTarget(ede_creature_swamp_small_0035,ede_creature_swamp_large_0018);
+	SetTarget(ede_creature_swamp_small_0036,ede_creature_swamp_large_0018);
+	SetTarget(ede_creature_swamp_small_0037,ede_creature_swamp_large_0018);
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+	code	
+			//playsound(eso_start);
+			setactivationdistance(6800);
+			starttimer(gti_timer_1);
+			playerai(epl_player0,true);
+			revealNavPoint(ena_Nav_Alpha);
+			revealNavPoint(ena_Nav_Beta);
+			RevealObjective(eob_Primary);
+			RevealObjective(eob_Secondary);
+			PlayVoiceOverOnce("VO\OP5\MI3\Intro",talker_RAT);			
+			PlayVoiceOverOnce("VO\OP5\MI3\Intro",talker_PI4);
+			PlayVoiceOverOnce("VO\OP5\MI3\Intro",talker_IAN);
+			PlayVoiceOverOnce("VO\OP5\MI3\Intro2",talker_RAT);
+			PlayLancemateSound("VO\OP5\MI3\Intro2",1);
+			StartMusic("Music\Push",3.0,3.5,50);
+			trans opening;
+//			trans sit;
+
+endstate;
+
+	
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+	var
+	
+		integer			wimpy;
+
+ 	code;
+	
+	if IsMusicPlaying == false then
+		StartMusic("Music\SwampAmbLoop",2.0,2.0,20);
+	endif;
+
+	if way0 == false then
+	if iswithin(playermech,ena_Nav_Alpha,150) then
+		PlayVoiceOverOnce("VO\Generic\NavAlpha",Talker_BET);
+		SetNavPoint(ena_Nav_Beta);
+    Way0 = true;
+	endif;
+endif;
+
+if way1 == false then
+	if iswithin(playermech,ena_Nav_Beta,150) then
+		PlayVoiceOverOnce("VO\Generic\NavBeta",Talker_BET);
+    Way1 = true;
+	endif;
+endif;
+
+if Way2 == false then
+	if iswithin(playermech,ena_Nav_Gamma,150) then
+		PlayVoiceOverOnce("VO\Generic\NavGamma",Talker_BET);
+		Way2 = true;
+	endif;
+endif;
+
+//Sounds
+If GroupNumDead(GroupObJectID(9)) == 1 then
+	if SinkingSound1 == false then
+		PlayLancemateSound("VO\OP5\MI3\Sinking",2);
+		SinkingSound1 = true;
+	endif;
+  PlayVoiceOverOnce("VO\OP5\MI3\Sinking",talker_PI4);
+	PlayVoiceOverOnce("VO\OP5\MI3\Sinking",talker_RAT);
+endif;
+
+If GroupAllDead(GroupObjectID(9)) == true then
+	if SinkingSound2 == false then
+		PlayLancemateSound("VO\OP5\MI3\Sinking2",2);
+		SinkingSound2 = true;
+	endif;
+	PlayVoiceOverOnce("VO\OP5\MI3\Sinking2",talker_RAT);
+	PlayVoiceOverOnce("VO\OP5\MI3\Sinking2",talker_REC);
+endif;
+	
+if DestSound == false then
+	if timegreater(2,20) then
+		PlayVoiceOverOnce("VO\OP5\MI3\Go30",talker_FO2);
+		PlayVoiceOverOnce("VO\OP5\MI3\Go30",talker_RAT);
+		PlayVoiceOverOnce("VO\OP5\MI3\Go30",talker_IAN);
+		killtimer(2);
+		DestSound = true;
+	endif;
+endif;
+
+If PanicSound1 == false then
+	if timegreater(2,15) then
+		PlayVoiceOverOnce("VO\OP5\MI3\OnSlaught",talker_VRD);
+		PlayVoiceOverOnce("VO\OP5\MI3\OnSlaught",talker_RAT);
+		PanicSound1 = true;
+	endif;
+endif;
+
+If PanicSound2 == false then
+	if timegreater(2,30) then
+		if GroupNumDead(GroupObjectID(9)) == 0 then
+			PlayVoiceOverOnce("VO\OP5\MI3\RUNuts",talker_VRD);
+			PlayVoiceOverOnce("VO\OP5\MI3\RUNuts2",talker_RAT);
+			PlayVoiceOverOnce("VO\OP5\MI3\RUNuts2",talker_VRD);
+			PanicSound2 = true;
+		endif;
+	endif;
+endif;
+
+if ShotSound1 == false then
+	if (WhoShot(GroupObjectID(8)) == eve_ThunderChild) or
+				(WhoShot(GroupObjectID(8)) == eve_Indomitable) then
+		PlayVoiceOverOnce("VO\OP5\MI3\CloseShot",talker_VRD);
+		PlayVoiceOverOnce("VO\OP5\MI3\CloseShot",talker_RAT);
+		ShotSound1 = true;
+	endif;
+endif;
+
+if ShotSound2 == false then
+	if (WhoShot(GroupObjectID(8)) == eve_ThunderChild) or
+				(WhoShot(GroupObjectID(8)) == eve_Indomitable) then
+		PlayLanceMateSound("VO\OP5\MI3\LanceShot",2);
+		ShotSound2 = true;
+	endif;
+endif;
+
+
+
+if RampageSound == false then
+	if iswithin(Playermech,GroupObjectID(5),1200) == true then
+		RampageSound = true;
+		StartMusic("Music\Daggers",3.0,3.5,50);
+		PlayVoiceOverOnce("VO\OP5\MI3\Rampage",talker_pi4);
+		PlayLancemateSound("VO\OP5\MI3\Rampage",1);
+	endif;
+endif;
+
+if PatrolSound1 == false then
+	if iswithin(PlayerMech,eve_Recon1,900) == true then
+		PatrolSound1 = true;
+		StartMusic("Music\DFA",3.0,3.5,70);
+		PlayLancemateSound("VO\OP5\MI3\Patrol1",1);
+	endif;
+endif;
+
+if PatrolSound2 == false then
+	if iswithin(PlayerMech,eve_Recon2,900) == true then
+		PatrolSound2 = true;
+		PlayLancemateSound("VO\OP5\MI3\Patrol2",1);
+	endif;
+endif;
+
+
+
+//****************
+//**OBJECTIVES***
+//**************
+if (iswithin(GroupObjectID(8),ena_Nav_Gamma,75) == TRUE)	then
+	PlayVoiceOverOnce("VO\OP5\MI3\Exodus",talker_RAT);
+	PlayVoiceOverOnce("VO\OP5\MI3\Allision",talker_SUP);
+	// *** Davelueh Added Salvage Here ***
+	AddWeaponSalvage("AC5",1);
+	AddWeaponSalvage("AC10",1);
+	AddWeaponSalvage("Gauss",1);
+	AddWeaponSalvage("BombastLaser",1);
+	AddWeaponSalvage("ERSmallLaser",1);
+	AddWeaponSalvage("MediumLaser",1);
+	AddWeaponSalvage("ClanLbxAC10",1);
+	AddWeaponSalvage("ClanLbxAC20",1);
+	AddWeaponSalvage("LbxAC20",1);
+	AddWeaponSalvage("ClanLRM5",1);
+	AddWeaponSalvage("ClanLRM15",1);
+	AddWeaponSalvage("ClanLRM20",1);
+	AddWeaponSalvage("LRM5",1);
+	AddWeaponSalvage("MRM10",1);
+	AddWeaponSalvage("ERLargePulseLaser",1);
+	AddWeaponSalvage("ERMediumPulseLaser",1);
+	AddWeaponSalvage("ERSmallPulseLaser",2);
+	AddWeaponSalvage("LargePulseLaser",1);
+	AddWeaponSalvage("MediumPulseLaser",2);
+	AddWeaponSalvage("SRM4",2);
+  AddWeaponSalvage("SSRM4",2);
+	AddWeaponSalvage("ThunderBolt",1);
+	AddWeaponSalvage("ClanUltraAC5",1);
+	AddWeaponSalvage("UltraAC5",1);
+
+			wimpy = GetDifficulty;
+			
+			If (wimpy == EASY_DIFFICULTY) then
+				AddMechInstanceSalvage("Daishi");
+			endif;
+
+	
+	StartMusic("Music\Victory",3.0,3.5,70);
+	endmission(true,70);
+  trans won;
+endif;
+
+if (GroupAllDead(GroupObjectID(99)) == TRUE) then
+	SuccessObjective(eob_Secondary);
+endif;
+
+if isdead(eve_refuge2) == true then
+	refuge = eve_refuge1;
+endif;
+
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		KillVoiceOvers;
+		PlayVoiceOverOnce("VO\Generic\IanDestroyed3",talker_RAT);
+		PlayVoiceOverOnce("VO\Generic\IanDestroyed3",talker_FO1);
+		StartMusic("Music\Defeat",3.0,3.5,70);
+		endmission(false,17);
+		trans lostdead;
+	endif;
+	
+if Status1 == false then
+	if (isdead(eve_refuge1) == true) then
+		DeadNum=DeadNum+1;
+		Status1 = true;
+	endif;
+endif;
+
+if Status2 == false then
+	if (isdead(eve_refuge2) == true) then
+		DeadNum=DeadNum+1;
+		Status2 = true;
+	endif;
+endif;
+
+		 If played == false then
+			If DeadNum == 1 then		
+				KillVoiceOvers;
+				PlayVoiceOverOnce("VO\OP5\MI3\LostOne",talker_VRD);
+				PlayVoiceOverOnce("VO\OP5\MI3\LostOne",talker_RAT);
+				PlayVoiceOverOnce("VO\OP5\MI3\LostOne",talker_REC);
+				Played = true;
+			endif;
+		endif;
+			
+			if DeadNum == 2 then
+				 KillVoiceOvers;
+				 PlayVoiceOverOnce("VO\OP5\MI3\LostTwo",talker_VRD);
+				 PlayVoiceOverOnce("VO\OP5\MI3\LostTwo",talker_RAT);
+				 StartMusic("Music\Defeat",3.0,3.5,70);
+				endmission(false,16);
+				Trans LostDead;
+			endif;
+
+endstate;
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			cinemaend;
+			KillVoiceOvers;
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+			start = true;
+			trans sit;	
+	endif;
+
+ 	switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera (eca_stomper);
+			Fadetoblack(0.0);
+
+			Targetfollowobject(playermech);
+			camerafollowobject(playermech);
+			SetCameraFootShake(playermech,100);
+
+			targetoffset(0.0,8.0,0.0,0.0,false);
+			Cameraoffset(100.0,16.0,-4.0,0.0,true);
+
+			Fadefromblack(8.0);
+
+			Cameraoffset(0.0,1.0,36.0,34.0,true);
+
+			startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+			
+			
+				case 1:
+				
+				if (timegreater(gti_Timer_21,35)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					start = true;
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+	
+	
+endstate;
+
+state won;
+
+		code
+		
+		if (cinemaskip) then
+			cinema_cut = 0;
+			playerai(epl_player0,false);
+			cinemaend;
+			KillVoiceOvers;
+			Endmission(true,1);
+		endif;
+
+		
+		switch cinema_cut
+		
+			case 0:
+				FadeToBlack(0.0);
+				FadeFromBlack(3.0);
+				
+//				if isdead(eve_refuge1) == false then
+//					teleport(eve_refuge1,Spot1);
+//				endif;
+//				
+//				if isdead(eve_refuge2) == false then
+//					teleport(eve_refuge2,Spot2);
+//				endif;
+	
+				FinalState = true;
+				Destroy(GroupObjectID(99));
+				CinemaStart;
+				playerai(epl_player0,true);
+				ClearMoveOrder(playermech);
+        setactivecamera (eca_stomper);
+				//Fadetoblack(7.0);
+					Targetfollowobject(playermech);
+					Camerafollowobject(playermech);
+					Targetoffset(0.0,4.0,0.0,0.0,false);
+					Cameraoffset(10.0,4.0,-150.0,0.0,false);
+					Cameraoffset(-120.0,60.0,50.0,10.0,false);
+				startTimer (gti_Timer_21);
+				resettimer (gti_Timer_21);
+				cinema_cut = cinema_cut + 1;
+			endcase;
+			
+			case 1:
+			
+			
+				if (timegreater(gti_Timer_21,10)) then
+				Targetfollowobject(refuge);
+				Camerafollowobject(refuge);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,80.0,-100.0,0.0,false);
+				Cameraoffset(50.0,80.0,100.0,35.0,false);
+				cinema_cut = cinema_cut + 1;
+				endif;
+
+			endcase;
+			
+			case 2:
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lostdead;
+
+		code
+		
+		if (cinemaskip) then
+			cinema_cut = 0;
+			playerai(epl_player0,false);
+			cinemaend;
+			KillVoiceOvers;
+			Endmission(false,1);
+		endif;
+
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				playerai(epl_player0,true);
+				Fadefromblack(0.0);
+				setactivecamera (eca_stomper);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(60.0,80.0,-150.0,0.0,false);
+				Cameraoffset(-120.0,20.0,50.0,20.0,false);
+				Cinema_Cut = Cinema_Cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;
+endstate;
+//state lostboats;
+//
+//		code
+//		
+//		if (cinemaskip) then
+//			cinema_cut = 0;
+//			playerai(epl_player0,false);
+//			KillVoiceOvers;
+//			cinemaend;
+//			Endmission(true,1);
+//		endif;
+//
+//		
+//		switch cinema_cut
+//		
+//			case 0:	
+//				CinemaStart;
+//				playerai(epl_player0,true);
+//				setactivecamera (eca_stomper);
+//				//Fadetoblack(7.0);
+//				Targetfollowobject(Refuge);
+//				Camerafollowobject(Refuge);
+//				Targetoffset(0.0,4.0,0.0,0.0,false);
+//				Cameraoffset(60.0,80.0,-150.0,0.0,false);
+//				Cameraoffset(-120.0,20.0,50.0,20.0,false);
+//			endcase;
+//			
+//		endswitch;
+//	
+//endstate;
+
+endfsm.
+//******************************************************************
+

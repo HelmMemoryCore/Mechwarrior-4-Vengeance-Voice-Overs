@@ -1,0 +1,204 @@
+
+
+//*********************************************************************************
+
+fsm ConvoyMech : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+  var
+	
+	static integer	gunnery;
+	static integer	attackrange1;
+	static integer	withdrawrange;
+	static real	mindelay;
+	static real	maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+	
+	static integer	mytruck;
+	static integer 	zoffset;
+	static integer  xoffset;
+	static integer			attackThrottle;		// My attack throttle
+	static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+  static integer 			attackSound;		// The attack sound I play when I first attack
+	static integer 			deathSound;			// The sound I play when I die
+  static integer			mood;
+
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+	 	withdrawRange	= 2000;
+
+	 	
+ 	switch (GetMemoryInteger(me,9))
+
+	case 1:	 //Front1
+		
+		attackrange1 = 500;				
+		piloting = 50;							
+		gunnery = 70;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 65;						
+		mytruck = eve_track1;							
+		xoffset	=	20;
+		zoffset	=	0;
+		attackThrottle	= 80;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= Agressive_START;
+	endcase;
+		
+	case 2:	//Front2
+		
+		attackrange1 = 500;			
+		piloting = 50;							
+		gunnery = 70;						
+		mindelay = 0.0;							
+		maxdelay = 1.0;									
+		elitelevel = 65;						
+		mytruck = eve_track1;							
+		xoffset	=	-20;
+		zoffset	=	0;
+		attackThrottle	= 80;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+	endcase;
+		
+	endswitch;
+ 	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+		trans sit;
+endstate;			
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+
+
+state sit;
+ 		var
+			ObjectID foe;
+			
+		code
+		
+		if (isDead(mytruck) == FALSE) then
+					OrderMoveFollow(mytruck,xoffset,zoffset);
+				else OrderMoveTo (epa_ConvoyPath,convoy_speed,MOVE_NOCYCLE,TRUE,FALSE);
+		endif;
+				
+		if (FindEnemy(attackrange1,FT_DEFAULT)) then
+			trans AttackState;
+		endif;
+	endstate;
+	
+	state	regroup;
+		code	
+		
+		if iswithin(me,mytruck,100) then
+			trans sit;
+		endif;
+
+		OrderMoveToObject(mytruck,600);		
+
+		if (FindEnemy(attackrange1,FT_DEFAULT)) then
+			trans AttackState;
+		endif;		
+	
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+state AttackState;
+	code
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans regroup;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		if alert == false then
+			OrderAttack(false);			
+		else
+			if soundplayed == false then
+				PlayLanceMateSound("VO\OP3\MI2\Guard1off",2);
+				SoundPlayed = true;
+			endif;
+			OrderAttack(true);
+		endif;	
+		
+		if ((isShot (me)) and (rand(0,3) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+						
+	endstate;
+	
+
+						
+endfsm.
+//******************************************************************

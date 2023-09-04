@@ -1,0 +1,75 @@
+
+fsm MacLeod : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+
+function Init;
+	code
+
+endfunction;
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,0.0,0.0);
+		SetIgnoreFriendlyFire	(ME,true);
+//		SetIsShotRadius			(ME,isShotRadius);
+//		SetEntropyMood			(ME,mood);
+//		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,0,999,0);
+//		SetAttackThrottle		(ME,attackThrottle);
+
+		SetSensorVisibility(ME,FALSE);
+
+		trans SitState;
+
+endstate;
+
+state SitState;
+	code
+		if (GetGlobalTrigger(8) == true) then
+			OrderMoveTo(epa_Path_MacLeod1,600,MOVE_NOCYCLE,true,false);
+			trans WalkForward;
+		endif;
+endstate;
+
+state WalkForward;
+	code
+		OrderMoveTo(epa_Path_MacLeod1,600,MOVE_NOCYCLE,true,false);
+
+		if (GetGlobalTrigger(9) == true) then
+			Fall(ME,1);
+			trans OhShit;
+		endif;
+endstate;
+
+state OhShit;
+	code
+		Fall(ME,2);
+
+		if (GetGlobalTrigger(17) == true) then
+			trans Leave;
+		endif;
+endstate;
+
+state Leave;
+	code
+		OrderMoveTo(epa_Path_MacLeod2,600,MOVE_NOCYCLE,true,false);
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.
+

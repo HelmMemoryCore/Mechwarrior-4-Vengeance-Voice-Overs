@@ -1,0 +1,247 @@
+
+//*********************************************************************************
+
+fsm Chopper : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+  var
+		static integer which_chopper;
+		static LocPoint start_point;
+		static ObjectID my_truck;
+		static LocPoint MY_LZ;
+		static integer  MY_X;
+		static integer	MY_Z;
+		static boolean	onground;
+		
+		static LocPoint	myspot;
+		
+	
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+code
+	onground = false;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		which_chopper = getmemoryinteger(me,0);
+		GetLocation(me,start_point);
+		switch (which_chopper)
+			case 0:
+				my_truck = eve_Truck1;
+				MY_X = 1375-2560;
+				MY_Z = 903-2560;
+			endcase;
+			case 1:
+				my_truck = eve_Truck2;
+				MY_X = 1415-2560;
+				MY_Z = 903-2560;
+			endcase;
+			case 2:
+				my_truck = eve_Truck3;
+				MY_X = 1395-2560;
+				MY_Z = 883-2560;
+			endcase;
+			case 3:
+				my_truck = eve_Truck4;
+				MY_X = 1395-2560;
+				MY_Z = 923-2560;
+			endcase;
+		endswitch;	
+		
+		MY_LZ[0] = MY_X;
+		MY_LZ[1] = 30;
+		MY_LZ[2] = MY_Z;	
+				
+		GetLocation(me,myspot);
+		Damnthe(me);
+				
+		trans sit;
+
+endstate;
+
+state deadState;
+	code
+//		if (truck_finished[which_chopper] == 0) then
+//			truck_finished[which_chopper] = 1;
+//			num_prisoners_killed = num_prisoners_killed + 1;
+//			print(4000 + num_prisoners_killed);
+//		endif;
+		num_choppers_killed = num_choppers_killed + 1;
+		
+		if (sounds_played[13] == FALSE) then
+			sounds_played[13] = TRUE;
+			PlayVoiceOverOnce("VO\OP4\MI6\ChopperDown",TALKER_CHL);
+		endif;
+		
+		if onground == false then
+		chopper_count = chopper_count + 1;
+ 		endif;
+		
+		orderDie;
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+
+state sit;
+
+	var
+
+		ObjectID foe;
+
+	code
+		
+		// Wait until truck is ready to go		
+		if (choppergo == TRUE) then
+					teleport(me,myspot);
+					startup(me);
+					orderTakeOff(50);
+	 				SetAlignment(me,FRIENDLY);
+			trans flytotruck;
+		endif;
+endstate;
+
+state flytotruck;
+		//-------------------------------------	
+		//Fly to LZ, then land in neat formation
+		//--------------------------------------
+	
+	var
+	
+	code
+		//FLYOVER????
+	 if (FlyBy(playermech) == TRUE) then
+//	  	if (OrderMoveTo(epa_choppersin,600,MOVE_NOCYCLE,false,false) == TRUE) then
+ 			trans formation;
+//	endif;
+	endif; 	
+endstate;		
+		
+state formation;
+	var
+	code				
+			if (OrderMoveToLocPoint(MY_LZ,600,FALSE,FALSE) == TRUE)then
+					trans iwillland;
+				endif;
+	//	else
+	//		truck_rescued[which_chopper] = 2;
+	//		trans getaway;
+endstate;
+
+
+state iwillland;
+	code
+//		if (isdead(my_truck) == TRUE) then
+//			trans getaway;
+//				else
+			if orderLand == true then
+				chopper_count = chopper_count + 1;
+				onground = true;
+				trans waiting;
+		endif;
+//			endif;
+endstate;
+
+state waiting;		
+		
+	code	
+		if chopper_count > 3 then
+			trans landedpause;
+		endif;
+
+endstate;
+
+state landedpause;	// delay to get prisoners
+	code
+	
+ 		if TimeGreater(11,3) == TRUE then
+			if (sounds_played[31] == FALSE) then
+				sounds_played[31] = TRUE;
+				 PlayVoiceOverOnce("VO\OP4\MI6\LAND",TALKER_CHL);
+			endif;
+		endif;
+ 		
+		if TimeGreater(11,100) == TRUE  then
+		truck_rescued[which_chopper] = 1;
+			trans iwilltakeoff;
+		endif;
+
+ // 	print(gettimer(11));
+endstate;
+
+state iwilltakeoff;
+	code
+		if (sounds_played[32] == FALSE) then
+			sounds_played[32] = TRUE;
+			PlayVoiceOverOnce("VO\OP4\MI6\Liftoff",TALKER_CHL);
+			PlayVoiceOverOnce("VO\OP4\MI6\Liftoff",TALKER_IAN);
+			PlayVoiceOverOnce("VO\OP4\MI6\Liftoff",TALKER_RAT);
+			PlayVoiceOverOnce("VO\OP4\MI6\Clear",TALKER_CHL);
+		endif;
+		
+
+		if (orderTakeOff(20)) then
+				UpAndAway = TRUE;	
+				trans getaway;
+ 		endif;
+endstate;
+
+state getaway;
+	code
+	
+		// got prisoners ... flee the mission
+			if ((orderMoveTo(epa_ChopperOut,1000,MOVE_NOCYCLE ,TRUE,TRUE) == TRUE) or
+			  (isWithinLocPoint(me,start_point,300))) then
+				if (truck_rescued[which_chopper] == 1) then
+				 // hooray! did it!
+//					num_trucks_captured = num_trucks_captured + 1;
+//					print(4000 + which_chopper);
+//					truck_finished[which_chopper] = 1;
+				endif;
+				
+//				print(3000 + which_chopper);
+				
+				orderMoveSit(TRUE);
+				ShutDown(me);
+			endif;
+
+endstate;
+
+
+endfsm.

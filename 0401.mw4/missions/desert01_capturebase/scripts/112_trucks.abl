@@ -1,0 +1,262 @@
+
+//*********************************************************************************
+
+fsm Cargo : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static boolean 			my_death_processed;
+	static integer			mytank;
+	static integer			Path1;
+	static integer			Path2;
+	static integer			Path3;
+	static integer			Path4;
+	static integer			mypark1;
+	static integer			mypark2;
+	static integer			mypark3;
+	static integer			mypark4;
+	static integer			speed;
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+ 		
+	setisshotradius(me,50);
+	my_death_processed = FALSE;
+	
+	Path1 = epa_FirstPath;
+	Path2 = epa_SecondPath;
+	Path3 = epa_ThirdPath;
+	Path4 = epa_EscapePath;
+	speed = 45;
+	switch (GetMemoryInteger(me,9))
+		
+	case 1:
+	mypark1 = ena_Park11;
+	mypark2 = ena_Park21;
+	mypark3 = ena_Park31;
+	mypark4 = ena_Home1;
+	endcase;
+	
+	case 2:
+	mypark1 = ena_Park12;
+	mypark2 = ena_Park22;
+	mypark3 = ena_Park32;
+	mypark4 = ena_Home2;
+	endcase;
+	
+	case 3:
+	mypark1 = ena_Park13;
+	mypark2 = ena_Park23;
+	mypark3 = ena_Park33;
+	mypark4 = ena_Home3;
+	endcase;
+	
+	endswitch;
+
+	
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+//		if cargogo == true then
+			trans truckswait;
+//		endif;
+	endstate;
+
+	state truckswait;
+	
+	code
+	
+	if cargogo == true then	
+		trans ToFirst;
+	endif;
+	
+	endstate;
+	
+	
+State ToFirst;
+
+	var
+			integer shooting;
+	code
+
+Shooting = (WhoShot(GroupObjectID(22)));
+	
+if OrderMoveTo(PATH1,speed,Move_noCycle,false,false) == true then
+	trans ParkFirst;
+endif;
+
+
+if (GroupContainsObject(GroupObjectID(4),Shooting) == TRUE) then
+	PlayVoiceOverOnce("VO\OP4\MI1\TakingFire",Talker_CCG);
+	setnavpoint(ena_Nav_delta);
+	speed = 30;
+endif;
+
+
+if GroupAllDead(GroupObjectID(4)) then
+	speed = 60;
+endif;
+
+
+endstate;
+
+
+State ParkFirst;
+	code
+
+If OrderMoveToObject(mypark1,600) then
+	ClearMoveOrder(me);
+endif;
+
+if iswithin(me,mypark1,10) then
+	ClearMoveOrder(me);
+endif;
+
+if looted1 == true then
+	trans ToSecond;
+endif;
+
+endstate;
+
+
+
+State ToSecond;
+	code
+
+if OrderMoveTo(PATH2,600,Move_noCycle,false,false) == true then
+	trans ParkSecond;
+endif;
+
+endstate;
+
+
+
+State ParkSecond;
+	code
+
+If OrderMoveToObject(mypark2,600) then
+	ClearMoveOrder(me);
+endif;
+
+if iswithin(me,mypark2,10) then
+	ClearMoveOrder(me);
+endif;
+
+if looted2 == true then
+	trans ToThird;
+endif;
+
+endstate;
+
+
+State ToThird;
+	code
+
+if OrderMoveTo(PATH3,600,Move_noCycle,false,false) == true then
+	trans ParkThird;
+endif;
+
+endstate;
+
+
+
+State ParkThird;
+	code
+
+If OrderMoveToObject(mypark3,600) then
+	ClearMoveOrder(me);
+endif;
+
+if iswithin(me,mypark3,10) then
+	ClearMoveOrder(me);
+endif;
+
+if looted3 == true then
+	trans ToHome;
+endif;
+
+endstate;
+
+State ToHome;
+	code
+
+if OrderMoveTo(PATH4,600,Move_noCycle,false,false) == true then
+	trans ParkHome;
+endif;
+
+endstate;
+
+
+
+State ParkHome;
+	code
+
+If OrderMoveToObject(mypark4,600) then
+	ClearMoveOrder(me);
+endif;
+
+if iswithin(me,mypark4,10) then
+	ClearMoveOrder(me);
+endif;
+
+endstate;
+
+	state deadState;
+		code
+				if (my_death_processed == FALSE) then
+						trucksdead = trucksdead + 1;
+					
+//				if (getAlignment(WhoDestroyed(me)) == FRIENDLY) then
+//						PlaySoundonce(friendlydeath);
+//				else					 					
+//						PlaySoundonce(deathsound);
+//				endif;
+		
+			my_death_processed = TRUE;
+			
+		endif;
+
+		
+			orderDie;
+  endstate;
+
+
+endfsm.
+//******************************************************************
+
+
+

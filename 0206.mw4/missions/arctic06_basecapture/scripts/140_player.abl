@@ -1,0 +1,94 @@
+
+//*********************************************************************************
+
+fsm playeraifsm : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		
+		trans New;
+		
+	endstate;
+	
+	state New;
+		code;
+			
+			OrderFormationMove(GroupObjectId(1),epa_Firstpath,45,move_nocycle,formation_11wedge,formtype_dense,false);
+	
+			if whack == true then
+				settarget(GroupObjectID(1),eve_whack1);
+				trans Attack;
+			endif;																								
+	
+			if DropFly == true then
+				trans Finish;
+			endif;
+			
+	endstate;
+	
+	state Attack;
+	
+	 code
+	
+	 OrderAttack(false);
+
+			if DropFly == true then
+				trans Finish;
+			endif;	
+	
+	endstate;
+	
+  state deadState;
+		code
+  endstate;
+
+	State Finish;
+		Code
+		
+		OrderMoveTo(epa_FinishSpot,55,move_nocycle,false,false);
+		
+	endstate;
+
+endfsm.
+//******************************************************************
+

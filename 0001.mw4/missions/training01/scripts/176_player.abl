@@ -1,0 +1,153 @@
+
+//*********************************************************************************
+
+fsm playeraifsm : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+//			trans Area2;
+
+			Shutdown(ME);
+
+			trans PlayerWaitToStartup;
+	endstate;
+
+	state PlayerWaitToStartup;
+		code
+			if (GetGlobalTrigger(3) == true) then
+				Startup(me);
+				trans PlayerWaitToWalk1;
+			endif;
+	endstate;
+
+	state PlayerWaitToWalk1;
+		code
+			if (GetGlobalTrigger(5) == true) then
+				trans PlayerWalk1;
+			endif;
+	endstate;
+
+	state PlayerWalk1;
+		code
+			OrderMoveTo(epa_Path_Ian1,40,MOVE_NOCYCLE,true,false);
+
+			if (GetGlobalTrigger(11) == true) then
+				trans PlayerWalk2;
+			endif;
+	endstate;
+
+	state PlayerWalk2;
+		var
+			LocPoint p;
+		code
+			ClearMoveOrder(ME);
+
+			GetLocation(ena_Nav_BetweenCones,p);
+
+			Teleport(ME,p);
+			SetRotation(ME,0);
+
+			trans WaitThere;
+	endstate;
+
+	state WaitThere;
+		code
+			if (GetGlobalTrigger(19) == true) then
+				OrderMoveTo(epa_Path_Jones3,60,MOVE_NOCYCLE,true,false);
+				trans MovingToGamma;
+			endif;
+	endstate;
+
+	state MovingToGamma;
+		var
+			integer speed;
+		code
+			if (GetGlobalTrigger(45) == true) then
+				speed = 600;
+			else
+				if (GetGlobalTrigger(42) == true) then
+					speed = 80;
+				else
+					speed = 40;
+				endif;
+			endif;
+
+			if (OrderMoveTo(epa_Path_Jones3,speed,MOVE_NOCYCLE,true,false) == true) then
+				trans EnterArea2;
+			endif;
+	endstate;
+
+	state EnterArea2;
+		code
+			if (OrderMoveTo(epa_Path_Area2p1,60,MOVE_NOCYCLE,true,false) == true) then
+				SetGlobalTrigger(40,true);
+
+				trans Area2;
+			endif;
+	endstate;
+
+	state Area2;
+		code
+			if (GetGlobalTrigger(37) == true) then
+				trans StopHere;
+			endif;
+
+			if (GetGlobalTrigger(34) == true) then
+				OrderMoveTo(epa_Path_IanFinal,600,MOVE_NOCYCLE,true,false);
+			endif;
+	endstate;
+
+	state StopHere;
+		code
+			OrderStopAttacking;
+			ClearMoveOrder(ME);
+	endstate;
+	
+  state deadState;
+		code
+  endstate;
+
+
+endfsm.
+//******************************************************************
+

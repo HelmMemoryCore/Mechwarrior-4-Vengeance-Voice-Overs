@@ -1,0 +1,219 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm Karnov : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_Patrol:
+//   Follows a path.  If anything comes near, it goes off and attacks it,
+//   and then comes back to the path when there's nothing left to attack.
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start shooting?
+		static integer			withdrawRange;		// At what range do I withdraw from combat entirely?
+
+		static integer			path;				// My path
+		static integer			moveType;			// How I move along the path
+		static boolean			canLeavePath;		// Can I leave the path if attacked? (TRUE by default)
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			findTypes;			// What kind of enemies to look for
+
+		
+		static integer			mood;				// My default mood.
+		static integer			speed;				// The speed at which I move along the path
+
+		static integer			takeOfftime;	
+		static integer			loadtime;
+		
+		static boolean			rangesoundplayed;
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 500;
+		withdrawRange	= attackrange * 3 / 2;
+		path			= -1;
+		moveType		= move_circle;
+		canLeavePath	= true;
+		speed			= 600;
+		takeOffTime	= 5;
+		loadtime = 30;
+		rangesoundplayed = false;
+
+		// driver settings
+		piloting		= 50;
+		gunnery			= 30;
+		minDelay		= 1.5;
+		maxDelay		= 3.0;
+		eliteLevel		= 30;
+		attackThrottle	= 80;
+		isShotRadius	= 120;
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+
+			trans takeoff;
+
+endstate;			
+
+state takeoff;
+	code
+
+	if (timegreater(gti_timer_0,takeofftime)) then
+		ordertakeoff(10);
+		trans moveout;
+	endif;
+
+endstate;
+
+state moveout;
+	code
+
+	if (ordermovetoobject(ena_midpoint,600)) then
+		trans hangout;
+	endif;
+			
+endstate;
+
+state hangout;
+	code
+
+	if (foundgarage) then
+		trans getthere;
+	endif;
+				
+endstate;
+
+state getthere;
+	code
+
+	if (ordermovetoobject(navpoint,600)) then
+		trans land;
+	endif;
+	
+	if (not rangesoundplayed) then
+		if (iswithin(me,navpoint,1200)) then
+			rangesoundplayed = true;
+			playvoiceover("VO\OP6\MI2\inrange",talker_EV1);
+		endif;
+	endif;
+			
+endstate;
+
+state land;
+	code
+
+	if (orderland) then
+		starttimer(gti_timer_10);
+		playvoiceover("VO\OP6\MI2\onground",talker_EV1);
+		trans counttotakeoff;
+	endif;
+			
+endstate;
+
+state counttotakeoff;
+	code
+
+	if (timegreater(gti_timer_10,loadtime)) then
+		pilotsloaded = true;
+		successobjective(eob_defendgarage);
+		playvoiceover("VO\OP6\MI2\departing",talker_EV1);
+		playvoiceover("VO\OP6\MI2\departing",talker_Ian);
+		trans takeoffagain;
+	endif;
+			
+endstate;
+
+state takeoffagain;
+	code
+
+	if (ordertakeoff(10)) then
+		trans getouttadodge;
+	endif;
+			
+endstate;
+
+state getouttadodge;
+	code
+
+	if (ordermovetoobject(ena_endpoint,600))then
+		missionwon = true;
+		trans homefree;
+	endif;
+			
+endstate;
+
+state homefree;
+	code
+			
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

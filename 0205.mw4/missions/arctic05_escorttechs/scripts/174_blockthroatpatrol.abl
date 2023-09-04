@@ -1,0 +1,146 @@
+
+//*********************************************************************************
+
+fsm unitspatrollingthroatofroadblock : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer		detect;
+	static integer		gunnery;
+	static integer		piloting;
+	static real				mindelay;
+	static real				maxdelay;
+	static integer		level;
+	
+	static integer speed;
+	static integer	movetype;
+	static integer	path;
+	static boolean	soundplayed;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	detect = 250;
+	piloting = 25;
+	gunnery = 10;
+	
+	path = epa_blockalarmpath;
+	speed = 60;
+	movetype = move_circle;
+	soundplayed = false;
+	
+ // if (getmemoryinteger(me,1) == 2) then
+ // 	detect = 450;
+ // endif;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetSkilllevel(me,piloting,gunnery,40);
+		setEntropyMood (me,NEUTRAL_START);
+		setfiringdelay(me,1.0,3.0);
+//		setignorefriendlyfire(me,true);
+//		setshotradius(me,80);
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+
+			orderMoveto(path,speed,movetype,true,false);
+
+		
+		if (groupnumdead(groupobjectid(15)) >0) then
+			detect = 550;
+		endif;
+		
+
+		if (setmytarget(detect)) then
+			trans attack;
+	 	endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+	  var
+		real		adjust;
+    real adjusteddetect;
+		integer	finaldetect;
+
+
+		code
+
+		if (LeaveAttackState(detect*3/2)) then
+			orderstopattacking;				
+			trans sit;
+		endif;
+	
+    orderAttack(true);
+		
+		if (not soundplayed) then
+				soundplayed = true;
+				playsoundonce(eso_throat);
+				//print("throat played!!!");
+		endif;
+
+		if (groupnumdead(groupobjectid(15)) >0) then
+			detect = 550;
+		endif;
+					
+	endstate;
+
+
+endfsm.
+//******************************************************************
+

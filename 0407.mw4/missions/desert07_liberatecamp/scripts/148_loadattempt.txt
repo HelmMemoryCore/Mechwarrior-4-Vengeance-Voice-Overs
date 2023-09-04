@@ -1,0 +1,201 @@
+EXCEPTION : Attempt to write to address 0x00000048 at 0x0053D1B3
+Address   : 0x0053D1B3
+Location  : Adept::Entity::CreateEntity() +0x13
+File      : C:\MWBuild\mw4\Libraries\Adept\Entity.cpp(637)
+
+Call Stack
+==========
+0x0053FB5E Adept::Player::Player() +0xCE    C:\MWBuild\mw4\Libraries\Adept\Player.cpp(159)
+0x005C1D8F MechWarrior4::MWPlayer::MWPlayer() +0x1F C:\MWBuild\mw4\Code\MW4\MWPlayer.cpp(100)
+0x0053D1BF Adept::Entity::CreateEntity() +0x1F C:\MWBuild\mw4\Libraries\Adept\Entity.cpp(637)
+0x00549B7E Adept::Application::ReceiveDirectMessage() +0x6E C:\MWBuild\mw4\Libraries\Adept\Application.cpp(2925)
+0x0065457C operator new() +0xC              C:\MWBuild\CoreTech\Libraries\MFCPlatform\MFCPlatform.cpp(29)
+0x00548C34 Adept::Application::RequestPlayerVehicleMessageHandler() +0x44 C:\MWBuild\mw4\Libraries\Adept\Application.cpp(2090)
+0x00549BD8 Adept::Application::ReceiveDirectMessage() +0xC8 C:\MWBuild\mw4\Libraries\Adept\Application.cpp(2925)
+0x0054F762 Adept::Network::ReceiveMessage() +0x72 C:\MWBuild\mw4\Libraries\Adept\Network.cpp(1034)
+
+Processor Registers EAX=0x0234DEC0 EBX=0x0658B4B1 ECX=0x00000000 EDX=0x0012F278 Flags=0x00210202
+=================== ESI=0x0658B441 EDI=0x0012F36C EBP=0x022DD640 ESP=0x0012F228 EIP  =0x0053D1B3
+ESP (0x0012F228) 5E FB 53 00 78 F2 12 00 48 F2 12 00 01 00 00 00 10 F5 12 00 40 D6 2D 02 40 42 B3 06 41 B4 58 06 
+EIP (0x0053D1B3) FF 41 48 8B 54 24 08 52 50 FF 51 28 83 C4 08 C3 90 90 90 90 90 90 90 90 90 90 90 90 90 8B 44 24 
+
+Machine details
+===============
+Executable name           : D:\Mw4Daily\Today\binaries\mw4\MW4Ed_p.exe
+Command line              : -armorlevel 3
+Current directory         : D:\Mw4Daily\Today
+Current time, date        : 08:35:13 Monday 4/3/2000
+Executable time, date     : 07:02:14 Sunday 4/2/2000
+GameOS build version      : Weekly - Thu Mar 30 18:47:37 2000
+Software rasterizer       : d:\mw4daily\today\assets\binaries\blade.dll (Size 274,498 bytes)
+User name                 : dabzug
+Machine name              : DABZUG4
+Processor                 : 498MHz Intel PIII (Possibly Xeon) MMX SSE 512K cache Model=7, Type=6, Stepping=3 
+L2 r/w/rw speed           : 8 cycles 1992MB/s, 31 cycles 514MB/s, 31 cycles 514MB/s
+Main memory r/w/rw speed  : 28 cycles 569MB/s, 58 cycles 274MB/s, 60 cycles 265MB/s
+Video memory r/w/rw speed : 296 cycles 53MB/s, 34 cycles 468MB/s, 275 cycles 57MB/s
+AGP memory r/w/rw speed   : 82 cycles 194MB/s, 30 cycles 531MB/s, 138 cycles 115MB/s
+Operating system          : Windows 2000 (5.0.2195) RTM
+DirectX version           : 7.04.00.0700 (DirectX 7.0)
+Time since booted         : 63h 30m 26s
+Time game running         : 0h 0m 0.00s (on frame 1)
+Physical memory           : 267,948,032 bytes (256 Meg)
+Available physical memory : 108,748,800 bytes (104 Meg)
+Swapfile size             : 749,199,360 bytes (714 Meg)
+Swapfile available        : 572,403,712 bytes (546 Meg)
+Virtual memory            : 2,147,352,576 bytes (2048 Meg)
+Available virtual memory  : 1,980,895,232 bytes (1889 Meg)
+Memory load               : 59%
+Desktop video mode        : 1280,1024 16bpp
+Networked Machine         : Yes
+Executable version        : 00.00.04.0200
+
+DLL Version numbers
+===================
+msvcrt.dll    - Version 6.00.8397.0
+msvcrtd.dll   - Version 6.00.8447.0
+msvcirt.dll   - Version 6.00.8168.0
+msvcirtd.dll  - Version 6.00.8168.0
+amstream.dll  - Version 6.01.09.0726
+quartz.dll    - Version 6.01.09.0726
+Ir50_32.dll   - Version R.5.10.15.2.55
+dsound.dll    - Version 5.00.2165.1
+dinput.dll    - Version 5.00.2172.1
+d3dim.dll     - Version 5.00.2180.1
+ddraw.dll     - Version 5.00.2180.1
+dplayx.dll    - Version 5.00.2169.1
+
+Sound device 0
+Description        : Aureal Audio
+Driver file        : adm8830.sys
+Driver size        : 795,456 bytes
+Driver date        : 07:58:28 Thursday 12/2/1999
+Driver version     : 5.00.2169.1
+CERTIFIED          : Yes
+EMULDRIVER         : No
+CONTINUOUSRATE     : Yes
+PRIMARYMONO        : Yes
+PRIMARYSTEREO      : Yes
+PRIMARY8BIT        : Yes
+PRIMARY16BIT       : Yes
+SECONDARYMONO      : Yes
+SECONDARYSTEREO    : Yes
+SECONDARY8BIT      : Yes
+SECONDARY16BIT     : Yes
+MinSecondarySampleRate      : 8000
+MaxSecondarySampleRate      : 48000
+PrimaryBuffers              : 1
+MaxHwMixingAllBuffers       : 96
+MaxHwMixingStaticBuffers    : 96
+MaxHwMixingStreamingBuffers : 96
+FreeHwMixingAllBuffers      : 95
+FreeHwMixingStaticBuffers   : 95
+FreeHwMixingStreamingBuffers: 95
+MaxHw3DAllBuffers           : 96
+MaxHw3DStaticBuffers        : 96
+MaxHw3DStreamingBuffers     : 96
+FreeHw3DAllBuffers          : 95
+FreeHw3DStaticBuffers       : 95
+FreeHw3DStreamingBuffers    : 95
+TotalHwMemBytes             : 0
+FreeHwMemBytes              : 0
+MaxContigFreeHwMemBytes     : 0
+UnlockTransferRateHwBuffers : 0
+PlayCpuOverheadSwBuffers    : 0
+
+Video device 0
+Description        : NVIDIA RIVA TNT
+Company / Chipset  : nVidia / Riva TNT
+Driver file        : nv4_disp.dll
+Driver size        : 1,077,872 bytes
+Driver date        : 10:11:25 Friday 2/18/2000
+Driver version     : 5.00.2195.0378
+Version            : 5.0.2195.0378
+Hardware ID        : 10DE.0020 (Rev 4, Subsys 0x58021092)
+Video memory       : 16,777,216 bytes (16 Meg)
+Card texture mem   : 16,777,216 bytes (16 Meg)
+AGP texture memory : 0 bytes (0 Meg)
+FourCC modes       : UYVY YUY2 RAW8 YV12 YVU9 IV32 IV31 IF09                                         
+Texture formats    : 555 1555 4444 565 (32 bit 888) 8888 
+Z Buffer formats   : 16 bit Z 24 bit Z (Z=32 (0xffffff00) Stencil=8 (0xff)) 
+16 bit modes       : 640x480 512x384 640x400 800x600 1024x768 1152x864 1280x1024 1600x1200 
+24 bit modes       : 
+32 bit modes       : 640x480 512x384 640x400 800x600 1024x768 1152x864 1280x1024 1600x1200 
+CERTIFIED          : No
+DRAWPRIMITIVES2    : Yes
+DRAWPRIMITIVES2EX  : Yes
+DRAWPRIMTLVERTEX   : Yes
+FLIPINTERVAL       : No
+FLIPNOVSYNC        : No
+NO2DDURING3DSCENE  : No
+NONLOCALVIDMEM     : Yes
+NOPAGELOCKREQUIRED : Yes
+CALIBRATE GAMMA    : No
+PRIMARYGAMMA       : Yes
+ZBuffer            : 16 24
+Render Depth       : 16 32
+Texture Size       : 1x1 to 2048x2048
+Maximum u,v coords : No limits
+Guard Band Clipping: -2048,-2048 to 2047,2047
+AlphaTest NotEqual : Yes
+Missing Src blend  : 
+Missing Dest blend : 
+AGP Texture        : Yes
+Texture Coords     : 8
+Blend Stages       : 8
+Max Textures       : 2
+Hardware T&L       : No
+Vertex Blending    : 4
+Maximum Lights     : Infinite
+Clip Planes        : 6
+Blend Lightmap     : Ok
+Blend Specularmap  : Ok
+Blend Detail       : Ok
+SELECTARG1         : Yes
+SELECTARG2         : Yes
+ADD                : Yes
+ADDSIGNED          : Yes
+SUBTRACT           : Yes
+MODULATE           : Yes
+MODULATE2X         : Yes
+MODULATE4X         : Yes
+BLENDCURRENTALPHA  : Yes
+BLENDDIFFUSEALPHA  : Yes
+BLENDTEXTUREALPHA  : Yes
+BUMPENVMAP         : No
+BUMPENVMAPLUMINANCE: No
+DOTPRODUCT3        : No
+ANISOTROPY         : Yes
+ANTIALIASSORTINDEP : No
+FOGTABLE           : Yes
+FOGVERTEX          : Yes
+FOGRANGE           : Yes
+WFOG               : Yes
+WBUFFER            : Yes
+MIPMAPLODBIAS      : Yes
+WBUFFER            : Yes
+ZBUFFERLESSHSR     : No
+MIPNEAREST         : Yes
+LINEARMIPLINEAR    : Yes
+DONOTSTRIPELEMENTS : Yes
+TEXTURE CLAMP      : Yes
+TEXTURE BORDER     : No
+TEXTURE MIRROR     : Yes
+ALPHAGOURAUDBLEND  : Yes
+SQUAREONLY         : No
+COLORFLATMONO      : Yes
+COLORGOURAUDMONO   : Yes
+COLORFLATRGB       : Yes
+COLORGOURAUDRGB    : Yes
+SPECULARFLATRGB    : Yes
+SPECULARGOURAUDRGB : No
+
+Audio CODEC Verification:
+========================
+  Microsoft ADPCM Audio CODEC installed.
+
+
+Video CODEC Verification:
+========================
+  Indeo® video 5.10 installed.
+

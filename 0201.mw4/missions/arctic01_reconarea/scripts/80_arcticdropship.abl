@@ -1,0 +1,247 @@
+//------------------------------------------------------------------
+
+fsm ArcticDropship : integer;
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+  var		
+		
+		static integer			piloting;		 	 	// Piloting skill
+		static integer			attackRange; 	 	// The range at which I start attacking if in the original patrol
+		static integer			gunnery;		 	 	// Gunnery skill/chance to hit
+		static real					minDelay;		 	 	// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real					maxDelay;		 	 	// Maximum amount of time I will wait between shots once a weapon is reloaded
+		
+		static integer			path;						// My original path
+		static integer			moveType;				// How I move along the path
+		static boolean			canLeavePath;		// Can I leave the path if attacked? (TRUE by default)
+		static integer			speed;					// The speed at which I move along the path
+		static integer			attackThrottle;		// My attack throttle
+		
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;						// My default mood.
+
+		static integer			takeOffDistance;	// My take-off distance if I'm an airplane (ignored if not an airplane)
+		
+		static Boolean			Closer;						// I do the closing cinema.
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+
+
+function Init;
+	
+	code
+		
+		
+ 	switch (GetMemoryInteger(me,9))
+
+	case 0:															 //Opening Cinema
+	
+		// script-specific variables
+		attackRange			= 700;
+		Path 				= epa_DropshipPath;
+		moveType		= move_NoCycle;
+		canLeavePath	= False;
+		speed			= 100;
+
+		takeOffDistance	= 150;
+
+		// driver settings
+		piloting		= 100;
+		gunnery			= 70;
+		minDelay		= 0.25;
+		maxDelay		= 0.75;
+		eliteLevel		= 80;
+		attackThrottle	= 80;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		//findTypes		= FT_DEFAULT;
+		closer = false;
+		
+	endcase;
+		
+	case 1:															 //Closeing Cinema
+		
+		// script-specific variables
+		attackRange			= 700;
+		path = epa_citytankspath;
+		moveType		= move_NoCycle;
+		canLeavePath	= False;
+		speed			= 100;
+
+		takeOffDistance	= 150;
+
+		// driver settings
+		piloting		= 100;
+		gunnery			= 70;
+		minDelay		= 0.25;
+		maxDelay		= 0.75;
+		eliteLevel		= 80;
+		attackThrottle	= 80;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		//findTypes		= FT_DEFAULT;
+		closer = true;
+		
+	endcase;
+		
+	endswitch;
+	
+endfunction;
+
+
+ state StartState;
+
+	code
+		
+		SetFiringDelay					(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire		(ME,true);
+		SetEntropyMood					(ME,mood);
+		SetCurMood							(ME,mood);
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+				
+						trans PowerUp;
+
+endstate;
+
+
+state PowerUp;
+	code
+	
+		ResetTimer(15);								//Dropship Timer
+		starttimer(gti_timer_15);
+	
+	trans DropLaunch;
+
+endstate;
+
+state DropLaunch;
+	code
+	
+	if (closer == true) then
+	  shutdown(me);
+		trans hellstate;
+	else
+		if (orderTakeOff(620) == true) then
+			if OrderMoveto(path,speed,movetype,true,false) then
+			endif;
+		endif;
+
+	OrderAttack(false);	
+	
+		if (TimeGreater(gti_Timer_15,12)) then
+		shutdown(me);
+		trans HellState1;
+		endif;
+	endif;
+	
+endstate;
+
+state WaitState;
+	code
+		
+		shutdown(me);
+	
+		if (missionwon == true) then
+			startup(me);
+			resettimer(15);
+			trans waitstate2;
+		endif;		
+		
+endstate;
+
+state WaitState2;
+	code
+			
+		if (orderTakeOff(65) == true) then
+			if OrderMoveto(path,speed,movetype,true,false) then
+			endif;
+		endif;
+			
+		if (TimeGreater(gti_Timer_15,4)) then
+			clearmoveorder(me);
+			trans WaitState3;
+		endif;
+
+endstate;
+
+state WaitState3;
+	code
+			
+		if OrderMoveToObject(ena_Nav_Beta,200) == true then
+			trans WaitState4;
+		endif;
+			
+endstate;
+
+state WaitState4;
+	code
+		
+		If (orderland == true) then
+		PlayVoiceOverOnce("VO\OP2\MI1\TouchingDown", TALKER_Fo1);
+			trans landwait;
+		endif;
+		
+endstate;
+
+state HellState;
+	code
+		
+	TeleportToHell(me);		
+		
+		trans WaitState;
+		
+endstate;
+
+state DeadState;
+	code
+		
+		orderDie;
+
+endstate;
+
+
+state LandWait;
+	code
+	
+	if orderdooropen then
+		//PlayVoiceOverOnce("VO\OP2\MI1\Elite", TALKER_Rat);
+	endif;	
+
+endstate;
+
+state HellState1;
+	code
+		
+	TeleportToHell(me);		
+	
+	trans deadstate;
+		
+endstate;
+
+endfsm.

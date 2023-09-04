@@ -1,0 +1,266 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Patrol must be changed to some other unique identifier
+fsm DuncanBurke : integer;
+
+//This unit patrols a specific path and attacks anything that comes near it.
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; 			// When do I start shooting?
+																
+	static integer			piloting; 				// piloting skill
+	static integer			gunnery; 					// hit chance,
+	static real					mindelay;					//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;					//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;			 			// What speed so I move at?
+	static integer 			elitelevel; 			// % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things that would normally be determined by combat experience
+													
+ 	static integer			isshotradius;			//how far away from me will I detect an enemy shot.
+	static integer			movetype;					//how will it move down the path?
+
+	static Boolean 			attacksoundplayed;
+	static integer 			attacksound; 			// plays when it first attacks
+	static integer 			deathsound; 			// plays when it dies
+	
+	static integer			mood;							//What is my normal mood?
+	
+	static Boolean			Resumed;				//Have I gotten to the end of the path?
+	static Boolean			reachedendofpath;				//Have I gotten to the end of the path?
+																							//Note: This only gets set if movetype is set to move_nocycle.
+	static integer			path;						 				//what path am I following?
+	static Boolean 			attackersdistractit;		// if FALSE, it won't leave the path, even when things
+																							// are shooting it. It will shoot back. Defaults to true
+																							// Once unit reaches the end of the path, It attacks freely.
+	
+	static locpoint			mystart;						 				//what path am I following?
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	 // Burke, Duncan
+		attackrange = 600;
+		piloting = 75;							
+		gunnery = 90;						
+		mindelay = 0.25;							
+		maxdelay = 1.0;									
+		speed = 600;
+		elitelevel = 90;
+		IsShotRadius = 80;
+		AttackersDistractIt = True;
+		Mood = neutral_start;
+		path = epa_BurkePath;
+		ReachedEndOfPath = False;
+		Resumed = False;
+		Attacksoundplayed = False;					
+		movetype = move_nocycle;
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//				
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SpecifyTalker(Talker_Brk,eve_Duncan_Burke);
+
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+		getlocation(me,mystart);
+	 	
+		//shutdown(me);
+		trans hangout;
+endstate;			
+
+								
+state deadState;
+	code
+		
+	PlayVoiceOverOnce("VO\OP5\MI2\DeadBrk",Talker_Brk);
+		
+		orderDie;
+endstate;
+
+								
+state hangout;
+	
+	var
+		LocPoint my_nav;
+	
+	code
+		
+		if (Time2Die == true) then
+			 //teleport(me,mystart);
+			 startup(me);
+			trans patrol;
+		endif;
+		
+		if (PeekaBoo == true) then
+			startup(me);
+			GetLocation(Teleport2Nav,my_nav);
+			Teleport(me,my_nav);
+			ResetTimer(25);								//Temp Mission Timer For Burke
+			StartTimer(25);								//Temp Mission Start For Burke
+			trans PeekState;
+		endif;
+				
+		//if (isShot (me))  then
+  	//	setTarget(me,whoShot(me));
+		//	startup(me);
+		//	trans patrol;
+		//endif;
+endstate;
+
+	state patrol;
+
+  var
+    ObjectID foe;
+
+		code
+				
+	//head down the path.  If this has already been done
+	// or if there is no path set then look around.
+			if ((path <> -1) and (reachedendofpath == FALSE)) then
+					if ((orderMoveto(path,speed,movetype,true,true)) == TRUE) then
+						reachedendofpath = TRUE;
+					endif; 			
+			else	 		 		
+				attackrange = 2600;			
+			endif;
+			
+		//Find me a target
+		if (setmytarget(attackrange)) then
+			trans attack;
+	 	endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+		
+		code
+			
+		if (LeaveAttackState(attackrange*3/2)) then
+			orderstopattacking;
+			orderMoveResumePatrol(path,speed,movetype,true,true);
+			trans patrol;
+		endif;
+		
+		//the ever popular attack order
+    orderAttack (attackersdistractit);
+				
+		//maybe swap targets when I am shot.
+		if ((isShot (me)) and (rand(0,75) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+ 		
+		
+//*******************************************
+// Timer Driven Duncan Burke Talking Shit
+//*******************************************						
+		
+//After 10 seconds
+	If (timegreater(gti_Timer_7,60)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\Taunt1",Talker_Brk);
+	endif;
+																								
+//After 30 seconds
+	If (timegreater(gti_Timer_7,75)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\Taunt2",Talker_Brk);
+	endif;
+																								
+//After 45 seconds
+	If (timegreater(gti_Timer_7,90)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\Taunt3",Talker_Brk);
+	endif;
+																								
+//After 1 Minute
+	If (timegreater(gti_Timer_7,105)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\Taunt4",Talker_Brk);
+	endif;
+																								
+/*After 1 Minute 15 seconds
+	 If (timegreater(gti_Timer_7,75)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\Taunt5",Talker_Brk);
+	 endif;		 */
+			
+	endstate;
+
+
+state PeekState;
+	
+	code
+		
+		If (timegreater(gti_Timer_25,6)) then
+		shutdown(me);
+		teleportToHell(me);
+			trans hangout2;
+		endif;
+				
+endstate;
+
+state hangout2;
+	
+	var
+		LocPoint my_nav;
+	
+	code
+		
+		if (Time2Die == true) then
+			startup(me);
+			GetLocation(TeleportNav,my_nav);
+			Teleport(me,my_nav);
+			trans patrol;
+		endif;
+						
+		//if (isShot (me))  then
+  	//	setTarget(me,whoShot(me));
+		//	startup(me);
+		//	trans patrol;
+		//endif;
+endstate;
+
+endfsm.
+//******************************************************************
+

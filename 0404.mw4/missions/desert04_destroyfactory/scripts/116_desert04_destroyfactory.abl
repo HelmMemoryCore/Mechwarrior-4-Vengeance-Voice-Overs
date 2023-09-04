@@ -1,0 +1,543 @@
+
+//*********************************************************************************
+
+fsm Desert04_DestroyFactory : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+			
+		eternal integer playermech;
+		eternal Boolean	linkedup;
+		eternal boolean	factoryonedown;
+		eternal boolean	factorytwodown;
+		eternal boolean	factorythreedown;
+		static boolean	obj1complete;
+		
+		
+		static integer	cinema_cut;
+		
+		static boolean	Dansaidhi;
+		static boolean	guidedead;
+		static boolean	musiconeplayed;
+		static boolean	musictwoplayed;
+		
+		static boolean	deltareached;
+		static integer	checkrange;
+		
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+
+		 playermech = getplayervehicle(epl_player0);	
+ 	
+//			GroupAddObject(GroupObjectId(1),playermech);
+
+
+			GroupAddObject(GroupObjectId(5),eve_guidesniffer1);
+			GroupAddObject(GroupObjectId(5),eve_guidesniffer2);
+			GroupAddObject(GroupObjectId(5),eve_guidesniffer3);
+			GroupAddObject(GroupObjectId(5),eve_guidesniffer4);
+			SetGroupAI(groupobjectid(5),GROUPAI_MOODSQUAD);
+	
+			GroupAddObject(Groupobjectid(6),eve_2defender1);
+			GroupAddObject(Groupobjectid(6),eve_2defender2);
+			SetGroupAI(groupobjectid(6),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(7),eve_1defender2);
+			GroupAddObject(GroupObjectId(7),eve_1defender3);
+			GroupAddObject(GroupObjectId(7),eve_1defender4);
+			GroupAddObject(GroupObjectId(7),eve_1defender5);
+			SetGroupAI(groupobjectid(7),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(8),eve_1defender1);
+			GroupAddObject(GroupObjectId(8),eve_1defender6);
+			GroupAddObject(GroupObjectId(8),eve_1defender7);
+			GroupAddObject(GroupObjectId(8),eve_1defender8);
+			SetGroupAI(groupobjectid(8),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(9),eve_3defender1);
+			GroupAddObject(GroupObjectId(9),eve_3defender2);
+			GroupAddObject(GroupObjectId(9),eve_3defender3);
+			GroupAddObject(GroupObjectId(9),eve_3defender4);
+			SetGroupAI(groupobjectid(9),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(20),ebu_munitions_plant_1);
+			GroupAddObject(GroupObjectId(20),ebu_munitions_plant_2);
+			GroupAddObject(GroupObjectId(20),ebu_munitions_plant_3);
+			
+			// *************************************************************************************
+			// *** dave use the specifytalker on for1, this will keep her from playing when dead ***
+			// *************************************************************************************
+			specifytalker(TALKER_FO1,eve_localguide);
+			
+			
+ 		
+		cinema_cut = 0;
+		
+		linkedup = false;
+		factoryonedown = false;
+		factorytwodown = false;
+		factorythreedown = false;
+		obj1complete = false;	
+		
+		dansaidhi = false;
+		guidedead = false;
+		musiconeplayed = false;
+		musictwoplayed = false;
+
+		deltareached = false;
+		checkrange = 150;
+
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+			setactivationdistance(1200);
+			revealobjective(eob_linkup);
+			revealobjective(eob_destroyfactoryone);
+			starttimer(gti_timer_0);
+			//****************************************
+			//**** Davelueh added new intro sounds here ****
+			//****************************************
+      PlayVoiceOver("VO\OP4\MI4\Intro",Talker_Ian);
+			PlayVoiceOver("VO\OP4\MI4\Intro",Talker_Rat);
+			PlayVoiceOver("VO\OP4\MI4\Intro2",Talker_Ian);
+			PlayVoiceOver("VO\OP4\MI4\Intro2",Talker_Rat);
+			PlayVoiceOver("VO\Generic\roger3",Talker_Ian);
+			PlayLancemateSound("VO\OP4\MI4\Intro3",2);
+			setsquadtargetingradius((groupobjectid(1)),180);
+			settargetdesirability(eve_localguide,-1);
+			setnavpoint(ena_Nav_Delta);
+			setradarnav(ena_nav_alpha,1);
+			setradarnav(ena_nav_beta,2);
+			setradarnav(ena_nav_gamma,3);
+			setradarnav(ena_nav_delta,4);
+			StartMusic("Music\EerieTheory",3.5,3.0,70);
+			playerai(epl_player0,true);
+			trans opening;
+			//trans sit;
+
+endstate;
+
+	
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+
+				PlayVoiceOverOnce("VO\Generic\Startup1",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+	
+	if (not dansaidhi) then
+		if (timegreater(gti_timer_0,16)) then
+			
+			// *** davelueh added inhere and needguns sounds here ***
+			PlayVoiceOver("VO\OP4\MI4\ImHere",Talker_FO1);
+			PlayVoiceOver("VO\OP4\MI4\ImHere",Talker_Ian);
+			PlayVoiceOver("VO\OP4\MI4\NeedGuns",Talker_FO1);
+			PlayLancemateSound("VO\OP4\MI4\NeedGuns",1);
+			PlayVoiceOver("VO\Generic\roger2",Talker_Ian);
+			dansaidhi = true;
+		endif;
+	endif;
+	
+			
+//Reveal the objectives
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		StartMusic("Music\Defeat",3.5,3.0,70);
+		killvoiceovers;
+		PlayVoiceOver("VO\Generic\Iandestroyed",talker_rat);
+		endmission(false,12);
+		trans lost;
+	endif;
+	
+//F if the Local Guide Dies
+	if (not guidedead) then
+		if (isdead(eve_localguide)) then
+			// davelueh changed these sounds to new shepard dead sounds.. note a couple are no longer present in new scripts but when final audio comes in this should work fine
+			PlayVoiceOver("VO\OP4\MI4\ShepardDead",Talker_Ian);
+			PlayVoiceOver("VO\OP4\MI4\ShepardDead",Talker_Rat);
+			PlayVoiceOver("VO\OP4\MI4\ShepardDead2",Talker_Ian);
+      PlayLancemateSound("VO\OP4\MI4\ShepardDead2",2);
+			GUIDEDEAD = TRUE;
+		endif;
+	endif;
+	
+	
+	//*******************************
+	//The Linkup Objective
+	//*******************************	
+	if (not obj1complete) then
+		if (linkedup) then
+				successobjective(eob_linkup);
+				settargetdesirability(eve_localguide,-1);
+				obj1complete = true;	
+		endif;
+	endif;
+	
+	//*******************************
+	//Playing Music
+	//*******************************
+	
+	
+	if (not musictwoplayed) then
+		if (factorytwodown) then
+			if (isshot(playerMech)) then
+				StartMusic("Music\actionpack",3.5,3.0,90);
+				musictwoplayed = true;
+			endif;
+		endif;
+	endif;
+
+			
+
+ //*********************************
+ // All three Factory objectives
+ //*********************************
+
+	switch (groupnumdead(groupobjectid(20)))
+	
+	case 1:
+		if (not factoryonedown) then
+			factoryonedown = true;
+			// davelueh inserted new audio here
+			if (not guidedead) then
+				if (linkedup) then
+					PlayVoiceOver("VO\OP4\MI4\1stDead",Talker_FO1);
+				endif;
+			endif;
+			StartMusic("Music\Vista",3.5,3.0,70);
+			revealObjective(eob_destroyfactorytwo);
+			successobjective(eob_destroyfactoryone);
+			linkedup = true;
+		endif;
+	endcase;
+	
+	case 2:
+		if (not factorytwodown) then
+			factorytwodown = true;
+			// davelueh inserted 2nd dead sounds here
+			if (not guidedead) then
+				if (linkedup) then
+					PlayVoiceOver("VO\OP4\MI4\2ndDead",Talker_FO1);
+					PlayVoiceOver("VO\OP4\MI4\2ndDead",Talker_Ian);
+					PlayVoiceOver("VO\OP4\MI4\2ndDead2",Talker_FO1);
+				endif;
+			endif;
+			revealObjective(eob_destroyfactorythree);
+			successobjective(eob_destroyfactorytwo);
+		endif;
+	endcase;
+	
+	case 3:
+		if (not factorythreedown) then
+			factorythreedown = true;
+			successobjective(eob_destroyfactorythree);
+      AddWeaponSalvage("AC10",1);
+			AddWeaponSalvage("ClanLRM5",1);
+			AddWeaponSalvage("ClanGauss",1);
+			AddWeaponSalvage("ERSmallLaser",2);
+			AddWeaponSalvage("ClanLBXAC20",1);
+			AddWeaponSalvage("ClanLRM15",1);
+			AddWeaponSalvage("LRM10",1);
+			AddWeaponSalvage("LRM15",1);
+			AddWeaponSalvage("LRM20",1);
+			AddWeaponSalvage("MachineGun",2);
+			AddWeaponSalvage("MRM10",2);
+			AddWeaponSalvage("PPC",1);
+			AddWeaponSalvage("ERMediumPulseLaser",1);
+			AddWeaponSalvage("SRM4",2);
+			AddWeaponSalvage("SRM6",2);
+			AddWeaponSalvage("SSRM2",2);
+			AddWeaponSalvage("ClanUltraAC2",1);
+			AddWeaponSalvage("UltraAC2",1);
+			AddMechInstanceSalvage("Nova Cat");
+			AddMechInstanceSalvage("Awesome");
+			StartMusic("Music\Victory",3.5,3.0,60);
+			settargetdesirability(playermech,-1);
+			enableglobalinvulnerable;
+			
+      if (not guidedead) then
+				if (linkedup) then
+					PlayVoiceOver("VO\OP4\MI4\3rdDead",Talker_FO1);
+					PlayVoiceOver("VO\OP4\MI4\3rdDead",Talker_Ian);
+					PlayVoiceOver("VO\OP4\MI4\Bugout",Talker_FO1);
+					PlayVoiceOver("VO\OP4\MI4\Bugout",Talker_Ian);
+					PlayVoiceOver("VO\OP4\MI4\NoEscort",Talker_FO1);
+					PlayLancemateSound("VO\OP4\MI4\NoEscort",2);
+					PlayVoiceOver("VO\OP4\MI4\Won",Talker_Ian);
+					PlayVoiceOver("VO\OP4\MI4\Won",Talker_Rat);
+					PlayVoiceOver("VO\OP4\MI4\Won2",Talker_Ian);
+					PlayVoiceOver("VO\OP4\MI4\Won2",Talker_Rat);
+					endmission(true,57);
+					resettimer(gti_timer_28);
+					starttimer(gti_timer_28);
+					trans waitforcinema;
+				endif;
+		 endif;
+		
+		
+				PlayVoiceOver("VO\OP4\MI4\Won",Talker_Ian);
+				PlayVoiceOver("VO\OP4\MI4\Won",Talker_Rat);
+				PlayVoiceOver("VO\OP4\MI4\Won2",Talker_Ian);
+				PlayVoiceOver("VO\OP4\MI4\Won2",Talker_Rat);
+				endmission(true,30);			
+				resettimer(gti_timer_28);
+				starttimer(gti_timer_28);
+				trans waitforcinema; 		
+		endif;	
+	endcase;
+	
+	endswitch;
+	
+if (not ismusicplaying) then
+	StartMusic("Music\urbanambloop",0.0,3.0,30);
+endif;
+	
+	//revealing navpoints
+	
+if (not deltareached) then
+	if (isnavrevealed(ena_nav_delta)) then
+		if (iswithin(playermech,ena_nav_delta,checkrange)) then
+			playvoiceover("VO\generic\navdelta",talker_Bet);
+			deltareached = true;
+		endif;
+	endif;
+endif;
+
+				
+endstate;
+
+					
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,4)) then
+			playerai(epl_player0,true);
+			trans won;
+		endif;
+		
+		
+endstate;
+
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			KillVoiceOvers;
+			Fadefromblack(0.0);
+			cinemaend;
+			trans sit;	
+	endif;
+
+switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera (eca_cameraship);
+			Fadetoblack(0.0);
+
+			Targetfollowobject(playermech);
+			camerafollowobject(playermech);
+			SetCameraFootShake(playermech,100);
+
+			targetoffset(0.0,4.0,0.0,0.0,false);
+			Cameraoffset(-90.0,49.0,4.0,0.0,false);
+
+
+			Cameraoffset(-40.0,35.0,72.0,10.0,false);
+
+			startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+
+			case 1:
+				
+				if (timegreater(gti_Timer_21,1)) then
+					
+					Fadefromblack(3.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 2;	
+				endif;
+				
+			endcase;
+
+			case 2:
+				
+				if (timegreater(gti_Timer_21,10)) then
+					
+					Fadetoblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;			
+
+			case 3:
+				
+				if (timegreater(gti_Timer_21,5)) then
+					Targetfollowobject(ebu_munitions_plant_1);
+					camerafollowobject(ebu_munitions_plant_1);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(-150.0,35.0,-150.0,0.0,true);
+					Cameraoffset(200.0,35.0,-150.0,30.0,true);
+					//Fadefromblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;
+							
+			case 4:
+				
+				if (timegreater(gti_Timer_21,26)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+endstate;
+
+state won;
+
+		code
+
+			if (cinemaskip) then
+				cinema_cut = 20;
+				resettimer (gti_Timer_21);
+				killtimer(gti_timer_21);
+				endmission(true,1);	
+				trans hang;
+			endif;
+
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(-30.0,125.0,75.0,0.0,false);
+				Cameraoffset(75.0,20.0,5.0,57.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+
+			if (cinemaskip) then
+				cinema_cut = 20;
+				resettimer (gti_Timer_21);
+				killtimer(gti_timer_21);
+				endmission(true,1);	
+				trans hang;
+			endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+
+state hang;
+	code
+
+endstate;
+
+endfsm.
+//******************************************************************
+

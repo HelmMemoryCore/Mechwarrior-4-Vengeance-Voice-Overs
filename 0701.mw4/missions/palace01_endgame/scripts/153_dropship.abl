@@ -1,0 +1,275 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm Dropship : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_Sentry:
+//   Stands still.  Moves to attack anything that comes near.
+//
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start shooting?
+		static integer			withdrawRange;		// At what range do I withdraw from combat completely?
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+		static integer			findTypes;			// What kind of enemies to look for
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+
+		static integer			takeOffDistance;	// My take-off distance if I'm an airplane (ignored if not an airplane)
+		static integer			powerup1;
+		
+		static boolean			attacking;
+		static boolean			playedit;
+		
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 500;
+		withdrawRange	= 1000;
+		takeOffDistance	= 150;
+
+		// driver settings
+		piloting		= 50;
+		gunnery			= 70;
+		minDelay		= 0.1;
+		maxDelay		= 0.3;
+		eliteLevel		= 30;
+		attackThrottle	= 80;
+		isShotRadius	= 20;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+		powerup1 = 650;
+		attacking = false;
+		playedit = false;
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+				
+		trans hangout;
+
+endstate;
+
+state hangout;
+	code
+		
+		if ((timegreater(gametimer,powerup1)) or (isshot(me))) then
+			powerup1 = ((gettimer(gametimer)) + 10);
+			trans countstate1;
+		endif;
+		
+		if (not attacking) then
+			if (FindEnemy(attackRange,findTypes)) then
+				attacking = true;
+			endif;
+		else
+			if (LeaveAttackState(withdrawRange)) then
+				OrderStopAttacking;
+				SetTarget(ME,NO_UNIT);
+				attacking = false;
+			endif;
+			OrderAttack(false);
+		endif;
+		
+
+	
+endstate;
+
+state countstate1;
+	code
+		
+		if (timegreater(gametimer,powerup1)) then
+			powerup1 = ((gettimer(gametimer)) + 20);
+			playvoiceover("VO\op7\MI1\1stout",talker_rat);
+			trans countstate2;
+		endif;
+		
+		if (not attacking) then
+			if (FindEnemy(attackRange,findTypes)) then
+				attacking = true;
+			endif;
+		else
+			if (LeaveAttackState(withdrawRange)) then
+				OrderStopAttacking;
+				SetTarget(ME,NO_UNIT);
+				attacking = false;
+			endif;
+			OrderAttack(false);
+		endif;
+		
+
+	
+endstate;
+
+state countstate2;
+	code
+		
+		if (timegreater(gametimer,powerup1)) then
+			powerup1 = ((gettimer(gametimer)) + 20);
+			playvoiceover("VO\op7\MI1\2ndout",talker_rat);
+			trans countstate3;
+		endif;
+		
+		if (not attacking) then
+			if (FindEnemy(attackRange,findTypes)) then
+				attacking = true;
+			endif;
+		else
+			if (LeaveAttackState(withdrawRange)) then
+				OrderStopAttacking;
+				SetTarget(ME,NO_UNIT);
+				attacking = false;
+			endif;
+			OrderAttack(false);
+		endif;
+		
+
+	
+endstate;
+
+state countstate3;
+	code
+		
+		if (timegreater(gametimer,powerup1)) then
+			powerup1 = ((gettimer(gametimer)) + 20);
+			playvoiceover("VO\op7\MI1\3rdout",talker_rat);
+			trans countstate4;
+		endif;
+		
+		if (not attacking) then
+			if (FindEnemy(attackRange,findTypes)) then
+				attacking = true;
+			endif;
+		else
+			if (LeaveAttackState(withdrawRange)) then
+				OrderStopAttacking;
+				SetTarget(ME,NO_UNIT);
+				attacking = false;
+			endif;
+			OrderAttack(false);
+		endif;
+		
+
+	
+endstate;
+
+state countstate4;
+	code
+		
+		if (timegreater(gametimer,powerup1)) then
+			playvoiceover("VO\op7\MI1\shiplift",talker_dam);
+			playlancematesound("VO\op7\MI1\shiplift",1);
+			trans takeoff;
+		endif;
+		
+		if (not attacking) then
+			if (FindEnemy(attackRange,findTypes)) then
+				attacking = true;
+			endif;
+		else
+			if (LeaveAttackState(withdrawRange)) then
+				OrderStopAttacking;
+				SetTarget(ME,NO_UNIT);
+				attacking = false;
+			endif;
+			OrderAttack(false);
+		endif;
+		
+
+	
+endstate;
+
+
+
+state takeoff;
+	code
+	
+		
+		if (ordertakeoff(150)) then
+			marcusbyebye = true;
+			shutdown(me);
+			teleporttohell(me);
+			trans nothing;
+		endif;
+						
+endstate;
+
+state nothing;
+	code
+	
+							
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

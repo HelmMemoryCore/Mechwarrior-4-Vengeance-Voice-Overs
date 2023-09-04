@@ -1,0 +1,49 @@
+
+fsm ShutdownYadaYadaYada : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+
+function Init;
+	code
+
+endfunction;
+
+state StartState;
+
+	code
+//		SetFiringDelay			(ME,minDelay,maxDelay);
+//		SetIgnoreFriendlyFire	(ME,true);
+//		SetIsShotRadius			(ME,isShotRadius);
+//		SetEntropyMood			(ME,mood);
+//		SetCurMood				(ME,mood);
+//		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+//		SetAttackThrottle		(ME,attackThrottle);
+
+		SetSensorVisibility(ME,FALSE);
+
+		Shutdown(ME);
+
+		trans SitState;
+
+endstate;
+
+state SitState;
+	code
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.
+

@@ -1,0 +1,133 @@
+
+
+
+//*********************************************************************************
+fsm Mosquito : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; // When do I start shooting?
+																
+	static integer			piloting; 	// piloting skill
+	static integer			gunnery; // hit chance,
+	static real					mindelay;		//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;		//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;			 // What speed so I move at?
+	static integer 			elitelevel; // % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																	// and other things that would normally be determined by combat experience
+
+ 	static integer			isshotradius;	//how far away from me will I detect an enemy shot.
+	static integer			movetype;		//how will it move down the path?
+
+	
+	static integer			mood;	//What is my normal mood?
+	static integer			path;		 //what path am I following?
+	static Boolean 			attackersdistractit;	// if FALSE, it won't leave the path, even when things
+	static integer			mygroup;
+	static integer			TIMER;
+//-------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	 						
+	
+	//Use this to set different values for different units using the same brain	
+		attackrange = 550;				
+		piloting = 50;							
+		gunnery = 30;						
+		mindelay = 1.0;							
+		maxdelay = 3.0;									
+		elitelevel = 50;						
+		speed = 600;							 	
+		isshotradius = 80;						 	
+		path =	epa_CandyPath;
+		movetype = move_circle;
+		attackersdistractit = true;
+		mood = Agressive_start;
+		mygroup = GroupObjectID(13);
+		Timer = rand(5,45);
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		SetTargetDesirability(me,-1);
+		trans wait;
+endstate;			
+
+state deadState;
+  code
+ 	
+						
+		orderDie;
+endstate;
+
+state wait;
+	code
+		
+		if TimeGreater(1,TIMER) then	
+			OrderTakeoff(40);
+			trans patrol;
+		endif;
+		
+endstate;
+
+
+state patrol;
+
+  var
+    ObjectID foe;
+
+		code
+//if orderformationmove(mygroup,path,speed,movetype,FORMATION_11WEDGE,FORMTYPE_DENSE,true) == true then
+	if OrderMoveTo(path,600,Move_NOCYCLE,false,false) == true then
+		DamnThe(me);
+	endif;
+			
+			
+	endstate;
+	
+
+																																		
+endfsm.
+
+//******************************************************************
+

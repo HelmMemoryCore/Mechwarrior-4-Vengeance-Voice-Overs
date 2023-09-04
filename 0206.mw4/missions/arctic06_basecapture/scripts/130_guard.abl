@@ -1,0 +1,219 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm Guard : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_ArmedConvoy:
+//   Follows a path but breaks off to attack enemies.
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start attacking?
+		static integer			withdrawRange;		// At what range do I withdraw from combat?
+		static integer			groupNumber;		// What's my group -- i.e. I will use GroupObjectID(groupNumber) to identify my group
+		static integer			speed;				// The speed at which I move along the path
+		static integer			formationType;		// What kind of formation am I in?
+		static integer			formationDensity;	// How densely are we packed?
+		static integer			path;				// My path
+		static integer			moveType;			// How I move along the path
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			findTypes;			// What kind of enemies to look for
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 500;
+		withdrawRange	= attackRange * 3 / 2;
+		groupNumber		= 0;
+		path			= epa_APCPath;
+		moveType		= move_nocycle;
+		speed			= 35;
+		formationType	= 1;
+		formationDensity= formtype_Dense;
+
+		// driver settings
+		piloting		= 50;
+		gunnery			= 190;
+		minDelay		= 0.5;
+		maxDelay		= 1.0;
+		eliteLevel		= 30;
+		attackThrottle	= 80;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+
+		trans FollowPathState;
+
+endstate;
+
+//------------------------------------------------------------------
+//	FollowPathState: follow our path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state FollowPathState;
+	code
+
+//		OrderMoveLookout;
+	if Whack == true then	
+		if (FindEnemy(attackRange,FT_DEFAULT)) then
+			trans Attack;
+		endif;
+	endif;		
+	
+		if ConvoyGo == true then
+			trans	GO;
+		endif;
+
+			
+	endstate;
+	
+state Attack;
+	code
+		if (LeaveAttackState(800)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans FollowPathState;
+		endif;
+
+		OrderAttack(false);
+		
+		if ConvoyGo == true then
+			trans	GO;
+		endif;
+
+																																
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+
+state Go;
+	code
+
+// OrderFormationMove(GroupObjectId(11),epa_APCpath,speed,moveType,formationType,formationDensity,false);
+	
+	
+	if OrderMoveTo(epa_APCpath,600,Move_NoCycle,false,false) == true then
+		trans Park;
+  endif;
+	
+
+	if (FindEnemy(attackRange,FT_DEFAULT)) then
+			trans Attack;
+		endif;
+
+	
+	
+ endstate;
+
+  state Park;
+	code
+		if OrderMoveToObject(ena_park4,600) then
+			ClearMoveOrder(me);
+		endif;
+
+		if iswithin(me,ena_Park4,30) then
+			ClearMoveOrder(me);
+		endif;
+	
+		if (FindEnemy(attackRange,FT_DEFAULT)) then
+			trans Attack2;
+		endif;
+
+	
+	
+	endstate;	
+
+	state Attack2;
+	code
+		if (LeaveAttackState(800)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans Park;
+		endif;
+
+		OrderAttack(false);
+																												
+	endstate;
+
+	
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

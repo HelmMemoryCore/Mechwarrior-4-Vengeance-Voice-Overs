@@ -1,0 +1,159 @@
+
+//*********************************************************************************
+
+fsm finalSRMcarriers : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer		detect;
+	static integer		gunnery;
+	static integer		piloting;
+	static real				mindelay;
+	static real				maxdelay;
+	static integer		level;
+	static integer		mygroup;
+	
+	static boolean		soundplayed;
+	
+	static integer	wimpy;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	detect = 550;
+	piloting = 1;
+	gunnery = 1;
+	
+	
+	mygroup = 14;
+	
+	soundplayed = false;
+		
+	wimpy = getdifficulty;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,48,60,60);
+		setEntropyMood (me,NEUTRAL_START);
+		setfiringdelay(me,2.0,4.0);
+		setignorefriendlyfire(me,true);
+		shutdown(me);
+		setisshotradius(me,100);
+		
+		if ((getmemoryinteger(me,9)) == 1) then
+			If (wimpy == EASY_DIFFICULTY) then
+				shutdown(me);
+				teleporttohell(me);
+				trans limbo;
+			endif;
+		endif;
+		
+		trans sit;
+endstate;		
+
+state limbo;
+	code
+endstate;	
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+
+		if ((iswithin((groupobjectid(1)),me,700)) or (iswithin((groupobjectid(20)),me,700))) then
+			startup(me);
+			ordermovelookout;
+		endif;
+
+		
+		if (groupnumdead(groupobjectid(mygroup))) >0 then
+			detect = 800;
+		endif;
+
+		if (setmytarget(detect)) then
+			startup(me);
+			trans attack;
+	 	endif;			
+		
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+	  var
+
+		objectid	foe;
+
+		code
+		
+		foe = gettarget(me);
+		
+		if (LeaveAttackState(detect*3/2)) then
+			orderstopattacking;				
+			trans sit;
+		endif;
+		
+    orderAttacktactic(tactic_rush,true);
+		
+		if (not soundplayed) then
+			if (groupcontainsobject((groupobjectid(21)),foe)) then
+				soundplayed = true;
+				playvoiceover("VO\OP3\MI5\ass6",talker_sgt);
+				//print("finalSRMC played!!!");
+			endif;
+		endif;
+					
+	endstate;
+
+
+endfsm.
+//******************************************************************
+

@@ -1,0 +1,96 @@
+
+
+//*********************************************************************************
+
+fsm depot : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+  var
+
+	static boolean FuelTimerStarted;
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+	
+	FuelTimerStarted = false;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+	
+	 if (iswithin(playermech,ebu_fuel,450)) then
+	  	if (fueltimerstarted == false) then
+				fueltimerstarted = true;
+				ResetTimer(15);																										
+			StartTimer(15);
+	 endif
+			endif;												
+			 		
+		if (fueltimerstarted == true) then
+			if (timegreater(gti_Timer_15,2)) then
+				SetAlignment (me,ENEMY_ALIGNMENT);
+					killtimer(gti_timer_15);
+					trans run;
+			endif;
+		endif;
+ 										
+	
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     RUNLIKE HELL
+//------------------------------------------------------------------
+state run;
+ 		var
+			ObjectID foe;
+			
+		code
+						if (ordermoveto(epa_fuelpath,40,MOVE_NOCYCLE,FALSE,FALSE) == true) then
+				player_has_been_seen = true;
+			endif;
+
+endstate;
+						
+endfsm.
+//******************************************************************
+															
+

@@ -1,0 +1,746 @@
+
+//*********************************************************************************
+
+fsm Mission_Desert02_DefendBase : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+var
+			
+		eternal	integer		playermech;
+		static boolean 	PlayerNearPass;	  //near pass check
+		
+		static 	integer		NearPassRange; 		//range to check
+		static boolean		PassDestroyed;		//are Pass buildings Destroyed
+		static boolean		PassOneDown;			//Pass building One is destroyed
+		static objectid		PassBuildingOne;
+		static objectid		PassBuildingTwo;
+		
+		eternal boolean		passobjectivedone;
+		static boolean		baseobjectivedone;
+		static boolean		ambushobjectivedone;
+		eternal boolean		linkupobjectivedone;
+		
+		static boolean		BaseDestroyed;		//are Base buildings Destroyed
+		static boolean		BaseOneDown;			//Base building One is destroyed
+		static objectid		BaseBuildingOne;
+		static objectid		BaseBuildingTwo;
+
+
+		static boolean		WallDestroyed;		//are Walls Destroyed
+		static boolean		WallOneDown;			//Wall One is destroyed
+		static objectid		BaseWallOne;
+		static objectid		BaseWallTwo;
+		
+		static integer		cinema_cut;
+		
+		static locpoint		Passpoint;
+		
+		static integer	numattackingpass;
+		
+		eternal boolean	basehit;
+		
+		
+		static boolean	warningplayed;
+		eternal boolean	hitem;
+		eternal boolean	hitemfront;
+		
+		//Navpoint Check Variables
+		static integer	checkrange;
+		static boolean	alphareached;
+		static boolean	betareached;
+
+		
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+		
+		code
+		
+			//Navpoint Check Declarations
+		checkrange = 150;
+		alphareached = false;
+		betareached = false;
+
+			//Set up mission Variables
+			playermech = getplayervehicle(epl_player0);	
+			
+			// This lancemate has been removed now that all lancemates are working
+			//setalignment(eve_lancemate1,friendly);
+      //SetSkillLevel(eve_lancemate1,90,50,85); 	
+			
+			
+			GroupAddObject(GroupObjectId(1),playermech);
+
+			PlayerNearPass = false;
+      NearPassRange = 400;
+			PassDestroyed = false;
+			PassOneDown = false;
+			
+			// Dave Fix these two refences which have changed  The pass buildings...
+			
+			PassBuildingOne	= ebu_tent2_0000;
+			PassBuildingTwo	= ebu_tent2_0002;
+			
+			BaseDestroyed = false;
+			BaseOneDown = false;
+			BaseBuildingOne	= ebu_objectivebuilding1;
+			BaseBuildingTwo	= ebu_objectivebuilding2;
+			
+			
+			WallDestroyed = false;	
+			WallOneDown = false;		
+						
+			passobjectivedone = false;
+			baseobjectivedone = false;
+			ambushobjectivedone = false;
+			linkupobjectivedone = false;
+			warningplayed = false;
+			
+			getlocation(ebu_tent2_0000,Passpoint);
+			
+			basehit = false;
+			hitem = false;
+			hitemfront = false;
+			
+			
+			
+			
+			
+			
+			//set up Groups
+      //Alies
+      //Enenmies
+			//Jump ambush Mechs
+			GroupAddObject(GroupObjectId(10),eve_Ambush1);
+			GroupAddObject(GroupObjectId(10),eve_Ambush2);
+			GroupAddObject(GroupObjectId(10),eve_Ambush3);
+			//SetGroupAI(groupobjectid(10),GROUPAI_MOODSQUAD);
+			
+      //Front Assault Scouts
+			//GroupAddObject(GroupObjectId(11),eve_FASwiftwind1);
+			//GroupAddObject(GroupObjectId(11),eve_FASwiftwind2);
+			//SetGroupAI(groupobjectid(11),GROUPAI_MOODSQUAD);
+			
+			//Front Assault Tank Group
+			//GroupAddObject(GroupObjectId(12),eve_FAVedette1);
+			//GroupAddObject(GroupObjectId(12),eve_FAVedette2);
+			//GroupAddObject(GroupObjectId(12),eve_FAVedette3);
+			//GroupAddObject(GroupObjectId(12),eve_FAVedette4);
+			//GroupAddObject(GroupObjectId(12),eve_FAVedette5);
+			//SetGroupAI(groupobjectid(12),GROUPAI_MOODSQUAD);
+			
+			//Front Assault LRM Carrier Group 	
+			GroupAddObject(GroupObjectId(13),eve_FALRM_carrier1);
+			GroupAddObject(GroupObjectId(13),eve_FALRM_carrier2);
+			GroupAddObject(GroupObjectId(13),eve_FALRM_carrier3);
+			GroupAddObject(GroupObjectId(13),eve_FALRM_carrier4);
+			GroupAddObject(GroupObjectId(13),eve_FALRM_carrier5);
+			SetGroupAI(groupobjectid(13),GROUPAI_MOODSQUAD);
+			
+			//Front Assault Mech support Group
+			GroupAddObject(GroupObjectId(14),eve_FAUziel1);
+			GroupAddObject(GroupObjectId(14),eve_FAUziel2);
+			SetGroupAI(groupobjectid(14),GROUPAI_MOODSQUAD);
+			
+			
+			//Rear Assault Mech Star Group 	
+      GroupAddObject(GroupObjectId(15),eve_RANovacat1);
+			GroupAddObject(GroupObjectId(15),eve_RAloki2);
+			GroupAddObject(GroupObjectId(15),eve_RAVulture1);
+			GroupAddObject(GroupObjectId(15),eve_RAVulture2);
+			SetGroupAI(groupobjectid(15),GROUPAI_MOODSQUAD);
+	
+			
+			//NorthEast Peregrine Patrol Group
+			GroupAddObject(GroupObjectId(16),eve_PeregrinePatrol1);
+			GroupAddObject(GroupObjectId(16),eve_PeregrinePatrol2);
+      GroupAddObject(GroupObjectId(16),eve_PeregrinePatrol3);
+			SetGroupAI(groupobjectid(16),GROUPAI_MOODSQUAD);
+			
+			//Ambush tanks
+			//GroupAddObject(GroupObjectId(17),eve_Ambushtank1);
+			//GroupAddObject(GroupObjectId(17),eve_Ambushtank2);
+			//GroupAddObject(GroupObjectId(17),eve_Ambushtank3);
+			//GroupAddObject(GroupObjectId(17),eve_Ambushtank4);
+			//SetGroupAI(groupobjectid(17),GROUPAI_MOODSQUAD);
+			
+			
+			//*************************************
+			//Allies
+			//*************************************
+			
+			//the units at the pass
+			//GroupAddObject(GroupObjectId(30),eve_Passguard1);
+			GroupAddObject(GroupObjectId(30),eve_Passguard2);
+			SetGroupAI(groupobjectid(30),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(31),eve_BaseDefender1);
+			//GroupAddObject(GroupObjectId(31),eve_BaseDefender2);
+			SetGroupAI(groupobjectid(31),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(32),eve_BaseDefender3);
+			GroupAddObject(GroupObjectId(32),eve_BaseDefender4);
+			GroupAddObject(GroupObjectId(32),eve_BaseDefender5);
+			GroupAddObject(GroupObjectId(32),eve_BaseDefender6);
+			SetGroupAI(groupobjectid(32),GROUPAI_RADIOSQUAD);
+			
+			//GroupAddObject(GroupObjectId(32),eve_BaseDefender7);
+			//GroupAddObject(GroupObjectId(32),eve_BaseDefender8);
+			//SetGroupAI(groupobjectid(32),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(33),eve_BaseDefender9);
+
+			
+			//***************************
+			//Groups for the purpose of objective checking
+			//***************************
+			
+			//those attacking the pass first
+			GroupAddObject(GroupObjectId(40),eve_FALRM_carrier1);
+			GroupAddObject(GroupObjectId(40),eve_FALRM_carrier2);
+			GroupAddObject(GroupObjectId(40),eve_FALRM_carrier3);
+			GroupAddObject(GroupObjectId(40),eve_FALRM_carrier4);
+			GroupAddObject(GroupObjectId(40),eve_FALRM_carrier5);
+			GroupAddObject(GroupObjectId(40),eve_FAUziel1);
+			GroupAddObject(GroupObjectId(40),eve_FAUziel2); 		
+			numattackingpass = groupsize(groupobjectid(40));
+
+			
+			//the two base buildings
+			GroupAddObject(GroupObjectId(41),basebuildingone);
+			GroupAddObject(GroupObjectId(41),basebuildingtwo);
+			
+			//the 'Mechs attacking the base
+			GroupAddObject(GroupObjectId(42),eve_RANovacat1);
+			GroupAddObject(GroupObjectId(42),eve_RAloki2);
+			GroupAddObject(GroupObjectId(42),eve_RAVulture1);
+			GroupAddObject(GroupObjectId(42),eve_RAVulture2);
+			GroupAddObject(GroupObjectId(42),eve_FAUziel1);
+			GroupAddObject(GroupObjectId(42),eve_FAUziel2);
+			GroupAddObject(GroupObjectId(42),eve_shilone1);
+			GroupAddObject(GroupObjectId(42),eve_shilone2);
+			GroupAddObject(GroupObjectId(42),eve_shilone3);
+			GroupAddObject(GroupObjectId(42),eve_shilone4);
+			GroupAddObject(GroupObjectId(42),eve_shilone5);
+			
+			GroupAddObject(GroupObjectId(43),etu_calliope1);
+			GroupAddObject(GroupObjectId(43),etu_calliope2);
+			GroupAddObject(GroupObjectId(43),etu_calliope3);
+			GroupAddObject(GroupObjectId(43),etu_calliope4);
+			
+			GroupAddObject(GroupObjectId(44),eve_shilone1);
+			GroupAddObject(GroupObjectId(44),eve_shilone2);
+			GroupAddObject(GroupObjectId(44),eve_shilone3);
+			GroupAddObject(GroupObjectId(44),eve_shilone4);
+			GroupAddObject(GroupObjectId(44),eve_shilone5);
+				
+			cinema_cut = 0;
+			
+			
+		//**********************************
+		//This is some weird attempt to not have the single frame at the beginning of the cinemas
+		//**********************************
+		//cinemastart; 	
+		//setactivecamera (eca_cameraship1);
+		//Targetfollowobject(playermech);
+		//camerafollowobject(playermech);
+		//Fadetoblack(0.0);
+		//targetoffset(0.0,9.0,0.0,0.0,false);
+		//Cameraoffset(-5.0,3.0,-5.0,0.0,false);					
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+		//SetActivationDistance(7000);	
+		
+		// Reveal New Secondary Objective - Eliminate Ambush Jump Mechs in NorthEast
+		Playvoiceover("VO\OP4\MI2\intro",talker_rat);
+		Playvoiceover("VO\OP4\MI2\intro",talker_erl);
+		Playvoiceover("VO\OP4\MI2\intro",talker_ian);
+		//RevealNavPoint(ena_NavBase);
+		SetNavPoint(ena_Nav_Alpha);
+		RevealObjective(eob_PO_LinkWithPassTroops);
+		RevealObjective(eob_SO_GuerrillaMechs);
+		starttimer(gti_timer_0);
+
+		//Go directly to sit state
+		//trans sit;
+		
+		//Go To Cinema
+		playerai(epl_player0,true);
+		starttimer(gti_timer_21);
+		StartMusic("Music\DFA",3.5,3.0,50);
+		trans opening;
+		
+
+endstate;
+
+	
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+	
+				//PlayVoiceOverOnce("VO\Generic\Startup1",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+
+		//************************************
+		//End it all if the player is dead
+		//************************************
+		
+		if (isdead(playermech)) then
+			endmission(false,15);
+			killvoiceovers;
+			PlayVoiceOver("VO\Generic\Iandestroyed",talker_rat);
+			StartMusic("Music\SteinerDefeat",3.5,3.0,50);
+			trans lost;
+		endif;
+		
+		//*********************************
+		//HERE GO ALL SOUNDS NOT DIRECTLY CONNECTED TO OBJECTIVES
+		//*********************************
+		
+		if (not warningplayed) then
+			if (not linkupobjectivedone) then
+				if ((gettimer(gti_timer_0)) > 360) then
+					warningplayed = true;
+					Playvoiceover("VO\OP4\MI2\units",talker_erl);
+					Playvoiceover("VO\OP4\MI2\units",talker_ian);
+					playlancematesound("VO\OP4\MI2\units",2);
+					Playvoiceover("VO\OP4\MI2\units2",talker_ian);
+				endif;
+			endif;
+		endif;
+		
+
+		 //*************************************
+		 //Check Secondary Objective - Eliminate Ambush Jump Mechs in NorthEast
+		 //*************************************
+		if (not ambushobjectivedone) then
+			if (groupalldead(groupobjectID(10))) then
+				SuccessObjective(eob_SO_GuerrillaMechs);
+				ambushobjectivedone = true;
+				StartMusic("Music\Wednesday7",3.5,3.0,80);
+			endif;
+		endif;
+
+		
+		//********************************
+		//Primary Objective Link up with troops at Pass
+		//and defend against the assault
+		//*******************************
+		
+		if (not linkupobjectivedone) then
+			
+			if (iswithinlocpoint(PlayerMech,Passpoint,300)) then
+				SuccessObjective(eob_PO_LinkWithPassTroops);
+				revealobjective(eob_PO_DefendPass);
+				if (not baseobjectivedone) then
+					Playvoiceover("VO\OP4\MI2\Link",talker_erl);
+					Playlancematesound("VO\OP4\MI2\Link",1);
+					Playvoiceover("VO\OP4\MI2\lance",talker_pa2);
+					Playlancematesound("VO\OP4\MI2\lance",1);
+				endif;
+				linkupobjectivedone = true;
+			endif;
+			
+		else
+		
+			if (not passobjectivedone) then
+				if ((groupnumdead(groupobjectid(40))) >= (numattackingpass * 1/2)) then
+					Successobjective(eob_PO_defendpass);
+					RevealObjective(eob_PO_DefendBase);
+					Playvoiceover("VO\OP4\MI2\breakoff",talker_pa2);
+					Playvoiceover("VO\OP4\MI2\breakoff",talker_brv);
+					//Playvoiceover("VO\OP4\MI2\breakoff",talker_bu1);
+					Playlancematesound("VO\OP4\MI2\breakoff",1);
+					SetNavPoint(ena_Nav_Beta);
+					passobjectivedone = true;
+					StartMusic("Music\Core",3.5,3.0,70);
+				endif;
+				
+				if (groupalldead(groupobjectid(43))) then
+					failobjective(eob_PO_defendpass);
+					RevealObjective(eob_PO_DefendBase);
+					SetNavPoint(ena_Nav_Beta);
+					passobjectivedone = true;
+				endif;
+			endif;
+			
+			
+			
+		endif;
+		
+		
+			//************************************************
+			//Check Primary Objective - Defend Base Factories
+			//************************************************
+		if (not baseobjectivedone) then
+			
+			if (groupalldead(groupobjectID(42))) then
+					SuccessObjective(eob_PO_DefendBase);
+					baseobjectivedone = true;
+			endif;
+			
+			//see if the two important buildings in the base have been destroyed
+			switch (groupnumdead(groupobjectid(41)))
+			
+				case 0: //none of the buildings are dead, do nothing
+				
+				endcase;
+				
+				case 1: //one of the buildings are dead			
+					if (not baseonedown) then
+						BaseOneDown = true;
+						Playvoiceover("VO\OP4\MI2\one",talker_brv);
+						RevealObjective(eob_PO_DefendBase);
+					endif;			
+				endcase;
+				
+				case 2: //Uh Oh, they got both buildings!!!
+					endmission(false,18);
+					baseobjectivedone = true;
+					//Playvoiceover("VO\OP4\MI2\fail",talker_bu2);
+					Playvoiceover("VO\OP4\MI2\fail",talker_brv);
+					Playlancematesound("VO\OP4\MI2\fail",1);
+					Playvoiceover("VO\OP4\MI2\fail",talker_ian);
+					playerai(epl_player0,true);
+					trans lost;			
+				endcase;
+			
+			endswitch;
+		
+		endif;
+		
+		//**********************************
+		//FINAL OBJECTIVE CHECK
+		//*********************************
+		
+		if (baseobjectivedone) then
+			if (linkupobjectivedone) then
+					if (not ambushobjectivedone) then
+						failobjective(eob_SO_GuerrillaMechs);
+					endif;
+					endmission(true,38);
+					Playvoiceover("VO\OP4\MI2\victory",talker_brv);
+					//Playvoiceover("VO\OP4\MI2\victory",talker_bu1);
+					//Playvoiceover("VO\OP4\MI2\victory",talker_bu2);
+					Playvoiceover("VO\OP4\MI2\victory2",talker_brv);
+					Playvoiceover("VO\OP4\MI2\victory2",talker_erl);
+					Playvoiceover("VO\OP4\MI2\victory2",talker_ian);
+					Playvoiceover("VO\OP4\MI2\victory2",talker_rat);
+					Playvoiceover("VO\OP4\MI2\victory2",talker_pa2);
+					StartMusic("Music\Victory",3.5,3.0,50);
+					
+					// ***********************************
+					// *** salvage here ***
+					// ***********************************
+					
+					AddWeaponSalvage("AC5",2);
+					AddWeaponSalvage("Gauss",1);
+					AddWeaponSalvage("LightGauss",1);
+					AddWeaponSalvage("ClanLBXAC10",2);
+					AddWeaponSalvage("ClanLRM10",1);
+					AddWeaponSalvage("ClanLRM20",1);
+					AddWeaponSalvage("LRM5",2);
+					AddWeaponSalvage("LRM15",1);
+					AddWeaponSalvage("ClanMachineGun",2);
+					AddWeaponSalvage("MRM10",2);
+					AddWeaponSalvage("PPC",1);
+					AddWeaponSalvage("ERMediumPulseLaser",1);
+					AddWeaponSalvage("MediumPulseLaser",2);
+					AddWeaponSalvage("SRM4",1);
+					AddWeaponSalvage("SSRM2",2);
+					AddWeaponSalvage("SSRM4",3);
+					AddWeaponSalvage("SSRM6",1);
+					AddWeaponSalvage("UltraAC2",1);
+					AddWeaponSalvage("UltraAC5",1);
+					AddWeaponSalvage("Flare",1);
+					AddMechInstanceSalvage("Mad Cat");
+					AddMechInstanceSalvage("Thanatos");
+					enableglobalinvulnerable;
+					settargetdesirability(playermech,-1);
+					resettimer(gti_timer_28);
+					starttimer(gti_timer_28);
+					trans waitforcinema;
+			endif;
+		endif;
+
+if (not ismusicplaying) then
+	StartMusic("Music\arcticambloop",0.0,3.0,40);
+endif;
+
+//*************************************
+//Navpoint Checks
+//*************************************
+
+if (not alphareached) then
+	if (isnavrevealed(ena_nav_alpha)) then
+		if (iswithin(playermech,ena_nav_alpha,checkrange)) then
+			playvoiceover("VO\generic\navalpha",talker_Bet);
+			alphareached = true;
+		endif;
+	endif;
+endif;
+
+if (not betareached) then
+	if (isnavrevealed(ena_nav_beta)) then
+		if (iswithin(playermech,ena_nav_beta,checkrange)) then
+			playvoiceover("VO\generic\navbeta",talker_Bet);
+			betareached = true;
+		endif;
+	endif;
+endif;
+
+		
+				
+endstate;
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,4)) then
+			playerai(epl_player0,true);
+			trans won;
+		endif;
+		
+		
+endstate;
+
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			killsound(eso_De02Intro);
+			Fadefromblack(0.0);
+			killvoiceovers;
+			cinemaend;
+			trans sit;	
+	endif;
+
+ 	switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera (eca_cameraship1);
+			Fadetoblack(0.0);
+
+			Targetfollowobject(playermech);
+			camerafollowobject(playermech);
+			SetCameraFootShake(playermech,100);
+
+			targetoffset(0.0,8.0,0.0,0.0,false);
+			Cameraoffset(100.0,16.0,-4.0,0.0,true);
+
+			Fadefromblack(8.0);
+
+			Cameraoffset(-70.0,1.0,36.0,27.0,true);
+
+			startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+			
+			case 1:
+			
+			if (timegreater(gti_Timer_21,24)) then
+				cinema_cut = cinema_cut + 1;
+				resettimer (gti_Timer_21);
+				//setactivecamera (eca_cameraship2);
+				Fadetoblack(0.0);
+				Fadefromblack(6.0);
+				Targetfollowobject(ede_boxvan_destroyed);
+				Camerafollowobject(ede_boxvan_destroyed);
+				//Targetfollowobject(201326592);
+				//Camerafollowobject(201326592);
+				//Targetfollowobject(ebu_objectivebuilding1);
+				//Camerafollowobject(ebu_objectivebuilding1);
+				Targetoffset(0.0,2.0,0.0,0.0,false);
+				Cameraoffset(70.0,40.0,110.0,0.0,false);
+				Cameraoffset(0.0,10.0,60.0,10.0,false);
+			endif;
+													
+			endcase;
+
+			case 2:
+			
+				if (timegreater(gti_Timer_21,6)) then
+					cinema_cut = cinema_cut + 1;
+					resettimer (gti_Timer_21);
+					fadetoblack(2.0);
+					//setactivecamera (eca_cameraship1);
+					//Targetfollowobject(playermech);
+					//Camerafollowobject(playermech);
+					//Targetoffset(0.0,5.0,-75.0,0.0,false);
+					//Cameraoffset(80.0,6.0,-75.0,8.0,false);
+				endif;
+										
+			endcase;
+			
+			case 3:
+			
+				if (timegreater(gti_Timer_21,2)) then
+					cinema_cut = cinema_cut + 1;
+					resettimer (gti_Timer_21);
+					setinternalcamera(false);
+					//fadetoblack(0.0);
+					//fadefromblack(3.0);
+					//setactivecamera (eca_cameraship1);
+					//Targetfollowobject(playermech);
+					//Camerafollowobject(playermech);
+					//Targetoffset(0.0,5.0,-75.0,0.0,false);
+					//Cameraoffset(80.0,6.0,-75.0,8.0,false);
+				endif;
+										
+			endcase;
+			
+				case 4:
+				
+				if (timegreater(gti_Timer_21,1)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+	
+	
+endstate;
+
+state won;
+
+		code
+		
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(true,1);	
+			trans hang;
+	endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship1);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(-30.0,125.0,75.0,0.0,false);
+				Cameraoffset(60.0,20.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(false,1);
+			trans hang;
+	endif;
+ 	
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship1);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+
+state hang;
+		
+		code
+		
+endstate;
+
+
+endfsm.
+//******************************************************************
+

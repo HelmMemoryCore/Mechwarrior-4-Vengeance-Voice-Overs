@@ -1,0 +1,131 @@
+
+//------------------------------------------------------------------
+fsm Dropship1 : integer;
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+  var		
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		static LocPoint			MyPoint;
+		
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+
+
+function Init;
+	code
+		piloting		= 50;
+		gunnery			= 60;
+		minDelay		= 2.0;
+		maxDelay		= 4.5;
+		eliteLevel		= 60;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+
+endfunction;
+
+		
+
+ state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,false);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel); 	
+		GetLocation(me,mypoint);
+		TeleportToHell(me);
+				trans LandingPad;
+
+endstate;
+
+
+state LandingPad;
+	code
+
+	SetSensorVisibility(me,false);
+
+	if DropFly == true then
+		Teleport(me,mypoint);
+		setSensorVisibility(me,true);
+		OrderTakeOff(1);
+		trans Showtime;
+	endif;
+	
+endstate;
+
+state AttackState;
+	code
+		
+		if (LeaveAttackState(1000)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans LandingPad;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+		
+		
+
+		OrderAttack(false);		
+endstate;
+
+state Showtime;
+	code
+	
+	if ordermoveto(epa_DropPath,600,MOVE_NOCYCLE,FALSE,FALSE) == true then
+		if OrderLand == true then
+			DropDown = true;
+//			OrderDoorOpen;
+		endif;
+	endif;
+	
+		
+	
+endstate;
+
+
+
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+		
+		orderDie;
+
+endstate;
+
+
+endfsm.
+	
+	
+

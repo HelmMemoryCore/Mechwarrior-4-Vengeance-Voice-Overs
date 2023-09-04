@@ -1,0 +1,48 @@
+
+fsm Convoy : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+		static integer speed;
+
+function Init;
+	code
+
+endfunction;
+
+state StartState;
+
+	code
+		SetSensorVisibility(ME,FALSE);
+
+		trans DoOpeningPath;
+
+endstate;
+
+state DoOpeningPath;
+	code
+		if (GetMemoryInteger(me,9) == 1) then
+			speed = 300;
+		else
+			speed = 120;
+		endif;
+
+		OrderMoveTo(epa_Path_StartingConvoy,speed,MOVE_NOCYCLE,true,false);
+		
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.
+

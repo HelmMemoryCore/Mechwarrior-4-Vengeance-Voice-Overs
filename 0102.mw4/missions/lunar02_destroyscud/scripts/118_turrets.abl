@@ -1,0 +1,106 @@
+
+fsm Turret : integer;
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+	var
+		static integer			attackRange;		// At what range do I start shooting?
+		static integer			withdrawRange;		// At what range do I stop attacking?
+																	
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			findTypes;			// What kind of enemies to look for
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+
+		static integer			attack_player_trigger;
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 900;
+		withdrawRange	= attackRange * 3 / 2;
+
+		// driver settings
+		piloting		= 100;
+		gunnery			=  50;
+		minDelay		= 1.0;
+		maxDelay		= 3.0;
+		eliteLevel		= 100;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+
+		attack_player_trigger = 12;
+
+endfunction;
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isshotradius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,elitelevel);
+		setsensorvisibility		(me,false);		
+		trans WaitState;
+endstate;			
+
+state WaitState;
+	code
+		if (GetGlobalTrigger(attack_player_trigger) == true) then
+			SetSensorVisibility(me,true);
+			SetTarget(ME,GetPlayerVehicle(epl_player0));
+			trans AttackState;
+		endif;
+
+		OrderMoveLookOut;
+endstate;
+
+state AttackState;
+	code
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			setsensorvisibility(me,false);
+			trans WaitState;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		SetAutoTargeting(ME,FALSE);
+		OrderAttackTactic(TACTIC_SHOOT_ONLY,true);
+endstate;
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

@@ -1,0 +1,330 @@
+
+//------------------------------------------------------------------
+fsm SirPeter : integer;
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start attacking?
+		static integer			withdrawRange;		// At what range do I withdraw from combat?
+		static integer			groupNumber;		// What's my group -- i.e. I will use GroupObjectID(groupNumber) to identify my group
+		static integer			speed;				// The speed at which I move along the path
+		static integer			formationType;		// What kind of formation am I in?
+		static integer			formationDensity;	// How densely are we packed?
+		static integer			path;				// My path
+		static integer			moveType;			// How I move along the path
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			findTypes;			// What kind of enemies to look for
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+
+		static integer			mood;				// My default mood.
+
+		static integer			myPath;
+
+		static integer			friendlyFireFrustrationLevel;
+
+		static boolean			doneFirstEncounter;
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 300;
+		withdrawRange	= attackRange * 3 / 2;
+		groupNumber		= 1;
+		path			= -1;
+		moveType		= move_nocycle;
+		speed			= 60;
+		formationType	= 1;
+		formationDensity= formtype_sparse;
+
+		myPath			= epa_PathToNavAlpha;
+
+		// driver settings
+		piloting		= 50;
+		gunnery			= 120;
+		minDelay		= 0.0;
+		maxDelay		= 0.5;
+		eliteLevel		= 60;
+		attackThrottle	= 100;
+		isShotRadius	= 160;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+
+		friendlyFireFrustrationLevel = 0;
+
+		doneFirstEncounter	= false;
+
+		StartTimer(gti_Timer_10);
+		SetTimer(gti_Timer_10,100);
+
+endfunction;
+
+function CheckIfPlayerShotMe : integer;
+	var
+		ObjectID who_shot;
+
+	code
+		if (Not TimeGreater(gti_Timer_10,8)) then
+			return (0);
+		endif;
+		
+		if (Not IsShot(ME)) then
+			return (0);
+		endif;
+
+		who_shot = WhoShot(me);
+
+		if (who_shot <> getplayervehicle(epl_player0)) then
+			return (0);
+		endif;
+
+		ResetTimer(gti_Timer_10);
+
+		if (friendlyFireFrustrationLevel == 0) then
+			PlaySoundOnce(eso_Lu02FriendlyFire1);
+			friendlyFireFrustrationLevel = 1;
+		else
+			if (friendlyFireFrustrationLevel == 1) then
+				PlaySoundOnce(eso_Lu02FriendlyFire2);
+				friendlyFireFrustrationLevel = 2;
+			else
+				PlaySoundOnce(eso_Lu02FriendlyFire3);
+				StartTimer(gti_Timer_5);
+				ResetTimer(gti_Timer_5);
+				trans KillPlayerState;
+			endif;
+		endif;
+
+		return (1);
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,false);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+
+		if (Not TimeGreater(gti_Timer_9,0)) then
+			if (GetGlobalTrigger(0) == true) then
+				StartTimer(gti_Timer_9);
+				ResetTimer(gti_Timer_9);
+			endif;
+		endif;
+
+		if (TimeGreater(gti_Timer_9,6.5)) then
+			trans GoToNextNavState;
+		endif;
+
+endstate;
+
+//------------------------------------------------------------------
+//	FollowPathState: follow our path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state GoToNextNavState;
+	var
+		LocPoint point;
+		integer newPath;
+		ObjectID who_shot;
+
+	code
+		CheckIfPlayerShotMe;
+
+		if (FindEnemy(attackRange,findTypes)) then
+			trans AttackState;
+		endif;
+
+		if (Not IsDead(getplayervehicle(epl_player0))) then
+			if (IsShot(getplayervehicle(epl_player0))) then
+				who_shot = WhoShot(getplayervehicle(epl_player0));
+
+				if (who_shot <> eve_Backup_1) then
+					SetTarget(ME,who_shot);
+					trans AttackState;
+				endif;
+			endif;
+		endif;
+
+		newPath = epa_PathToNavAlpha;
+
+		if (GetGlobalTrigger(50) == true) then
+			newPath = epa_PathToNavBeta;
+
+			if (GetGlobalTrigger(51) == true) then
+
+				if (doneFirstEncounter == false) then
+					newPath = epa_PathFromNavBeta;
+				else
+					newPath = epa_PathToNavGamma;
+				endif;
+
+				attackRange		= 700;
+				withdrawRange	= attackRange * 3 / 2;
+
+				if (GetGlobalTrigger(52) == true) then
+					newPath = epa_PathToNavOmega;
+				endif;
+			endif;
+		endif;
+
+		if (GetGlobalTrigger(77) == true) then
+			speed = 600;
+		else
+			if (GetGlobalTrigger(50) == true) then
+				speed = 100;
+			else
+				speed = 60;
+			endif;
+		endif;
+
+		if (newPath <> myPath) then
+			ClearMoveOrder(ME);
+			myPath = newPath;
+		endif;
+
+		OrderMoveResumePatrol(myPath,speed,moveType,TRUE,FALSE);
+		if (OrderMoveTo(myPath,speed,moveType,TRUE,FALSE) == true) then
+			ClearMoveOrder(ME);
+			trans WaitAtNavState;
+		endif;
+endstate;
+
+//------------------------------------------------------------------
+//	WaitAtNavState: wait at this nav point
+//------------------------------------------------------------------
+
+state WaitAtNavState;
+	var
+		integer newPath;
+
+	code
+		CheckIfPlayerShotMe;
+
+		if (FindEnemy(attackRange,findTypes)) then
+			trans AttackState;
+		endif;
+
+		OrderMoveLookOut;
+
+		newPath = epa_PathToNavAlpha;
+
+		if (GetGlobalTrigger(50) == true) then
+			newPath = epa_PathToNavBeta;
+
+			if (GetGlobalTrigger(51) == true) then
+				newPath = epa_PathToNavGamma;
+
+				if (GetGlobalTrigger(52) == true) then
+					newPath = epa_PathToNavOmega;
+				endif;
+			endif;
+		endif;
+
+		if (newPath <> myPath) then
+			trans GoToNextNavState;
+		endif;
+endstate;
+
+//------------------------------------------------------------------
+//	AttackState: attack my target
+//------------------------------------------------------------------
+
+state AttackState;
+	code
+		CheckIfPlayerShotMe;
+
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans GoToNextNavState;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttackTactic(TACTIC_CIRCLE_OF_DEATH,TRUE);
+
+		doneFirstEncounter = true;
+
+endstate;
+
+//------------------------------------------------------------------
+//	KillPlayerState: attack the player
+//------------------------------------------------------------------
+
+state KillPlayerState;
+	code
+		if (TimeGreater(gti_Timer_5,4)) then
+			SetFiringDelay			(ME,0.0,0.0);
+			SetSkillLevel			(ME,100,500,100);
+
+			SetAutoTargeting(ME,FALSE);
+			SetTarget(ME,getplayervehicle(epl_player0));
+			OrderAttackTactic(TACTIC_CIRCLE_OF_DEATH,TRUE);
+		endif;
+
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

@@ -1,0 +1,1870 @@
+
+fsm Training01 : integer;		
+
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+      var
+			
+		eternal integer playermech;
+		
+		
+		static integer	cinema_cut;
+		static integer  cinema_timer;
+		static integer  kick_ass_timer;
+
+		static integer  group_FirstTanks;
+		static integer  group_SecondTanks;
+
+		static integer  group_RandomVehicles;
+		static integer  group_SRMCs;
+		static integer  group_Peregrines;
+
+		static integer	frustration_timer;
+		static integer	kill_player_timer;
+
+		static integer	friendlyFireFrustrationLevel;
+
+// Global triggers:
+
+// 1 = convoy speed up
+// 7 = convoy speed up ... a lot
+// 2 = Jones power up
+// 3 = Player power up
+// 4 = Jones start walking
+// 5 = player start walking
+// 6 = chaos ensues
+// 8 = Arioch falls
+// 9 = MacLeod falls
+// 10 = Abzug shakes his head
+// 11 = player walks between cones
+// 12 = Shilones take off
+// 13
+// 14 = Jones walking back to Gamma
+// 15 = 
+// 16 = Jones demonstrates
+// 17 = exeunt fools
+// 18 = Jones walk to area 2
+// 19 = player walk to area 2
+// 20 = Jones proceeds to area 3
+// 21 = Jones proceeds to area 4
+// 22 = Jones proceeds to area 5
+// 23 = Jones proceeds to area 6
+// 30 = ducks start moving
+// 31 = SRMCs attack
+// 32 = Peregrines attack
+// 33 = psycho boy
+// 34 = player walks out
+// 35 = Jones helps out
+// 36 = Osiris visible on radar
+// 37 = player stand still
+// 40 = player has reached area 2
+// 41 = blow up building
+// 42 = stop attacking building
+// 45 = speed up
+// 46 = flatbed move
+// 47 = lock-vedette move
+// 99 = kill player
+
+function init;
+	var
+		integer i;
+
+	code
+
+		OverrideHeatOption(TRUE);
+
+		playermech = getplayervehicle(epl_player0);	
+
+		frustration_timer = gti_timer_1;
+		kill_player_timer = gti_timer_2;
+ 	
+		cinema_cut = 0; 						
+		cinema_timer = gti_Timer_21;
+
+		kick_ass_timer = gti_timer_10;
+
+endfunction;
+
+
+function CheckIfPlayerDied;
+	code
+		if (isdead(playermech)) then
+			failobjectiveall(9);
+		endif;
+
+		if (IsDead(eve_vulture)) then
+			failobjectiveall(9);
+		endif;
+endfunction;
+
+
+function FollowAndShake(ObjectID who);
+	var
+
+	code
+		Targetfollowobject(who);
+		camerafollowobject(who);
+		SetCameraFootShake(who,100);
+endfunction;
+
+
+function NextCinemaState;
+	var
+
+	code
+		cinema_cut = cinema_cut + 1;
+		ResetTimer(cinema_timer);
+endfunction;
+
+function CheckIfPlayerShotMe : integer;
+	var
+		ObjectID who_shot;
+
+	code
+		if (IsDead(eve_vulture)) then
+			failobjectiveall(9);
+		endif;
+
+		if (Not TimeGreater(frustration_timer,7)) then
+			return (0);
+		endif;
+		
+		if ((Not IsShot(eve_vulture)) AND
+			(Not IsRammed(eve_vulture))) then
+			return (0);
+		endif;
+
+		who_shot = WhoShot(eve_vulture);
+
+		if (who_shot == no_unit) then
+			who_shot = WhoRammed(eve_vulture);
+		endif;
+
+		if (who_shot <> playermech) then
+			return (0);
+		endif;
+
+		ResetTimer(frustration_timer);
+
+		if (friendlyFireFrustrationLevel == 0) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\33",TALKER_IAN);
+			friendlyFireFrustrationLevel = 1;
+		else
+			if (friendlyFireFrustrationLevel == 1) then
+				KillVoiceOvers;
+				PlayVoiceOverOnce("VO\OP0\34",TALKER_IAN);
+				friendlyFireFrustrationLevel = 2;
+			else
+				if (friendlyFireFrustrationLevel == 2) then
+					KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP0\35",TALKER_IAN);
+
+					SetViewMode(VIEW_OUTSIDE_CENTER);
+					TorsoPitch(playermech,0.1);
+					SetInputTypeEnabled(INPUT_ALL,FALSE);
+					DisableGlobalInvulnerable;
+
+					SetGlobalTrigger(99,true);
+
+					StartTimer(kick_ass_timer);
+					trans KickPlayersAss;
+				endif;
+			endif;
+		endif;
+
+		return (1);
+
+endfunction;
+
+function TurnOffTheFuckingHUD;
+	code
+		SetHUDComponentEnabled(HUD_NAV,FALSE);
+		SetHUDComponentEnabled(HUD_TARGETARROW,FALSE);
+		SetHUDComponentEnabled(HUD_TORSOBAR,FALSE);
+		SetHUDComponentEnabled(HUD_HEAT,FALSE);
+		SetHUDComponentEnabled(HUD_COOLANT,FALSE);
+		SetHUDComponentEnabled(HUD_JUMP,FALSE);
+		SetHUDComponentEnabled(HUD_SPEED,FALSE);
+		SetHUDComponentEnabled(HUD_DAMAGE,FALSE);
+		SetHUDComponentEnabled(HUD_TARGETDAMAGE,FALSE);
+		SetHUDComponentEnabled(HUD_WEAPON,FALSE);
+		SetHUDComponentEnabled(HUD_RETICLE,FALSE);
+		SetHUDComponentEnabled(HUD_RADAR,FALSE);
+		SetHUDComponentEnabled(HUD_CHAT,FALSE);
+		SetHUDComponentEnabled(HUD_COMM,FALSE);
+		SetHUDComponentEnabled(HUD_MAP,FALSE);
+		SetHUDComponentEnabled(HUD_OBJECTIVE,FALSE);
+		SetHUDComponentEnabled(HUD_SCORE,FALSE);
+		SetHUDComponentEnabled(HUD_TIMER,FALSE);
+endfunction;
+
+
+state startState;
+
+	code
+		group_RandomVehicles = GroupObjectID(50);
+		group_SRMCs = GroupObjectID(51);
+		group_Peregrines = GroupObjectID(52);
+		group_FirstTanks = GroupObjectID(53);
+		group_SecondTanks = GroupObjectID(54);
+
+		GroupAddObject(group_RandomVehicles,eve_swiftwind);
+		GroupAddObject(group_RandomVehicles,eve_apc_0003);
+		GroupAddObject(group_RandomVehicles,eve_artillery_loader);
+		GroupAddObject(group_RandomVehicles,eve_vedette);
+		GroupAddObject(group_RandomVehicles,eve_transport);
+
+		GroupAddObject(group_SRMCs,eve_srm_carrier);
+		GroupAddObject(group_SRMCs,eve_srm_carrier_0005);
+		GroupAddObject(group_SRMCs,eve_srm_carrier_0006);
+		GroupAddObject(group_SRMCs,eve_srm_carrier_0008);
+		GroupAddObject(group_SRMCs,eve_srm_carrier_0007);
+
+		GroupAddObject(group_FirstTanks,ebu_Fuel_tank);
+		GroupAddObject(group_FirstTanks,ebu_Fuel_tank_0000);
+		GroupAddObject(group_FirstTanks,ebu_Fuel_tank_0005);
+		GroupAddObject(group_FirstTanks,ebu_Fuel_tank_0002);
+		GroupAddObject(group_FirstTanks,ebu_Fuel_tank_0003);
+		GroupAddObject(group_FirstTanks,ebu_Fuel_tank_0004);
+
+		GroupAddObject(group_SecondTanks,ebu_Fuel_tank_0006);
+		GroupAddObject(group_SecondTanks,ebu_Fuel_tank_0011);
+		GroupAddObject(group_SecondTanks,ebu_Fuel_tank_0010);
+		GroupAddObject(group_SecondTanks,ebu_Fuel_tank_0007);
+		GroupAddObject(group_SecondTanks,ebu_Fuel_tank_0008);
+		GroupAddObject(group_SecondTanks,ebu_Fuel_tank_0009);
+
+		GroupAddObject(group_Peregrines,eve_peregrine);
+		GroupAddObject(group_Peregrines,eve_peregrine_0000);
+		GroupAddObject(group_Peregrines,eve_peregrine_0001);
+
+		TurnOffTheFuckingHUD;
+
+		SetSensorVisibility(etu_Calliope_0004,FALSE);
+		SetSensorVisibility(eve_ammo_carrier,FALSE);
+
+		SetTorsoCenteringEnabled(playermech,FALSE);
+
+		EnableGlobalInvulnerable;
+
+		friendlyFireFrustrationLevel = 0;
+		StartTimer(frustration_timer);
+		SetTimer(frustration_timer,100);
+
+//		trans JumpToArea2;
+
+		SetMissionBounds(ena_Nav_Section1A,ena_Nav_Section1B);
+		SetAudioFXEnabled(false);
+
+		trans Part01_Opening;
+endstate;
+	
+state deadState;
+	code
+endstate;
+
+state Part01_Opening;
+	code
+		if (cinemaskip) then
+			if (cinema_cut < 7) then
+				cinema_cut = 7;
+				KillVoiceOvers;
+				SetTimer(cinema_timer,100);
+			endif;
+		endif;
+
+ 		switch (cinema_cut)
+
+			case 0:
+				CinemaStart;
+				SetAlwaysIgnoreObstacles(TRUE);
+				playerai(epl_player0,true);
+				SetCompositingEnabled(false);
+
+				StartTimer(cinema_timer);
+
+				SetActiveCamera(eca_CameraShip_Opening2);
+
+				FadeToBlack(0.0);
+				FadeFromBlack(4.0);
+
+				SetGlobalTrigger(12,true);
+
+				PlayVoiceOverOnce("VO\OP0\02",TALKER_IAN);
+				PlayVoiceOverOnce("VO\OP0\03",TALKER_IAN);
+				PlayVoiceOverOnce("VO\OP0\04",TALKER_IAN);
+
+				SetGlobalTrigger(1,true);
+				SetGlobalTrigger(7,true);
+				
+				cinema_cut = 6;
+			endcase;
+
+			case 6:
+				if (TimeGreater(cinema_timer,29.0)) then
+					Targetfollowobject(eve_boxvan);
+					camerafollowobject(eve_boxvan);
+					TargetOffset(-40.0,4.0,00.0,0.0,false);
+					CameraOffset(0.0,2.0,4.0,0.0,true);
+
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 7:
+				if (IsVoiceOverPlaying == false) then
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 8:
+				if (TimeGreater(cinema_timer,3.0)) then
+					SetAudioFXEnabled(true);
+					FollowAndShake(playermech);
+					TargetOffset(0.0,4.8,0.0,0.0,true);
+					CameraOffset(1.5,0.3,20.0,0.0,true);
+
+					KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP0\06",TALKER_IAN);
+
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 9:
+				if (TimeGreater(cinema_timer,3.0)) then
+					SetGlobalTrigger(3,true);
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 10:
+				if (TimeGreater(cinema_timer,5.0)) then
+					FollowAndShake(eve_vulture);
+					TargetOffset(0.0,4.8,0.0,0.0,true);
+					CameraOffset(0.0,0.3,20.0,0.0,true);
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 11:
+				if (TimeGreater(cinema_timer,1.0)) then
+					SetGlobalTrigger(2,true);
+					SetGlobalTrigger(4,true);
+
+					KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP0\07",TALKER_IAN);
+					NextCinemaState;
+
+					cinema_cut = 13;
+				endif;
+			endcase;
+
+			case 13:
+				if (TimeGreater(cinema_timer,2.0)) then
+					KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP0\08",TALKER_IAN);
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 14:
+				if (TimeGreater(cinema_timer,9.0)) then
+					FollowAndShake(playermech);
+					TargetOffset(0.0,4.8,0.0,0.0,true);
+					CameraOffset(0.0,0.3,20.0,0.0,true);
+					SetGlobalTrigger(5,true);
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 15:
+				if (TimeGreater(cinema_timer,3.0)) then
+					SetCameraFootShake(-2,0);
+					SetActiveCamera(eca_CameraShip_Start3);
+					SetGlobalTrigger(6,true);
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 16:
+				if (TimeGreater(cinema_timer,1.0)) then
+					SetGlobalTrigger(8,true);
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 17:
+				if (TimeGreater(cinema_timer,1.0)) then
+					KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP0\09",TALKER_IAN);
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 18:
+				if (TimeGreater(cinema_timer,2.0)) then
+					Destroy(ebu_crate_stack_0001);
+					SetGlobalTrigger(9,true);
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 19:
+				if (TimeGreater(cinema_timer,1.0)) then
+					KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP0\10",TALKER_IAN);
+					SetGlobalTrigger(10,true);
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 20:
+				if (TimeGreater(cinema_timer,10.0)) then
+					SetActiveCamera(eca_CameraShip_Start4);
+
+					KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP0\13",TALKER_IAN);
+
+					NextCinemaState;
+				endif;
+			endcase;
+
+			case 21:
+				if (TimeGreater(cinema_timer,10.0)) then
+					SetCompositingEnabled(true);
+					playerai(epl_player0,false);
+					CinemaEnd;
+					SetAlwaysIgnoreObstacles(TRUE);
+
+					TurnOffTheFuckingHUD;
+					SetHUDComponentEnabled(HUD_SPEED,TRUE);
+
+					SetGlobalTrigger(17,true);
+
+					SetViewMode(VIEW_OUTSIDE_CENTER);
+					TorsoPitch(playermech,0.1);
+					SetInputTypeEnabled(INPUT_ALL,FALSE);
+					SetHelpArrow(180,588,520,1000,true,0);
+					SetHelpArrow(180,508,520,1000,true,2);
+					HelpMessage(eob_Obj_ThrottleForward,5000);
+
+					StartTimer(cinema_timer);
+
+					trans Part02b_SetRotation;
+				endif;
+			endcase;
+
+		endswitch;
+
+endstate;
+
+state Part02b_SetRotation;
+	var
+		LocPoint p;
+	code
+		p[0] = -884;
+		p[1] = 43;
+		p[2] = -1437;
+
+		Teleport(playermech,p);
+		SetRotation(playermech,270);
+
+		trans Part02_Throttle;
+endstate;
+
+state Part02_Throttle;
+	code
+		if (TimeGreater(cinema_timer,2.0) == true) then
+			SetInputTypeEnabled(INPUT_THROTTLE,TRUE);
+		endif;
+
+		if (IsWithin(playermech,ena_Nav_NCone2,20) == true) then
+			HelpMessage(eob_Obj_ThrottleBackward,5000);
+			trans Part02b_Wait;
+		endif;
+endstate;
+
+state Part02b_Wait;
+	code
+		if (TimeGreater(cinema_timer,4.0)) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\15",TALKER_IAN);
+			trans Part03_ThrottleBack;
+		endif;
+endstate;
+
+state Part03_ThrottleBack;
+	code
+		if (IsWithin(playermech,ena_Nav_NCone1,24) == true) then
+			HelpMessage(eob_Obj_ThrottleForwardAgain,5000);
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\16",TALKER_IAN);
+			SetHelpArrow(0,-100,-100,1000,true,0);
+			trans Part04_ThrottleAgain;
+		endif;
+endstate;
+
+state Part04_ThrottleAgain;
+	code
+		if (IsWithin(playermech,ena_Nav_NCone2,10) == true) then
+			SetInputTypeEnabled(INPUT_THROTTLE,FALSE);
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\17",TALKER_IAN);
+			HelpMessage(eob_Obj_FaceBackward,5000);
+
+			StartTimer(cinema_timer);
+
+			trans Part05_TurnAround;
+		endif;
+endstate;
+
+state Part05_TurnAround;
+	code
+		if (TimeGreater(cinema_timer,2.0) == true) then
+			SetInputTypeEnabled(INPUT_TURN,TRUE);
+		endif;
+
+		if (TimeGreater(cinema_timer,5.0) == true) then
+			if (LookingToward(ena_Nav_NCone1) == true) then
+				KillVoiceOvers;
+				PlayVoiceOverOnce("VO\OP0\60",TALKER_IAN);
+				HelpMessage(eob_Obj_FaceJones,5000);
+
+				trans Part05b_FaceJones;
+			endif;
+		endif;
+endstate;
+
+state Part05b_FaceJones;
+	code
+		if (LookingToward(eve_Vulture) == true) then
+			SetInputTypeEnabled(INPUT_THROTTLE,TRUE);
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\18",TALKER_IAN);
+			HelpMessage(eob_Obj_WalkAroundTower,5000);
+			trans Part06_CircleAround1;
+		endif;
+endstate;
+
+state Part06_CircleAround1;
+	code
+		if (IsWithin(playermech,ena_Nav_NCone1,25) == true) then
+			trans Part06_CircleAround2;
+		endif;
+endstate;
+
+state Part06_CircleAround2;
+	code
+		if (IsWithin(playermech,ena_Nav_Alpha,35) == true) then
+			trans Part06_CircleAround3;
+		endif;
+endstate;
+
+state Part06_CircleAround3;
+	code
+		if (IsWithin(playermech,ena_Nav_SCone1,25) == true) then
+			SetHUDComponentEnabled(HUD_NAV,TRUE);
+
+			SetNavPoint(ena_Nav_Alpha);
+
+			SetHelpArrow(270,400,120,1000,true,0);
+			SetHelpArrow(270,400,70,1000,true,1);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\19",TALKER_IAN);
+			
+			HelpMessage(eob_Obj_MoveToAlpha,5000);
+			trans Part07_GoToAlpha;
+		endif;
+endstate;
+
+state Part07_GoToAlpha;
+	code
+		if (IsWithin(playermech,ena_Nav_Alpha,20) == true) then
+			SetNavPoint(ena_Nav_Beta);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\20",TALKER_IAN);
+
+			HelpMessage(eob_Obj_MoveToBeta,5000);
+			trans Part08_GoToBeta;
+		endif;
+endstate;
+
+state Part08_GoToBeta;
+	code
+		if (IsWithin(playermech,ena_Nav_Beta,20) == true) then
+			SetInputTypeEnabled(INPUT_NAV_SWITCHING,TRUE);
+
+			SetHelpArrow(270,-100,-100,1000,true,0);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\21",TALKER_IAN);
+
+			HelpMessage(eob_Obj_SwitchToAlpha,5000);
+			trans Part09_SwitchToNavAlpha;
+		endif;
+endstate;
+
+state Part09_SwitchToNavAlpha;
+	code
+		if (IsSetToNavPoint(ena_Nav_Alpha) == true) then
+			HelpMessage(eob_Obj_SwitchToBeta,5000);
+			trans Part10_SwitchToNavBeta;
+		endif;
+endstate;
+
+state Part10_SwitchToNavBeta;
+	code
+		if (IsSetToNavPoint(ena_Nav_Beta) == true) then
+			HelpMessage(NO_UNIT,0);
+			SetInputTypeEnabled(INPUT_ALL,FALSE);
+
+			CinemaStart;
+			SetAlwaysIgnoreObstacles(TRUE);
+			playerai(epl_player0,true);
+
+			SetActiveCamera(eca_CameraShip_LookAtJones);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\22",TALKER_IAN);
+
+			StartTimer(cinema_timer);
+
+			trans Part11_WalkToCenter;
+		endif;
+endstate;
+
+state Part11_WalkToCenter;
+	code
+		SetGlobalTrigger(11,true);
+
+		if (TimeGreater(cinema_timer,4.0) == true) then
+			SetActiveCamera(eca_CameraShip_Opening1);
+			FollowAndShake(playermech);
+			TargetOffset(0.0,4.5,0.0,0.0,true);
+			CameraOffset(0.0,4.5,-20.0,0.0,true);
+
+			StartTimer(cinema_timer);
+
+			trans Part11b_StartTurning;
+		endif;
+endstate;
+
+state Part11b_StartTurning;
+	code
+		if (TimeGreater(cinema_timer,8.0) == true) then
+			TorsoYaw(playermech,1.5);
+			StartTimer(cinema_timer);
+			trans Part12_LookLeft;
+		endif;
+endstate;
+
+state Part12_LookLeft;
+	code
+		if (TimeGreater(cinema_timer,3.0)) then
+			TorsoYaw(playermech,-1.5);
+			StartTimer(cinema_timer);
+			trans Part12b_LookRight;
+		endif;
+endstate;
+
+state Part12b_LookRight;
+	code
+		if (TimeGreater(cinema_timer,3.0)) then
+			TorsoYaw(playermech,2.0);
+			StartTimer(cinema_timer);
+			trans Part12c_LookLeftAgain;
+		endif;
+endstate;
+
+state Part12c_LookLeftAgain;
+	code
+		if (TimeGreater(cinema_timer,3.0)) then
+			TorsoYaw(playermech,-2.0);
+			StartTimer(cinema_timer);
+			trans Part12d_LookRightAgain;
+		endif;
+endstate;
+
+state Part12d_LookRightAgain;
+	code
+		if (TimeGreater(cinema_timer,3.0)) then
+			TorsoYaw(playermech,0.0);
+			StartTimer(cinema_timer);
+			trans Part13_StopLooking;
+		endif;
+endstate;
+
+state Part13_StopLooking;
+	code
+		if (TimeGreater(cinema_timer,2.0)) then
+			playerai(epl_player0,false);
+			CinemaEnd;
+			SetAlwaysIgnoreObstacles(TRUE);
+
+			TurnOffTheFuckingHUD;
+			SetHUDComponentEnabled(HUD_SPEED,TRUE);
+			SetHUDComponentEnabled(HUD_NAV,TRUE);
+			SetHUDComponentEnabled(HUD_TORSOBAR,TRUE);
+			SetHUDComponentEnabled(HUD_RETICLE,TRUE);
+			SetHUDComponentEnabled(HUD_TARGETARROW,TRUE);
+			SetHUDComponentEnabled(HUD_RADAR,TRUE);
+			SetHUDComponentEnabled(HUD_TARGETDAMAGE,TRUE);
+
+			SetViewMode(VIEW_OUTSIDE_CENTER);
+			TorsoPitch(playermech,0.1);
+
+			SetHelpArrow(270,400,440,1000,true,0);
+			SetHelpArrow(270,400,370,1000,true,2);
+
+			SetInputTypeEnabled(INPUT_TORSO,TRUE);
+			HelpMessage(eob_Obj_LookAtLeftTower,5000);
+
+			SetSensorVisibility(ebu_west_tower,TRUE);
+			SetGUITarget(playermech,ebu_west_tower);
+
+			StartTimer(cinema_timer);
+			trans Part14_PlayerLookLeft;
+		endif;		
+endstate;
+
+state Part14_PlayerLookLeft;
+	code
+		if (IsTargeted(ebu_west_tower) == true) then
+			HelpMessage(eob_Obj_LookAtRightTower,5000);
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\23",TALKER_IAN);
+
+			SetSensorVisibility(ebu_east_tower,TRUE);
+			SetGUITarget(playermech,ebu_east_tower);
+
+			trans Part15_PlayerLookRight;
+		endif;
+endstate;
+
+state Part15_PlayerLookRight;
+	code
+		if (IsTargeted(ebu_east_tower) == true) then
+			HelpMessage(NO_UNIT,0);
+
+			CinemaStart;
+			SetAlwaysIgnoreObstacles(TRUE);
+			SetHelpArrow(180,-100,-100,1000,true,0);
+
+			SetActiveCamera(eca_CameraShip_WatchCircle);
+			playerai(epl_player0,true);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\24",TALKER_IAN);
+
+			SetInputTypeEnabled(INPUT_TORSO,FALSE);
+
+			StartTimer(cinema_timer);
+
+			trans Part16_JonesDemonstrates;
+		endif;
+endstate;
+
+state Part16_JonesDemonstrates;
+	code
+		if (TimeGreater(cinema_timer,2.0)) then
+			SetGlobalTrigger(16,true);
+			StartTimer(cinema_timer);
+			trans Part17_WaitForJones;
+		endif;
+endstate;
+
+state Part17_WaitForJones;
+	code
+		if (GetGlobalTrigger(14) == true) then
+			playerai(epl_player0,false);
+			CinemaEnd;
+			SetAlwaysIgnoreObstacles(TRUE);
+
+			TurnOffTheFuckingHUD;
+			SetHUDComponentEnabled(HUD_SPEED,TRUE);
+			SetHUDComponentEnabled(HUD_NAV,TRUE);
+			SetHUDComponentEnabled(HUD_TORSOBAR,TRUE);
+			SetHUDComponentEnabled(HUD_RETICLE,TRUE);
+			SetHUDComponentEnabled(HUD_RADAR,TRUE);
+			SetHUDComponentEnabled(HUD_TARGETARROW,TRUE);
+			SetHUDComponentEnabled(HUD_TARGETDAMAGE,TRUE);
+
+			SetViewMode(VIEW_OUTSIDE_CENTER);
+			TorsoPitch(playermech,0.1);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\25",TALKER_IAN);
+
+			SetInputTypeEnabled(INPUT_TORSO,TRUE);
+			SetInputTypeEnabled(INPUT_THROTTLE,TRUE);
+			SetInputTypeEnabled(INPUT_TURN,TRUE);
+			HelpMessage(eob_Obj_CircleOfDeathTower,5000);
+
+			SetGUITarget(playermech,ebu_west_tower);
+
+			trans Part18_OKNowYouDoIt_1;
+		endif;
+endstate;
+
+state Part18_OKNowYouDoIt_1;
+	code
+		if (IsWithin(playermech,ena_Nav_NCone1,25) == true) then
+			if (IsTargeted(ebu_west_tower) == true) then
+				trans Part18_OKNowYouDoIt_2;
+			endif;
+		endif;
+endstate;
+
+state Part18_OKNowYouDoIt_2;
+	code
+		if (IsWithin(playermech,ena_Nav_Alpha,35) == true) then
+			if (IsTargeted(ebu_west_tower) == true) then
+				trans Part18_OKNowYouDoIt_3;
+			endif;
+		endif;
+endstate;
+
+state Part18_OKNowYouDoIt_3;
+	code
+		if (IsWithin(playermech,ena_Nav_SCone1,25) == true) then
+			if (IsTargeted(ebu_west_tower) == true) then
+				KillVoiceOvers;
+				PlayVoiceOverOnce("VO\OP0\59",TALKER_IAN);
+				HelpMessage(eob_Obj_CircleOfDeathTower2,5000);
+				SetGUITarget(playermech,ebu_east_tower);
+
+				trans Part18x_CircleOtherCone_1;
+			endif;
+		endif;
+endstate;
+
+state Part18x_CircleOtherCone_1;
+	code
+		if (IsWithin(playermech,ena_Nav_NCone2,25) == true) then
+			if (IsTargeted(ebu_east_tower) == true) then
+				trans Part18x_CircleOtherCone_2;
+			endif;
+		endif;
+endstate;
+
+state Part18x_CircleOtherCone_2;
+	code
+		if (IsWithin(playermech,ena_Nav_Beta,35) == true) then
+			if (IsTargeted(ebu_east_tower) == true) then
+				trans Part18x_CircleOtherCone_3;
+			endif;
+		endif;
+endstate;
+
+state Part18x_CircleOtherCone_3;
+	code
+		if (IsWithin(playermech,ena_Nav_SCone2,25) == true) then
+			if (IsTargeted(ebu_east_tower) == true) then
+				KillVoiceOvers;
+				PlayVoiceOverOnce("VO\OP0\26",TALKER_IAN);
+				HelpMessage(eob_Obj_MoveToGamma,5000);
+				SetNavPoint(ena_Nav_Gamma);
+
+				SetSensorVisibility(ebu_west_tower,FALSE);
+				SetSensorVisibility(ebu_east_tower,FALSE);
+				SetGUITarget(playermech,NO_UNIT);
+
+				trans Part19_WaitForGamma;
+			endif;
+		endif;
+endstate;
+
+
+state Part19_WaitForGamma;
+	code
+		if (IsWithin(playermech,ena_Nav_Gamma,25) == true) then
+			SetInputTypeEnabled(INPUT_ALL,FALSE);
+
+			HelpMessage(NO_UNIT,0);
+
+			CinemaStart;
+			SetAlwaysIgnoreObstacles(TRUE);
+			playerai(epl_player0,true);
+			SetActiveCamera(eca_CameraShip_WatchCircle);
+			FollowAndShake(eve_vulture);
+			TargetOffset(0.0,4.8,0.0,0.0,true);
+			CameraOffset(0.0,0.3,22.0,0.0,true);
+
+			SetRotation(eve_shadowcat_0000,180);
+
+			SetGlobalTrigger(18,true);
+			StartTimer(cinema_timer);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\27",TALKER_IAN);
+
+			trans Part19_WaitForGamma_2;
+		endif;
+endstate;
+
+state Part19_WaitForGamma_2;
+	code
+		if (TimeGreater(cinema_timer,4.0)) then
+			SetGlobalTrigger(19,true);
+			CameraOffset(0.0,0.3,40.0,14.0,true);
+			StartTimer(cinema_timer);
+			trans Part20_MovingToGamma;
+		endif;
+endstate;
+
+state Part20_MovingToGamma;
+	var
+		LocPoint p;
+	code
+		if (TimeGreater(cinema_timer,10.0)) then
+			p[0] = -1719;
+			p[1] = 45;
+			p[2] = -1346;
+			Teleport(playermech,p);
+			SetRotation(playermech,0);
+
+			p[0] = -1656;
+			p[2] = -1455;
+			Teleport(eve_vulture,p);
+			SetRotation(eve_vulture,300);
+
+			SetGlobalTrigger(45,true);
+
+			playerai(epl_player0,false);
+			CinemaEnd;
+			SetAlwaysIgnoreObstacles(TRUE);
+
+			trans Area2_01;
+
+//			trans Part20b_WaitToSwitchCameras;
+		endif;
+endstate;
+
+state Part20b_WaitToSwitchCameras;
+	code
+/*
+		if (IsWithin(playermech,eve_shadowcat_0000,82) == true) then
+			TargetOffset(0.0,4.8,0.0,0.0,true);
+			CameraOffset(0.0,3.0,140.0,0.0,true);
+			trans Part21_AttackBuilding;
+		endif;
+*/
+endstate;
+
+state Part21_AttackBuilding;
+	code
+/*
+		if (IsWithin(playermech,eve_shadowcat_0000,68) == true) then
+			SetGlobalTrigger(41,true);
+			StartTimer(cinema_timer);
+			trans Part22_DestroyBuilding;
+		endif;
+*/
+endstate;
+
+state Part22_DestroyBuilding;
+	code
+/*
+		if (TimeGreater(cinema_timer,2.5) == true) then
+			Destroy(ebu_mech_hanger_0000);
+			SetGlobalTrigger(42,true);
+
+			StartTimer(cinema_timer);
+
+			trans Part23_HeyWatchIt;
+		endif;
+*/
+endstate;
+
+state Part23_HeyWatchIt;
+	code
+/*
+		if (TimeGreater(cinema_timer,2.5) == true) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\28",TALKER_IAN);
+
+			StartTimer(cinema_timer);
+
+			trans Part24_YouFuckUp;
+		endif;
+*/
+endstate;
+
+state Part24_YouFuckUp;
+	code
+/*
+		if (TimeGreater(cinema_timer,2.5) == true) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\29",TALKER_IAN);
+
+			SetGlobalTrigger(45,true);
+			SetGlobalTrigger(46,true);
+
+			CameraOffset(0.0,0.3,20.0,13.0,true);
+
+			trans Vestite;
+		endif;
+*/
+endstate;
+
+state Vestite;
+	code
+/*
+		if (GetGlobalTrigger(40) == true) then
+			playerai(epl_player0,false);
+			CinemaEnd;
+			SetAlwaysIgnoreObstacles(TRUE);
+
+			SetRotation(playermech,0);
+
+			trans Area2_01;
+		endif;
+*/
+endstate;
+
+	state JumpToArea2;
+		var
+			LocPoint p;
+		code
+			p[0] = -1719;
+			p[1] = 43;
+			p[2] = -1347;
+			Teleport(playermech,p);
+			p[0] = -1650;
+			p[1] = 43;
+			p[2] = -1325;
+			Teleport(eve_Vulture,p);
+			trans Area2_01;
+	endstate;
+
+state Area2_01;
+	code
+		SetMissionBounds(ena_Nav_Section2A,ena_Nav_Section2B);
+		SetInputTypeEnabled(INPUT_ALL,FALSE);
+		SetInputTypeEnabled(INPUT_TORSO,TRUE);
+		SetInputTypeEnabled(INPUT_FIRING,TRUE);
+		SetViewMode(VIEW_IN_MECH);
+
+		TurnOffTheFuckingHUD;
+		SetHUDComponentEnabled(HUD_SPEED,TRUE);
+		SetHUDComponentEnabled(HUD_NAV,TRUE);
+		SetHUDComponentEnabled(HUD_TORSOBAR,TRUE);
+		SetHUDComponentEnabled(HUD_WEAPON,TRUE);
+		SetHUDComponentEnabled(HUD_RETICLE,TRUE);
+
+		KillVoiceOvers;
+		PlayVoiceOverOnce("VO\OP0\30",TALKER_IAN);
+
+		SetHelpArrow(0,532,60,1000,true,0);
+		SetHelpArrow(0,576,60,1000,true,1);
+
+		HelpMessage(eob_Obj_FireGroup1,5000);
+
+		Trans Area2_02_FireGroup1;
+endstate;
+
+state Area2_02_FireGroup1;
+	code
+		if (FiredWeaponGroup(1) == true) then
+			HelpMessage(eob_Obj_FireGroup2,5000);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\56",TALKER_IAN);
+
+			SetGlobalTrigger(47,true);
+
+			StartTimer(cinema_timer);
+
+			trans Area2_03_FireGroup2;
+		endif;
+endstate;
+
+state Area2_03_FireGroup2;
+	code
+		if (TimeGreater(cinema_timer,4.0) == true) then
+			if (FiredWeaponGroup(2) == true) then
+				HelpMessage(eob_Obj_FireGroup3,5000);
+
+				KillVoiceOvers;
+				PlayVoiceOverOnce("VO\OP0\57",TALKER_IAN);
+
+				StartTimer(cinema_timer);
+
+				trans Area2_04_FireGroup3;
+			endif;
+		endif;
+endstate;
+
+state Area2_04_FireGroup3;
+	code
+		if (TimeGreater(cinema_timer,2.0) == true) then
+			if (FiredWeaponGroup(3) == true) then
+				KillVoiceOvers;
+				PlayVoiceOverOnce("VO\OP0\58",TALKER_IAN);
+
+				HelpMessage(eob_Obj_FireAllWeapons,5000);
+
+				StartTimer(cinema_timer);
+
+				trans Area2_06_FireAll;
+			endif;
+		endif;
+endstate;
+
+state Area2_06_FireAll;
+	var
+
+	code
+		if (FiredWeaponGroup(1) == true) then
+			if (FiredWeaponGroup(2) == true) then
+				if (FiredWeaponGroup(3) == true) then
+					KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP0\32",TALKER_IAN);
+
+					SetHelpArrow(0,-100,-100,1000,true,0);
+
+					SetViewMode(VIEW_OUTSIDE_CENTER);
+					TorsoPitch(playermech,0.1);
+
+					ResetAmmo(playermech);
+
+					HelpMessage(eob_Obj_DestroyTanks0,5000);
+
+					SetInputTypeEnabled(INPUT_TURN,TRUE);
+					SetInputTypeEnabled(INPUT_THROTTLE,TRUE);
+
+					trans Area2_03_BlowUpTanks;
+					
+				endif;
+			endif;
+		endif;
+endstate;
+
+state Area2_03_BlowUpTanks;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GroupNumDead(group_FirstTanks) == 6) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\31",TALKER_IAN);
+
+			HelpMessage(eob_Obj_FollowToNextTrainingArea,5000);
+
+			SetGlobalTrigger(20,true);
+
+			HideNav(ena_Nav_Alpha);
+			HideNav(ena_Nav_Beta);
+			HideNav(ena_Nav_Gamma);
+
+			SetNavPoint(ena_Nav_Delta);
+
+			StartTimer(cinema_timer);
+
+			trans Area2_03b_WaitToOpen;
+		endif;
+endstate;
+
+state Area2_03b_WaitToOpen;
+	code
+		CheckIfPlayerShotMe;
+
+		if (TimeGreater(cinema_timer,5.0)) then
+			SetMissionBounds(ena_Nav_Section2to3A,ena_Nav_Section3B);
+
+			trans Area2_04_GoToArea3;
+		endif;
+endstate;
+
+state Area2_04_GoToArea3;
+	code
+		CheckIfPlayerShotMe;
+
+		if (IsWithin(playermech,ena_Nav_InSection3,10) == true) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\36",TALKER_IAN);
+
+			SetMissionBounds(ena_Nav_Section3A,ena_Nav_Section3B);
+
+			HelpMessage(eob_Obj_DestroyTanks1,5000);
+
+			ResetAmmo(playermech);
+
+//			StartTimer(gti_timer_17);
+//			ShowTimer(gti_timer_17,eob_Obj_DestroyTanks1,100,true,MakeColor(255,255,255,255),true);
+
+			trans Area3_01_BlowUpMoreTanks;
+		endif;
+endstate;
+
+state Area3_01_BlowUpMoreTanks;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GroupNumDead(group_SecondTanks) == 6) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\37",TALKER_IAN);
+
+			ShowTimer(gti_timer_17,eob_Obj_DestroyTanks1,100,true,MakeColor(255,255,255,255),false);
+
+			SetInputTypeEnabled(INPUT_VIEW_MODES,TRUE);
+
+			HelpMessage(eob_Obj_SwitchToInsideView,5000);
+
+			trans Area3_02a_SetToInsideView;
+		endif;
+endstate;
+
+state Area3_02a_SetToInsideView;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GetViewMode(playermech) == VIEW_IN_MECH) then
+			HelpMessage(eob_Obj_SwitchToOutsideView,5000);
+
+			trans Area3_02b_SetToOutsideView;
+		endif;
+endstate;
+
+state Area3_02b_SetToOutsideView;
+	var
+		Boolean skip;
+	code
+		skip = false;
+
+		CheckIfPlayerShotMe;
+
+		if (GetViewMode(playermech) == VIEW_OUTSIDE_CENTER) then
+			if (IsDead(etu_Calliope_0004) == true) then
+				skip = true;
+			endif;
+
+			if (IsDead(eve_ammo_carrier) == true) then
+				skip = true;
+			endif;
+
+			if (skip == true) then
+				HelpMessage(NO_UNIT,0);
+
+				KillVoiceOvers;
+				PlayVoiceOverOnce("VO\OP0\31",TALKER_IAN);
+
+				SetHelpArrow(0,-100,-100,1000,true,0);
+
+				SetGlobalTrigger(21,true);
+				SetGlobalTrigger(22,true);
+				SetGlobalTrigger(30,true);
+
+				HelpMessage(eob_Obj_FollowToNextTrainingArea,5000);
+
+				StartTimer(cinema_timer);
+
+				SetNavPoint(ena_Nav_Epsilon);
+
+				SetMissionBounds(ena_Nav_Section3A,ena_Nav_Section5B);
+
+				ResetAmmo(playermech);
+
+				SetInputTypeEnabled(INPUT_THROTTLE,TRUE);
+				SetInputTypeEnabled(INPUT_TURN,TRUE);
+				SetInputTypeEnabled(INPUT_TORSO,TRUE);
+				SetInputTypeEnabled(INPUT_ZOOM,TRUE);
+				SetInputTypeEnabled(INPUT_TARGET_SELECTION,TRUE);
+				SetInputTypeEnabled(INPUT_HEAT,TRUE);
+				SetHUDComponentEnabled(HUD_TARGETDAMAGE,TRUE);
+				SetHUDComponentEnabled(HUD_TARGETARROW,TRUE);
+				SetHUDComponentEnabled(HUD_HEAT,TRUE);
+				trans Area5_01_WaitToEnter;
+			endif;
+
+			HelpMessage(eob_Obj_FollowToNextTrainingArea,5000);
+
+			SetInputTypeEnabled(INPUT_FIRING,FALSE);
+
+			SetNavPoint(ena_Nav_Zeta);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\38",TALKER_IAN);
+
+			SetGlobalTrigger(21,true);
+
+			StartTimer(cinema_timer);
+
+			trans Area3_02c_WaitToOpen;
+		endif;
+endstate;
+
+state Area3_02c_WaitToOpen;
+	code
+		CheckIfPlayerShotMe;
+
+		if (TimeGreater(cinema_timer,5.0)) then
+			SetMissionBounds(ena_Nav_Section3A,ena_Nav_Section4B);
+
+			trans Area3_03_FollowJonesAgain;
+		endif;
+endstate;
+
+state Area3_03_FollowJonesAgain;
+	code
+		CheckIfPlayerShotMe;
+
+		if (IsWithin(playermech,ena_Nav_Section4B,45) == true) then
+			SetAlignment(etu_Calliope_0004,ENEMY);
+			SetAlignment(eve_ammo_carrier,ENEMY);
+
+			SetHUDComponentEnabled(HUD_TARGETDAMAGE,TRUE);
+			SetHUDComponentEnabled(HUD_TARGETARROW,TRUE);
+
+			SetSensorVisibility(etu_Calliope_0004,TRUE);
+			SetSensorVisibility(eve_ammo_carrier,TRUE);
+
+			SetInputTypeEnabled(INPUT_TARGET_SELECTION,TRUE);
+
+			SetSensorVisibility(eve_vulture,TRUE);
+
+			SetMissionBounds(ena_Nav_Section4A,ena_Nav_Section4B);
+
+			HelpMessage(eob_Obj_TargetAmmoCarrier,5000);
+
+			StartTimer(cinema_timer);
+
+			trans Area4_01a_skip;
+		endif;
+endstate;
+
+state Area4_01a_skip;
+	code
+		CheckIfPlayerShotMe;
+
+		SetGUITarget(playermech,etu_Calliope_0004);
+
+		if (TimeGreater(cinema_timer,2.0)) then
+
+			trans Area4_01_WaitForToggleToHumvee;
+		endif;
+endstate;
+
+state Area4_01_WaitForToggleToHumvee;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GetGUITarget(playermech) == eve_ammo_carrier) then
+			HelpMessage(eob_Obj_TargetCalliope,5000);
+
+			trans Area4_02_WaitForToggleToCalliope;
+		endif;
+endstate;
+
+state Area4_02_WaitForToggleToCalliope;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GetGUITarget(playermech) == etu_Calliope_0004) then
+			SetHUDComponentEnabled(HUD_RADAR,TRUE);
+
+			HelpMessage(eob_Obj_TargetAmmoCarrier,5000);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\39",TALKER_IAN);
+
+			SetHelpArrow(90,402,404,1000,true,0);
+			SetHelpArrow(90,402,454,1000,true,1);
+
+			trans Area4_03_WaitForToggleToHumvee2;
+		endif;
+endstate;
+
+state Area4_03_WaitForToggleToHumvee2;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GetGUITarget(playermech) == eve_ammo_carrier) then
+			HelpMessage(eob_Obj_TargetCalliope,5000);
+
+			trans Area4_04_WaitForToggleToCalliope2;
+		endif;
+endstate;
+
+state Area4_04_WaitForToggleToCalliope2;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GetGUITarget(playermech) == etu_Calliope_0004) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\40",TALKER_IAN);
+
+			HelpMessage(eob_Obj_ZoomIn,5000);
+
+			SetSensorVisibility(eve_vulture,FALSE);
+
+			SetInputTypeEnabled(INPUT_ZOOM,TRUE);
+
+			SetHelpArrow(0,-100,-100,1000,true,0);
+
+			trans Area4_05_WaitForZoom;
+		endif;
+endstate;
+
+state Area4_05_WaitForZoom;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GetZoomState(playermech) == true) then
+			SetInputTypeEnabled(INPUT_FIRING,TRUE);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\41",TALKER_IAN);
+
+			ResetAmmo(playermech);
+
+			HelpMessage(eob_Obj_DestroyCalliope,5000);
+
+			trans Area4_06_WaitForKillCalliope;
+		endif;
+endstate;
+
+state Area4_06_WaitForKillCalliope;
+	code
+		CheckIfPlayerShotMe;
+
+		if (IsDead(etu_Calliope_0004) == true) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\42",TALKER_IAN);
+
+			SetSensorVisibility(eve_ammo_carrier,FALSE);
+
+			SetHUDComponentEnabled(HUD_HEAT,TRUE);
+
+			HelpMessage(NO_UNIT,0);
+
+			SetInputTypeEnabled(INPUT_THROTTLE,FALSE);
+			SetInputTypeEnabled(INPUT_TURN,FALSE);
+			SetInputTypeEnabled(INPUT_HEAT,TRUE);
+			SetViewMode(VIEW_OUTSIDE_CENTER);
+			TorsoPitch(playermech,0.1);
+
+			StartTimer(cinema_timer);
+
+			trans Area4_07a_WaitToOverheatHelpArrow;
+		endif;
+endstate;
+
+state Area4_07a_WaitToOverheatHelpArrow;
+	code
+		if (TimeGreater(cinema_timer,24.0)) then
+			SetHelpArrow(0,248,520,1000,true,0);
+			SetHelpArrow(0,298,520,1000,true,1);
+
+			trans Area4_07_WaitToOverheat;
+		endif;
+endstate;
+
+state Area4_07_WaitToOverheat;
+	code
+		if (TimeGreater(cinema_timer,36.0)) then
+			trans Area4_07b_Overheat;
+		endif;
+endstate;
+
+state Area4_07b_Overheat;
+	code
+		CreateInstantHeatSphere(playermech,5,1);
+
+		if (IsShutdown(playermech) == true) then
+			trans Area4_08_ManThatSucked
+		endif;
+endstate;
+
+state Area4_08_ManThatSucked;
+	code
+		CheckIfPlayerShotMe;
+
+		if (TimeGreater(cinema_timer,5.0)) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\43",TALKER_IAN);
+
+			SetHelpArrow(0,-100,-100,1000,true,0);
+
+			SetGlobalTrigger(22,true);
+			SetGlobalTrigger(30,true);
+
+			HelpMessage(eob_Obj_FollowToNextTrainingArea,5000);
+
+			SetNavPoint(ena_Nav_Epsilon);
+
+			SetInputTypeEnabled(INPUT_THROTTLE,TRUE);
+			SetInputTypeEnabled(INPUT_TURN,TRUE);
+			SetInputTypeEnabled(INPUT_TORSO,TRUE);
+			SetInputTypeEnabled(INPUT_ZOOM,TRUE);
+
+			StartTimer(cinema_timer);
+
+			trans Area5_01b_WaitToOpen;
+		endif;
+endstate;
+
+state Area5_01b_WaitToOpen;
+	code
+		CheckIfPlayerShotMe;
+
+		if (TimeGreater(cinema_timer,10.0)) then
+			SetMissionBounds(ena_Nav_Section4A,ena_Nav_Section5B);
+
+			trans Area5_01_WaitToEnter;
+		endif;
+endstate;
+
+
+state Area5_01_WaitToEnter;
+	code
+		CheckIfPlayerShotMe;
+
+		if (IsWithin(playermech,ena_Nav_InArea5,18) == true) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\44",TALKER_IAN);
+
+			HelpMessage(eob_Obj_KillDucks,5000);
+
+			ResetAmmo(playermech);
+
+			SetMissionBounds(ena_Nav_Section5A,ena_Nav_Section5B);
+
+			SetInputTypeEnabled(INPUT_ALL,TRUE);
+			SetInputTypeEnabled(INPUT_MISC,FALSE);
+
+			trans Area5_02_KillDucks;
+		endif;
+endstate;
+
+state Area5_02_KillDucks;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GroupNumDead(group_RandomVehicles) == 5) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\45",TALKER_IAN);
+
+			HelpMessage(eob_Obj_GoToNextTrainingArea,5000);
+
+			SetNavPoint(ena_Nav_Theta);
+
+			StartTimer(cinema_timer);
+
+			SetGlobalTrigger(23,true);
+
+			trans Area6_01b_WaitToOpen;		
+		endif;
+endstate;
+
+state Area6_01b_WaitToOpen;
+	code
+		CheckIfPlayerShotMe;
+
+		if (TimeGreater(cinema_timer,5.0)) then
+			SetMissionBounds(ena_Nav_Section5A,ena_Nav_Section6B);
+
+			trans Area6_01_WaitToEnter;
+		endif;
+endstate;
+
+state Area6_01_WaitToEnter;
+	code
+		CheckIfPlayerShotMe;
+
+		if (IsWithin(playermech,ena_Nav_InArea6,18) == true) then
+			HelpMessage(eob_Obj_DestroySRMs,5000);
+			SetGlobalTrigger(31,true);
+
+			ResetAmmo(playermech);
+
+			SetMissionBounds(ena_Nav_Section6A,ena_Nav_Section6B);
+
+			trans Area6_02_WaitToLaunchPeregrines;
+		endif;
+endstate;
+
+state Area6_02_WaitToLaunchPeregrines;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GroupNumDead(group_SRMCs) == 5) then
+			HelpMessage(eob_Obj_DestroyPeregrines,5000);
+			SetGlobalTrigger(32,true);
+
+			ResetAmmo(playermech);
+			SetHelicoptersIgnoreMissionBounds(TRUE);
+
+			trans Area6_03_WaitForPeregrinesToDie;
+		endif;
+endstate;
+
+state Area6_03_WaitForPeregrinesToDie;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GroupNumDead(group_Peregrines) == 3) then
+			HelpMessage(eob_Obj_QuashInvader,5000);
+			SetMissionBounds(ena_Nav_SectionFinalA,ena_Nav_SectionFinalB);
+
+			CinemaStart;
+			SetAlwaysIgnoreObstacles(TRUE);
+			SetInputTypeEnabled(INPUT_ALL,FALSE);
+			SetActiveCamera(eca_CameraShip_Opening1);
+			playerai(epl_player0,true);
+			FollowAndShake(playermech);
+			TargetOffset(0.0,4.8,0.0,0.0,true);
+			CameraOffset(0.0,0.3,70.0,0.0,true);
+
+			StartTimer(cinema_timer);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\46",TALKER_IAN);
+
+			trans AreaFinal_01_PlayWarning;
+		endif;
+endstate;
+
+state AreaFinal_01_PlayWarning;
+	code
+		if (TimeGreater(cinema_timer,7.0)) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\47",TALKER_IAN);
+
+			StartTimer(cinema_timer);
+
+			SetGlobalTrigger(33,true);
+
+			CameraOffset(0.0,0.3,20.0,2.5,true);
+
+			trans AreaFinal_02_YouHoldThemOff;
+		endif;
+endstate;
+
+state AreaFinal_02_YouHoldThemOff;
+	code
+		if (TimeGreater(cinema_timer,8.0)) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\48",TALKER_IAN);
+
+			StartTimer(cinema_timer);
+
+			trans AreaFinal_03_ThisIsPartOfTrainingRight;
+		endif;
+endstate;
+
+state AreaFinal_03_ThisIsPartOfTrainingRight;
+	code
+		if (TimeGreater(cinema_timer,2.0)) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\49",TALKER_IAN);
+
+			SetGlobalTrigger(34,true);
+
+			StartTimer(cinema_timer);
+
+			trans AreaFinal_04_NoItsNotMoron;
+		endif;
+endstate;
+
+state AreaFinal_04_NoItsNotMoron;
+	code
+		if (TimeGreater(cinema_timer,15.0)) then
+			SetGUITarget(playermech,eve_osiris);
+			playerai(epl_player0,false);
+			CinemaEnd;
+			SetAlwaysIgnoreObstacles(TRUE);
+
+			SetGlobalTrigger(46,true);
+
+			TurnOffTheFuckingHUD;
+			SetHUDComponentEnabled(HUD_HEAT,TRUE);
+			SetHUDComponentEnabled(HUD_SPEED,TRUE);
+			SetHUDComponentEnabled(HUD_NAV,TRUE);
+			SetHUDComponentEnabled(HUD_TORSOBAR,TRUE);
+			SetHUDComponentEnabled(HUD_WEAPON,TRUE);
+			SetHUDComponentEnabled(HUD_RETICLE,TRUE);
+			SetHUDComponentEnabled(HUD_TARGETARROW,TRUE);
+			SetHUDComponentEnabled(HUD_RADAR,TRUE);
+			SetHUDComponentEnabled(HUD_TARGETDAMAGE,TRUE);
+
+			ResetAmmo(playermech);
+
+			SetViewMode(VIEW_OUTSIDE_CENTER);
+			TorsoPitch(playermech,0.1);
+
+			SetGlobalTrigger(36,true);
+
+			SetInputTypeEnabled(INPUT_ALL,TRUE);
+			SetInputTypeEnabled(INPUT_MISC,FALSE);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\50",TALKER_IAN);
+
+			StartTimer(cinema_timer);
+
+			trans AreaFinal_05_WhatTheHell;
+		endif;
+endstate;
+
+state AreaFinal_05_WhatTheHell;
+	code
+		CheckIfPlayerShotMe;
+
+		if (TimeGreater(cinema_timer,2.0)) then
+			Destroy(ebu_shilone_hangar_0001);
+		endif;
+
+		if (TimeGreater(cinema_timer,5.0)) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\51",TALKER_IAN);
+
+			StartTimer(cinema_timer);
+
+			trans AreaFinal_06_BeCarefulIan;
+		endif;
+endstate;
+
+state AreaFinal_06_BeCarefulIan;
+	code
+		CheckIfPlayerShotMe;
+
+		if (TimeGreater(cinema_timer,9.0)) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\52",TALKER_IAN);
+
+			StartTimer(cinema_timer);
+
+			trans AreaFinal_07_WaitForFinish;
+		endif;
+endstate;
+
+state AreaFinal_07_WaitForFinish;
+	code
+		CheckIfPlayerShotMe;
+
+		if (TimeGreater(cinema_timer,90.0) == true) then
+			SetGlobalTrigger(35,true);
+		endif;
+
+		if (IsDead(eve_osiris) == true) then
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\53",TALKER_IAN);
+
+			HelpMessage(NO_UNIT,0);
+
+			StartTimer(cinema_timer);
+
+			trans AreaFinal_08_RecommendPromotion;
+		endif;
+endstate;
+
+state AreaFinal_08_RecommendPromotion;
+	code
+		CheckIfPlayerShotMe;
+
+		if (TimeGreater(cinema_timer,10.0)) then
+			CinemaStart;
+			SetAlwaysIgnoreObstacles(TRUE);
+			SetInputTypeEnabled(INPUT_ALL,FALSE);
+			SetGlobalTrigger(37,true);
+			SetActiveCamera(eca_CameraShip_Opening1);
+			playerai(epl_player0,true);
+			FollowAndShake(playermech);
+			TargetOffset(0.0,4.8,0.0,0.0,true);
+			CameraOffset(0.0,0.3,20.0,0.0,true);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\54",TALKER_IAN);
+
+			StartTimer(cinema_timer);
+
+			trans AreaFinal_09_DontDeserve;
+		endif;
+endstate;
+
+state AreaFinal_09_DontDeserve;
+	code
+		if (TimeGreater(cinema_timer,2.0)) then
+			SetGlobalTrigger(50,true);
+			FollowAndShake(eve_vulture);
+			TargetOffset(0.0,4.8,0.0,0.0,true);
+			CameraOffset(0.0,0.3,45.0,0.0,true);
+			CameraOffset(0.0,0.3,20.0,17.0,true);
+
+			KillVoiceOvers;
+			PlayVoiceOverOnce("VO\OP0\55",TALKER_IAN);
+
+			StartTimer(cinema_timer);
+			
+			trans AreaFinal_10_YouKickAss;
+		endif;
+endstate;
+
+state AreaFinal_10_YouKickAss;
+	code
+		if (TimeGreater(cinema_timer,18.0)) then
+			SuccessObjectiveAll(0);
+			playerai(epl_player0,false);
+		endif;
+endstate;
+
+state KickPlayersAss;
+	code
+		if (TimeGreater(kick_ass_timer,12.0)) then
+			Destroy(playermech);
+		endif;
+
+		if (isdead(playermech)) then
+			failobjectiveall(9);
+			trans lost;
+		endif;
+endstate;
+
+state won;
+
+		code
+		
+		switch cinema_cut
+		
+			case 0:	
+			
+			endcase;
+			
+			case 1:
+			
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+		
+		switch cinema_cut
+		
+			case 0:	
+			
+			endcase;
+			
+			case 1:
+			
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+
+endfsm.

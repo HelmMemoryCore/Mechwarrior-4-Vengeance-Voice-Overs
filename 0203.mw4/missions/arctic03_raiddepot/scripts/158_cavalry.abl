@@ -1,0 +1,173 @@
+
+//*********************************************************************************
+
+fsm Cavalry : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+	static integer	gunnery;
+	static integer	attackrange;
+	static real			mindelay;
+	static real			maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+	static integer	attacksound;
+	static integer	mood;
+	static integer	speed;
+	static integer	Wheretogo;
+	static boolean	Wakeup;
+	static boolean  AttackSoundPlayed;
+	
+	static locpoint	Point1;
+	static locpoint	Point2;
+	
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+	function init;
+	 code
+		
+		wakeup = false;
+		AttackSoundPlayed = false;
+		
+			Point1[0] = 48;
+			Point1[1] = 158;
+			Point1[2] = 1735;
+			
+			Point2[0] = 56;
+			Point2[1] = 159;
+			Point2[2] = 1735;
+
+				
+		switch (GetMemoryInteger(me,9))
+			case 0:
+				attackrange = 600;				
+				piloting = 40;							
+				gunnery = 65;				   	
+				mindelay = 0.5;							
+				maxdelay = 1.0;									
+				elitelevel = 60;
+				attacksound = -1;
+				mood = BRUTAL_END;
+				speed = 70;
+				wheretogo = epa_CavPath;
+			endcase;
+			case 1:
+				attackrange = 500;				
+				piloting = 50;							
+				gunnery = 60;						
+				mindelay = 0.5;							
+				maxdelay = 1.5;									
+				elitelevel = 60;
+				attacksound = -1;
+				mood = BRUTAL_START;
+				speed = 70;
+				wheretogo = epa_cavpath;
+			endcase;
+		endswitch;
+	endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+			setskilllevel(me,piloting,gunnery,elitelevel);
+			setfiringdelay(me,mindelay,maxdelay);
+			setignorefriendlyfire(me,true);
+			setentropymood(me,mood);
+			setcurmood(me,mood);
+			SetSensorVisibility(me,false);
+			TeleportToHell(me); 	
+						
+			trans wait;
+	endstate;
+	
+	state deadState;
+  code
+//Do I want to do some random thing in here....with the "did you see that?" and something else??
+//		if (deathsound <> -1) then	
+//			PlaySoundOnce(deathsound);
+//		endif;								
+		orderDie;
+	endstate;
+
+	state	wait;
+		code
+			
+
+
+			if isdead(eve_garrison2) or isdead(eve_garrison1) then
+					if Alert == TRUE then
+						if Wakeup == false then
+							starttimer(gti_timer_12);
+							wakeup = true;
+						endif;
+					endif;
+      endif;
+
+				if timegreater(12,30) then
+						Teleport(eve_Cavalry1,Point1);
+						Teleport(eve_Cavalry2,Point2);
+						Startup(me);
+						SetSensorVisibility(me,true);
+						trans rumble;
+				endif;
+			
+	endstate;																																	
+	
+	state rumble;
+		code
+						
+			OrderMoveResumePatrol(wheretogo,speed,move_nocycle,false,true);
+			
+			
+		if (FindEnemy(attackRange,FT_DEFAULT)) then
+			trans Attack;
+		endif;
+			
+			
+	endstate;
+	
+state Attack;
+	code
+		if (LeaveAttackState(800)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans Rumble;
+		endif;
+		
+		OrderAttack(true);
+																																
+endstate;
+
+																																		
+endfsm.
+//******************************************************************

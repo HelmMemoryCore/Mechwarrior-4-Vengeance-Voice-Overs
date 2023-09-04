@@ -1,0 +1,283 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Sentry must be changed to some other unique identifier
+fsm Allies : integer;
+		
+
+
+// 		Behavior: Sits stationary and looks around. When an enemy comes within
+//   alertrange it moves towards the unit
+//	When the unit comes within attackrange it attacks
+//	Whenit kills the unit it can either go back to it's start point or not,
+//	depending on different settings in the brain.
+
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; // When do I start shooting?
+																
+	static integer			piloting; 	// piloting skill
+	static integer			gunnery; // hit chance,
+	static real					mindelay;		//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;		//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;			 // What speed so I move at?
+	static integer 			elitelevel; // % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																	// and other things that would normally be determined by combat experience
+
+  static integer			isshotradius;	//how far away from me will I detect an enemy shot.
+	
+	static integer			mood;	//What is my normal mood?
+			
+	static Boolean 			attacksoundplayed;	//Am I attacking?
+	
+	//if set to -1 the below sounds effectively do not exist
+	static integer 			attacksound; // plays when the unit first attacks
+	static integer 			deathsound; // plays when the unit dies
+	
+	static locpoint			mystart; //Where was the unit when the mission started
+	static boolean			movingtostart;	//Is the unit moving to the start point
+	static boolean			movetostart;	//should the unit move back to it's start point when it's done fighting?
+	
+	static integer			xoffset;
+	static integer			yoffset;
+	
+	static boolean			linkgotten;
+	static boolean			soundplayed;
+	static boolean			sound2played;
+	static boolean			sound3played;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+
+																			// defaults are below
+	//These are the variables that are normally changed by the designer
+	//in order to change behavior
+	attackrange = 500;									//500
+	piloting = 65;												//50
+	gunnery = 75;											//30
+	mindelay = 0.1;											//1.5
+	maxdelay = 0.4;											//3.0
+	elitelevel = 70;										//30
+	speed = 600;												//600 (max speed)
+	isshotradius = 80;										//80	
+	attacksound = -1;                   //-1 (no sound)
+	deathsound = -1;                    //-1 (no sound)	
+	movetostart = true;								//False
+	mood = neutral_start;								//neutral_start
+
+	//These variables should not be changed by the designer without good reason
+	attacksoundplayed = FALSE;									//false
+	getlocation(me,mystart);		 				//DO NOT CHANGE THIS LINE!!!
+	movingtostart = false;							//false
+	xoffset = -30;
+	yoffset = -20;
+	
+	linkgotten = false;
+	soundplayed = false;
+	sound2played = false;
+	sound3played = false;
+	
+	
+	//Use this to set different values for different units using the same brain
+	switch (GetMemoryInteger(me,9))
+
+		case 1:
+		xoffset = -30;
+		yoffset = -20;
+		endcase;
+		
+		case 2:
+		xoffset = -40;
+		yoffset = -30;
+		endcase;
+		
+		case 3:
+		xoffset = -30;
+		yoffset = 20;
+		endcase;
+		
+		case 4:
+		xoffset = -40;
+		yoffset = 30;
+		endcase;
+		
+	endswitch;
+	
+endfunction;
+
+
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		setalignment(me,friendly);
+
+	
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		if (deathsound <> -1) then	
+			PlaySoundOnce(deathsound);
+		endif;
+		
+		orderDie;
+endstate;
+
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+	
+	//If the player has linked up with me then go to the Follow State	
+	If (linkedup) then
+			attackrange = 725;
+			linkgotten = true;
+			trans follow;
+	endif;
+		
+		//Go back to my start point if I am supposed to
+		if (movingtostart == true) then
+			if (orderMovetolocpoint(mystart,speed,true,true) == true) then
+				movingtostart = false;
+			endif;
+		endif;
+		
+		//initial order
+		if (movingtostart == false) then		
+			OrderMoveLookout;
+		endif;
+
+
+		if (setmytarget(attackrange)) then
+			trans attack;
+	 	endif;
+ 	
+	endstate;
+	
+//--------------------------------------------------------------------
+//The Follow State
+//-------------------------------------------------------
+
+state follow;
+  code
+	
+	if (not soundplayed) then
+		if ((GetMemoryInteger(me,8)) == 1) then
+			if (not sound2played) then
+				playvoiceover("VO\OP4\MI7\linkup",talker_den);
+				playvoiceover("VO\OP4\MI7\linkup",talker_ian);
+				playlancematesound("VO\OP4\MI7\linkup",1);
+			else
+				playvoiceover("VO\OP4\MI7\underattack",talker_den);
+			endif;
+		endif;
+		soundplayed = true;
+	endif;
+	
+	linkgotten = true;
+	
+	orderMoveFollow(playermech,xoffset,yoffset);
+	
+	if (setmytarget(attackrange)) then
+		trans attack;
+	endif;
+
+endstate;
+
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	 	var
+
+		
+		code
+		
+		
+		//Get out of the attack state if any of the above is true.	
+		if (LeaveAttackState(attackrange*3/2)) then
+			orderstopattacking;
+			//see if I want to go back to my start point and set things accordingly
+			if (movetostart == true) then			 				
+				movingtostart = true;
+			endif;				
+			trans sit;
+		endif;
+				
+			//Attack
+			OrderAttack(true);
+			
+		//play the attack sound if one exists
+		if ((attacksound <> -1) and (attacksoundplayed == FALSE)) then	
+			attacksoundplayed = true;
+			PlaySoundOnce(attacksound);
+		endif;
+		
+		//maybe swap targets when I am shot.
+		if ((isShot (me)) and (rand(0,75) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+		
+		if (not linkgotten) then	
+			If (linkedup) then
+					attackrange = 725;
+					trans follow;
+			endif;
+		endif;
+
+ 		
+					
+	endstate;
+	
+endfsm.
+//******************************************************************
+

@@ -1,0 +1,115 @@
+
+//*********************************************************************************
+
+fsm Decoys : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer	gunnery;
+	static integer	attackrange;
+	static real	mindelay;
+	static real	maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+	
+	static boolean	Chatter;
+	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+		attackrange = 500;				
+		piloting = 30;							
+		gunnery = 90;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 30;
+		
+		Chatter = true;
+				
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		setignorefriendlyfire(me,true);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		setfiringdelay(me,mindelay,maxdelay);
+		if romeogo == true then
+			trans Transit;
+		endif;
+	endstate;
+
+  state deadState;
+		code
+			orderDie;
+  endstate;
+	
+	state Transit;
+	 		
+		var
+			ObjectID foe;
+
+		code
+				
+		ordermoveto(epa_DecoyPath,600,MOVE_NOCYCLE,FALSE,FALSE);
+		
+		if (FindEnemy(attackrange,FT_DEFAULT)) then
+			trans Attack;
+		endif;
+
+	endstate;
+
+state Attack;
+	code
+		if (LeaveAttackState(700)) then
+			trans Transit;
+		endif;
+
+		if Play1 == false then
+			PlayVoiceOver("VO\OP4\MI1\FireGuards",TALKER_ROM);
+			PlayLancemateSound("VO\OP4\MI1\FireGuards",1);
+			Play1 = true;
+		endif;
+		
+		OrderAttack(TRUE);
+
+endstate;
+		
+endfsm.
+//******************************************************************
+
+
+

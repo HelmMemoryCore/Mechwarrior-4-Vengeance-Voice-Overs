@@ -1,0 +1,529 @@
+
+//*********************************************************************************
+
+fsm Alpine03 : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+			
+		eternal integer playermech;
+		
+		
+		static integer	cinema_cut;
+		
+		eternal boolean Alarm;
+		static boolean	alarmon;
+		
+		eternal integer	basetime;
+		static boolean	alarmsoundplayed;
+		
+		static boolean	founddropship;
+		static boolean	killeddropship;
+		eternal boolean	dropshipgone;
+		static boolean	calledtrouble;
+		static integer	wimpy;
+		static boolean	contactplayed;
+		
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+
+		 playermech = getplayervehicle(epl_player0);	
+ 	
+//			GroupAddObject(GroupObjectId(1),playermech);
+//			GroupAddObject(GroupObjectId(1),eve_lancemate1);
+//			setalignment(eve_lancemate1,friendly);
+//			SetSkillLevel(eve_lancemate1,50,90,75);
+//			setsquadtargetingradius(eve_lancemate1,500);
+//      setgroupai(groupobjectid(1),groupai_lancemate);
+
+
+
+			GroupAddObject(GroupObjectId(10),eve_APU1);
+			GroupAddObject(GroupObjectId(10),eve_APU2);
+			GroupAddObject(GroupObjectId(10),eve_APU3);
+			GroupAddObject(GroupObjectId(10),eve_APU4);
+			//SetGroupAI(groupobjectid(X),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(11),etu_turret1);
+			GroupAddObject(GroupObjectId(11),etu_turret2);
+			GroupAddObject(GroupObjectId(11),etu_turret3);
+			GroupAddObject(GroupObjectId(11),etu_turret4);
+			GroupAddObject(GroupObjectId(11),etu_turret5);
+			SetGroupAI(groupobjectid(11),GROUPAI_RADIOSQUAD);
+						
+			GroupAddObject(GroupObjectId(13),eve_Centerpatrol1);
+			
+			GroupAddObject(GroupObjectId(14),eve_Dropshippatrol1);
+			GroupAddObject(GroupObjectId(14),eve_Dropshippatrol2);
+			SetGroupAI(groupobjectid(14),GROUPAI_RADIOSQUAD);
+ 		
+		cinema_cut = 0; 						
+		
+		alarm = false;
+		alarmon = false;
+		basetime = 240;
+		alarmsoundplayed = false;
+		founddropship = false;
+		killeddropship = false;
+		dropshipgone = false;
+		calledtrouble = false;
+		wimpy = GetDifficulty;
+		contactplayed = false;
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+			//playsound(eso_start);
+			//setactivationdistance(6800);
+			//trans opening;
+			starttimer(gti_timer_0);
+			playvoiceover("VO\OP3\MI3\ready",talker_ian);
+			playvoiceover("VO\OP3\MI3\intro",talker_rat);
+			playvoiceover("VO\OP3\MI3\intro",talker_art);
+			playvoiceover("VO\OP3\MI3\intro",talker_rec);
+			playvoiceover("VO\OP3\MI3\intro",talker_sal);
+			playvoiceover("VO\OP3\MI3\intro",talker_fo1);
+			playvoiceover("VO\OP3\MI3\intro2",talker_ian);
+			playlancematesound("VO\OP3\MI3\intro2",1);
+			revealobjective (eob_finddropship);
+			revealobjective(eob_killdropship);
+			StartMusic("Music\Sander",3.5,3.0,50);
+			playerai(epl_player0,true);
+			trans opening;
+
+endstate;
+
+													
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+	
+				//PlayVoiceOverOnce("VO\Generic\Startup1",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+
+			
+//Reveal the objectives
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		endmission(false,12);
+		killvoiceovers;
+		PlayVoiceOver("VO\Generic\Iandestroyed",talker_rat);
+		failobjective(eob_finddropship);
+		failobjective(eob_killdropship);
+		StartMusic("Music\Defeat",3.5,3.0,80);
+		trans lost;
+	endif;
+	
+	if (dropshipgone) then
+		endmission(false,12);
+		failobjective(eob_killdropship);
+		StartMusic("Music\SteinerDefeat",3.5,3.0,80);
+		trans lost;
+	endif;
+	
+	//sound alarm if dropship is shot
+	if (not alarm) then
+		if (isshot(eve_dropship)) then
+			alarm = true;
+		endif;
+	endif;
+	
+	//start alarm timer when alarm goes off
+	if (not alarmon) then
+		if (alarm) then
+			starttimer(gti_timer_10);			
+			alarmon = true;
+		endif;
+	endif;
+	
+	if (not contactplayed) then
+		if (timegreater(gti_timer_10,4)) then
+			playvoiceover("VO\OP3\MI3\contact",talker_ian);
+			contactplayed = true;
+		endif;
+	endif;
+	
+	// 8 seconds after alarm goes off play the alarm raised sound
+	if (not alarmsoundplayed) then
+		if (alarmon) then
+			if (timegreater(gti_timer_10,25)) then
+				playvoiceover("VO\OP3\MI3\power",talker_rat);
+				alarmsoundplayed = true;
+			endif;
+		endif;
+	endif;
+	
+	//change basetime depending on how many apus are up
+	switch (groupnumdead(groupobjectid(10)))
+
+		case 1:
+		
+		Basetime = 400;			
+		
+		endcase;
+		
+		case 2:
+		
+		Basetime = 460;			
+		
+		endcase;
+		
+		case 3:
+		
+		Basetime = 520;			
+		
+		endcase;
+		
+		case 4:
+		
+		Basetime = 580;			
+		
+		endcase;
+		
+	endswitch;
+
+		
+//*********************************************
+//OBJECTIVE DATA
+//*********************************************
+
+ //find the dropship
+ if (not founddropship) then
+	if ((iswithin(playermech,eve_dropship,750)) or (isshot(eve_dropship))) then
+		successobjective(eob_finddropship);
+		if (playlancematesound("VO\OP3\MI3\close",1)) then
+			playvoiceover("VO\OP3\MI3\close",talker_art);
+		endif;
+		founddropship = true;
+	endif;
+endif;
+
+//kill the dropship	
+if (founddropship) then	
+	
+	if (not killeddropship) then
+		if (isdead(eve_dropship)) then
+			successobjective(eob_killdropship);
+			killeddropship = true;
+		endif;
+	endif;
+	
+	if (not calledtrouble) then
+		if ( (groupnumdead(groupobjectid(1))) > 0 ) then
+			playlancematesound("VO\OP3\MI3\trouble",1);
+			calledtrouble = true;
+		endif;
+	endif;
+	
+endif;
+
+//end the mission
+if (killeddropship) then
+	if (founddropship) then
+		endmission(true,24);
+		playlancematesound("VO\OP3\MI3\deadship",2);
+		playlancematesound("VO\generic\targetdestroyed2",1);
+		playvoiceover("VO\OP3\MI3\win",talker_fO1);
+		playvoiceover("VO\OP3\MI3\win",talker_ian);
+		playvoiceover("VO\OP3\MI3\win",talker_rat);
+		enableglobalinvulnerable;
+		StartMusic("Music\victory",3.5,3.0,50);
+		
+		// ************************************
+		// *******  Insert Salvage Here *******
+		// ************************************
+		AddWeaponSalvage("AC5",1);
+		AddWeaponSalvage("Gauss",1);
+		AddWeaponSalvage("LightGauss",1);
+		AddWeaponSalvage("ClanLBXAC20",1);
+		AddWeaponSalvage("LBXAC10",2);
+		AddWeaponSalvage("ClanLRM5",2);
+		AddWeaponSalvage("ClanLRM10",2);
+		AddWeaponSalvage("LRM10",2);
+		AddWeaponSalvage("LRM15",2);
+		AddWeaponSalvage("LRM20",2);
+		AddWeaponSalvage("MachineGun",2);
+		AddWeaponSalvage("NarcBeacon",1);
+		AddWeaponSalvage("MediumPulseLaser",2);
+		AddWeaponSalvage("SmallPulseLaser",3);
+		AddWeaponSalvage("SRM2",2);
+		AddWeaponSalvage("SSRM2",2);
+		AddWeaponSalvage("SSRM4",2);
+		AddWeaponSalvage("SSRM6",1);
+		AddMechInstanceSalvage("Mauler");
+			
+			If (wimpy == EASY_DIFFICULTY) then
+				AddMechInstanceSalvage("Thor");
+			endif;
+
+		settargetdesirability(playermech,-1);
+		
+		
+		resettimer(gti_timer_28);
+		starttimer(gti_timer_28);
+		trans waitforcinema;
+	endif;
+endif;
+
+//AMBIENT MUSIC
+if (not ismusicplaying) then
+	StartMusic("Music\arcticambloop",0.0,3.0,40);
+endif;
+
+				
+endstate;
+
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,4)) then
+			playerai(epl_player0,true);
+			trans won;
+		endif;
+		
+		
+endstate;
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			KillVoiceOvers;
+			cinemaend;
+			trans sit;	
+	endif;
+
+switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera (eca_cameraship);
+			Fadetoblack(0.0);
+
+			Targetfollowobject(playermech);
+			Camerafollowobject(playermech);
+			SetCameraFootShake(playermech,100);
+
+			targetoffset(0.0,7.0,0.0,0.0,false);
+			Cameraoffset(-140.0,49.0,4.0,0.0,false);
+
+
+			Cameraoffset(-90.0,35.0,12.0,30.0,false);
+
+			startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+
+			case 1:
+				
+				if (timegreater(gti_Timer_21,1)) then
+					
+					Fadefromblack(3.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 3;	
+				endif;
+				
+			endcase;
+
+			case 2:
+				
+				if (timegreater(gti_Timer_21,8)) then
+					
+					Fadetoblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;			
+
+			case 3:
+				
+				if (timegreater(gti_Timer_21,2)) then
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(-100.0,49.0,35.0,0.0,true);
+					Cameraoffset(90.0,15.0,35.0,17.0,true);
+					Fadefromblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;
+							
+			case 4:
+				
+				if (timegreater(gti_Timer_21,27)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+	
+	
+endstate;
+
+state won;
+
+		code
+		
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(true,1);	
+			trans hang;
+	endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				Fadetoblack(0.0);
+				Fadefromblack(3.0);
+				Targetfollowobject(eve_dropship);
+				Camerafollowobject(eve_dropship);
+				targetoffset(0.0,15.0,0.0,0.0,false);
+				Cameraoffset(-230.0,150.0,270.0,0.0,false);	
+				Cameraoffset(120.0,45.0,-180.0,12.0,false);
+				startTimer (gti_Timer_21);
+				resettimer (gti_Timer_21);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+				if (timegreater(gti_Timer_21,10)) then
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(-100.0,49.0,35.0,0.0,true);
+					Cameraoffset(90.0,15.0,35.0,17.0,true);
+					Fadefromblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;
+
+			case 2:
+			endcase;
+
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(false,1);
+			trans hang;
+	endif;
+ 	
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				Fadetoblack(0.0);
+				Fadefromblack(3.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+
+state hang;
+		
+		code
+		
+endstate;
+
+endfsm.
+//******************************************************************
+

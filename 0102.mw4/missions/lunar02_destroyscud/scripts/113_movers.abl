@@ -1,0 +1,351 @@
+
+fsm Movers : integer;
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+	var
+		static ObjectID		path;
+		static integer		trigger_id;
+		static integer		speed;
+		static integer		movetype;
+
+		static ObjectID		path2;
+		static integer		trigger2;
+		static integer		speed2;
+
+		static integer		slow_speed;
+		static integer		fast_speed;
+
+		static integer		flee_trigger;
+		static ObjectID		flee_nav;
+
+		static ObjectID		flee_path;
+
+function Init;
+	code
+		slow_speed = 40;
+		fast_speed = 400;
+
+		path = -1;
+		trigger_id = -1;
+		speed = 0;
+		movetype = move_nocycle;
+
+		path2 = -1;
+		trigger2 = -1;
+		speed2 = 0;
+
+		flee_trigger = -1;
+		flee_nav = ena_Nav_Alpha;
+
+		flee_path = -1;
+
+		switch (getmemoryinteger(me,9))
+
+
+		// BASE UNITS
+			case 0: // boxvan
+				path = epa_Boxvan_Path;
+				speed = 50;
+				movetype = move_nocycle;
+			endcase;
+
+			case 30: // flatbed 0000
+				path = epa_Salvage_Path;
+				trigger_id = 56;
+				speed = 16;
+				movetype = move_nocycle;
+			endcase;
+
+		// NORTH UNITS
+			case 1: // artillery loader
+				trigger2 = 16;
+				path2 = epa_North_Path;
+				speed2 = 20;
+				flee_nav = ena_Nav_Beta;
+			endcase;
+
+			case 2: // artillery loader 0000
+				trigger2 = 16;
+				path2 = epa_North_Path;
+				speed2 = 20;
+				flee_nav = ena_Nav_Beta;
+			endcase;
+
+			case 12:// scud
+				trigger2 = 16;
+				path2 = epa_North_Path;
+				speed2 = 20;
+				flee_nav = ena_Nav_Beta;
+			endcase;
+
+		// SOUTH UNITS
+			case 3: // fueltruck
+				trigger_id = 7;
+				path = epa_Path_3;
+				speed = slow_speed;
+
+				trigger2 = 16;
+				path2 = epa_Osiris_Path;
+				speed2 = 60;
+
+				flee_trigger = 20;
+				flee_nav = ena_Nav_Alpha;
+				flee_path = epa_Path_Flee1;
+			endcase;
+
+			case 9: // humvee_1
+				trigger2 = 16;
+				speed2 = 30;
+
+				flee_trigger = 20;
+				flee_nav = ena_Nav_Alpha;
+				flee_path = epa_Path_Flee1;
+			endcase;
+
+			case 4:	// fueltruck 2
+				trigger_id = 7;
+				path = epa_Path_4;
+				speed = slow_speed;
+
+				trigger2 = 16;
+				path2 = epa_Osiris_Path;
+				speed2 = 60;
+
+				flee_trigger = 20;
+				flee_nav = ena_Nav_Alpha;
+				flee_path = epa_Path_Flee1;
+			endcase;
+
+			case 5:	// humvee
+				trigger_id = 7;
+				path = epa_Path_5;
+				speed = slow_speed;
+
+				trigger2 = 16;
+				path2 = epa_Osiris_Path;
+				speed2 = 200;
+
+				flee_trigger = 20;
+				flee_nav = ena_Nav_Alpha;
+				flee_path = epa_Path_Flee2;
+			endcase;
+
+			case 6:	// humvee 0000
+				trigger_id = 7;
+				path = epa_Path_6;
+				speed = slow_speed;
+
+				trigger2 = 16;
+				path2 = epa_Osiris_Path;
+				speed2 = 200;
+
+				flee_trigger = 20;
+				flee_nav = ena_Nav_Alpha;
+				flee_path = epa_Path_Flee2;
+			endcase;
+
+			case 13:// south scud
+				trigger_id = 7;
+				path = epa_Path_13;
+				speed = 16;
+
+				trigger2 = 16;
+				path2 = epa_Osiris_Path;
+				speed2 = 60;
+
+				flee_trigger = 20;
+				flee_nav = ena_Nav_Alpha;
+				flee_path = epa_Path_Flee1;
+			endcase;
+
+			case 16:// swiftwind
+				trigger_id = 7;
+				path = epa_Path_16;
+				speed = slow_speed;
+
+				trigger2 = 16;
+				path2 = epa_Osiris_Path;
+				speed2 = 160;
+
+				flee_trigger = 20;
+				flee_nav = ena_Nav_Alpha;
+				flee_path = epa_Path_Flee2;
+			endcase;
+
+			case 17:// swiftwind 0000
+				trigger_id = 7;
+				path = epa_Path_17;
+				speed = slow_speed;
+
+				trigger2 = 16;
+				path2 = epa_Osiris_Path;
+				speed2 = 160;
+
+				flee_trigger = 20;
+				flee_nav = ena_Nav_Alpha;
+				flee_path = epa_Path_Flee2;
+			endcase;
+
+		endswitch;
+
+		SetIgnoreFriendlyFire(ME,true);
+
+endfunction;
+
+function FleeIfTooClose;
+	var
+		LocPoint flee_point;
+		boolean should_flee;
+
+	code
+		should_flee = false;
+
+		if (IsWithin(ME,GetPlayerVehicle(epl_player0),150) == true) then
+			should_flee = true;
+		endif;
+
+		if (IsShot(me) == true) then
+			should_flee = true;
+		endif;
+
+		if (should_flee == true) then
+			if (flee_path == -1) then
+				ClearMoveOrder(ME);
+				SetTarget(me,GetPlayerVehicle(epl_player0));
+				OrderAttackTactic(TACTIC_RETREAT,TRUE);
+				GetLocation(flee_nav,flee_point);
+				SetCombatLeash(me,flee_point,350);
+			else
+				OrderMoveTo(flee_path,100,move_seesaw,true,false);
+			endif;
+
+			trans FleeState;
+		endif;
+endfunction;
+
+state StartState;
+
+	code
+		if (trigger_id <> -1) then
+			if (GetGlobalTrigger(trigger_id) == true) then
+				trans RigidMoveState;
+			endif;
+		else
+			trans RigidMoveState;
+		endif;
+
+		FleeIfTooClose;
+endstate;
+
+state RigidMoveState;
+	var
+
+	code
+		if (getmemoryinteger(me,9) <> 30) then
+			if (GetGlobalTrigger(66) == true) then
+				trans PathDoneState;
+			endif;
+
+			if (GetGlobalTrigger(67) == true) then
+				speed = 120;
+			endif;
+		endif;
+
+		if (path <> -1) then
+			if (OrderMoveTo(path,speed,movetype,true,false) == true) then
+				trans PathDoneState;
+			endif;
+		else
+			trans PathDoneState;
+		endif;
+
+		if (getmemoryinteger(me,9) <> 30) then
+			FleeIfTooClose;
+		endif;
+endstate;
+
+state PathDoneState;
+	code
+		if (GetGlobalTrigger(67) == true) then
+			speed = 120;
+		endif;
+
+		if (trigger2 <> -1) then
+			if (GetGlobalTrigger(trigger2) == true) then
+				trans Path2State;
+			endif;
+		else
+			if (path2 <> -1) then
+				trans Path2State;
+			else
+				OrderMoveLookOut;
+			endif;
+		endif;
+
+		FleeIfTooClose;
+endstate;
+
+state Path2State;
+	code
+		OrderMoveTo(path2,speed2,move_seesaw,true,false);
+
+		FleeIfTooClose;
+endstate;
+
+state FleeState;
+	code
+		if (flee_nav <> -1) then
+			if (Not IsWithin(me,getplayervehicle(epl_player0),700)) then
+				OrderStopAttacking;
+				OrderMoveToObject(flee_nav,600);
+				trans ReturnToFleeNav;
+			endif;
+
+			if (Not IsWithin(me,flee_nav,900)) then
+				OrderStopAttacking;
+				OrderMoveToObject(flee_nav,600);
+				trans ReturnToFleeNav;
+			endif;
+		endif;
+endstate;
+
+state ReturnToFleeNav;
+	
+	var
+		LocPoint flee_point;
+		boolean should_flee;
+	
+	code
+		if (IsWithin(me,flee_nav,350)) then
+			ClearMoveOrder(me);
+			
+			if (flee_path == -1) then
+				ClearMoveOrder(ME);
+				SetTarget(me,GetPlayerVehicle(epl_player0));
+				OrderAttackTactic(TACTIC_RETREAT,TRUE);
+				GetLocation(flee_nav,flee_point);
+				SetCombatLeash(me,flee_point,350);
+			else
+				OrderMoveTo(flee_path,100,move_seesaw,true,false);
+			endif;
+			
+			trans FleeState;
+		endif;
+endstate;
+
+state ScudAttackState;
+	code
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.

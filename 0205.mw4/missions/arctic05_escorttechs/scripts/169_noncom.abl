@@ -1,0 +1,159 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Patrol must be changed to some other unique identifier
+fsm NonCom : integer;
+
+//This unit patrols a specific path and attacks anything that comes near it.
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; // When do I start shooting?
+	static integer			elitelevel;															
+	static integer			piloting; 	// piloting skill
+	static integer			gunnery; // hit chance,
+	static integer 			speed;			 // What speed so I move at?
+	static integer			movetype;		//how will it move down the path?
+	
+	static Boolean			reachedendofpath;	//Have I gotten to the end of the path?
+																			//Note: This only gets set if movetype is set to move_nocycle.
+	static integer			path;		 //what path am I following?
+	static Boolean 			attackersdistractit;	// if FALSE, it won't leave the path, even when things
+		// are shooting it. It will shoot back. Defaults to true
+// Once unit reaches the end of the path, of course, it attacks freely.
+
+	static objectid		whoshotme;
+	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+																					// defaults are below
+	//These are the variables that are normally changed by the designer
+	//in order to change behavior
+	attackrange = 75;											// 500
+	piloting = 50;														//50
+	gunnery = 30;												//30
+	elitelevel = 30;												//30
+	speed = 400;														//600 (max speed)	
+	path = epa_noncompath;													 //-1 (no path)
+	movetype = move_nocycle;									//move_circle
+	attackersdistractit = TRUE;					 //true
+			
+ 	//These variables should not be changed by the designer without good reason
+	reachedendofpath = FALSE;						 //false
+
+	whoshotme = 0;
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		//setignorefriendlyfire(me,true);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+				
+		trans patrol;
+endstate;			
+
+state deadState;
+  code
+
+						
+		orderDie;
+endstate;
+
+	state patrol;
+
+  var
+    ObjectID foe;
+
+		code
+
+	//head down the path.  If this has already been done
+	// or if there is no path set then look around.
+			if ((path <> -1) and (reachedendofpath == FALSE)) then
+					if ((orderMoveto(path,speed,movetype,true,true)) == TRUE) then
+						shutdown(me);
+						trans there;
+					endif; 						
+			endif;
+			
+			if (isshot(me) == true) then
+				whoshotme = whoshot(me);
+				clearmoveorder(me);
+				trans RunAway;
+			endif;
+					
+			if (iswithin(me,playermech,100)) then
+				whoshotme = playermech;
+				clearmoveorder(me);
+				trans runaway;
+			endif;
+			
+	endstate;
+	
+		state there;
+	
+		code
+						
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state runaway;
+	
+		
+		code
+
+			
+		if ((OrderMoveFlee(WhoShotme,600)) > 400) then
+			clearmoveorder(me);
+			ordermoveresumepatrol(path,speed,movetype,true,true);
+			trans patrol;
+		endif;
+ 			
+					
+	endstate;
+
+
+endfsm.
+//******************************************************************
+

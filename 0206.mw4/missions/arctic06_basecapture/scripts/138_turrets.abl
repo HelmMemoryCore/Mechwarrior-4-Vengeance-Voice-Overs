@@ -1,0 +1,242 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm Turrets1111 : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_Turret:
+//   This shoots anything that comes near, but never moves.
+//   It can be used for turrets.
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start shooting?
+		static integer			withdrawRange;		// At what range do I stop attacking?
+																	
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			findTypes;			// What kind of enemies to look for
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+		static integer			turretTower;
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 500;
+		withdrawRange	= attackRange * 3 / 2;
+		turretTower		= ebu_Turret_Control;
+		// driver settings
+		piloting		= 50;
+		gunnery			= 40;
+		minDelay		= 0.7;
+		maxDelay		= 1.0;
+		eliteLevel		= 30;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isshotradius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,elitelevel);
+		setsensorvisibility(me,false);
+		SetTargetDesirability(me,-1); 		
+		trans WaitState1;
+
+endstate;			
+
+
+state WaitState1;
+
+	code
+	
+	OrderMoveLookOut;
+
+	
+	If whack == true then
+	 SetTargetDesirability(me,50);
+	endif;
+
+	
+	If IWhack == true then
+	SetTargetDesirability(me,35);
+		trans WaitState2;
+	endif;
+	
+			if (turretTower <> NO_UNIT) then
+			if (IsDead(turretTower) == true) then
+				GoNumber = GoNumber + 1;
+
+				trans TowerGoneState;
+			endif;
+		endif;
+
+
+
+
+endstate;
+
+//------------------------------------------------------------------
+//	WaitState: wait for someone to come near
+//------------------------------------------------------------------
+
+state WaitState2;
+	code
+		if (FindEnemy(attackRange,findTypes)) then
+			setsensorvisibility(me,true);
+			trans AttackState;
+		endif;
+
+		OrderMoveLookOut;
+
+				if (turretTower <> NO_UNIT) then
+			if (IsDead(turretTower) == true) then
+			GoNumber = GoNumber + 1;
+
+				trans TowerGoneState;
+			endif;
+		endif;
+
+
+
+endstate;
+
+//------------------------------------------------------------------
+//	AttackState: let's see what's around, and destroy it
+//------------------------------------------------------------------
+
+state AttackState;
+	code
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			setsensorvisibility(me,false);
+			trans WaitState2;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttackTactic(TACTIC_SHOOT_ONLY,true);
+
+		if (turretTower <> NO_UNIT) then
+			if (IsDead(turretTower) == true) then
+			GoNumber = GoNumber + 1;
+				trans TowerGoneState;
+			endif;
+		endif;
+
+
+
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		GoNumber = GoNumber + 1;
+
+		orderDie;
+
+endstate;
+
+state TowerGoneState;
+	code
+		SetTarget(ME,NO_UNIT);
+		OrderStopAttacking;
+		ClearMoveOrder(ME);
+		SetTargetDesirability(ME,-1);
+		SetSensorVisibility(ME,FALSE);
+		
+		if TurnCoat == true then
+			AttackRange = 1000;
+			trans WHUPASS;
+		endif;
+		
+endstate;
+
+State WhupAss;
+	code
+
+		OrderAttackTactic(TACTIC_SHOOT_ONLY,true);
+		
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			setsensorvisibility(me,false);
+			trans WaitState3;
+		endif;			
+endstate;
+
+state WaitState3;
+	code
+		if (FindEnemy(attackRange,findTypes)) then
+			setsensorvisibility(me,true);
+			trans WhupAss;
+		endif;
+
+		OrderMoveLookOut;
+
+endstate;
+
+endfsm.
+											

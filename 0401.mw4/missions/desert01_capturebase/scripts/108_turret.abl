@@ -1,0 +1,269 @@
+
+//*********************************************************************************
+
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Turret must be changed to some other unique identifier
+fsm Turret : integer;
+
+// This is the generic script for turrets of all sorts.
+// Memory integer 9 is reserved for settings in case multiple turret groups are using the same brain
+
+// Behavior: The turret sits and shoots, and that's it.
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer		attackrange; // At what range will I attack someone?
+	static integer		gunnery; 	// What is my chance to hit?
+	static real				mindelay;		//minimum amount of time I will wait between shots
+	static real				maxdelay;		//maximum amount of time I will wait between shots
+	static integer 		elitelevel; // How smart am I?
+																//Turrets do not use Elite Level to choose tactics.  However,
+																//they do use Elite level to set up opportunity fire.
+	static integer		isshotradius;  //how close must an enemy shot come to me before I notice it
+	
+	static ObjectID mytower; // Tower which controls this turret.
+														// -1 means I have no control tower
+	static boolean	targettrucks;
+	static LocPoint 	Whupup; //for guns to switch target to trucks
+
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+
+															// defaults are below
+	attackrange = 400;					//350
+	gunnery = 30;							//30
+	mindelay = 1.0;							//1.0
+	maxdelay = 1.5;             //2.0
+	elitelevel = 30;            //30
+	mytower = ebu_tower1;				       //-1	(-1 means I have no control tower)
+	isshotradius = 40;				 //40
+	targettrucks=false;
+	
+		Whupup[0] = 1049-1280;
+		Whupup[1] = 42;
+		Whupup[2] = 1618-1280;
+
+	
+	//Use this to set different values for different units using the same brain
+	switch (GetMemoryInteger(me,9))
+
+		case 1:
+		
+		attackrange = 650;	
+		gunnery = 60;					
+		mindelay = 0.5;			
+		maxdelay = 1.0;
+		elitelevel = 60;
+		mytower = eve_tower2;				
+    isshotradius = 40;				
+		
+		endcase;
+		
+	endswitch;
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setskilllevel(me,-1,gunnery,elitelevel);
+		//startexecute(me);
+		//setalignment(me,enemy);
+		setsensorvisibility(me,false);
+		trans look;
+
+endstate;
+
+state deadState;
+	code
+	  orderDie;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state look;
+	var
+		ObjectID foe;
+
+	code
+	
+		OrderMoveLookout;
+
+		if (FindEnemy(attackRange,FT_DEFAULT)) then
+			setsensorvisibility(me,true);
+			trans Attack;
+		endif;
+
+
+		//If I have a tower attached to me and that tower is destroyed
+		// then go to the towergone state when my tower is destroyed
+		if (mytower <> -1) then
+			if (IsDead(mytower)) then
+				trans towergone;
+			endif;
+		endif;
+
+		//Find me an enemy.
+		//If the enemy is within my attackrange then attack it
+		if (setmytarget(attackrange)) then
+			trans attack;
+		endif;
+		
+		if targettrucks == FALSE then
+			if (iswithinlocpoint(GroupObjectID(2),whupup,50) == TRUE)
+				then targettrucks = TRUE;
+			endif;
+		endif;
+
+  		
+switch (GetMemoryInteger(me,9))
+	case 1:
+		if targettrucks == TRUE then
+			trans Whup;
+		endif;
+	endcase;
+endswitch;
+  	
+endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+state attack;
+
+	var
+		ObjectID foe;
+		boolean	check;
+
+	code
+	
+		if (LeaveAttackState(750)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			setsensorvisibility(me,false);
+			trans look;
+		endif;	
+		
+		//Go ahead, shoot the target.  You know you want to.
+		orderAttack(TRUE);
+				
+		//If I have a tower attached to me and that tower is destroyed
+		// then go to the towergone state when my tower is destroyed
+		if (mytower <> -1) then
+			if (IsDead(mytower)) then
+				trans towergone;
+			endif;
+		endif;
+		
+		if targettrucks == FALSE then
+			if (iswithinlocpoint(GroupObjectID(2),whupup,50) == TRUE)
+				then targettrucks = TRUE;
+			endif;
+		endif;
+	
+switch (GetMemoryInteger(me,9))
+	case 1:
+		if targettrucks == TRUE then
+			trans Whup;
+		endif;
+	endcase;
+endswitch;
+
+endstate;
+
+state towergone;
+
+	code	
+
+		//My tower is dead so I should stop attacking things.
+		SetTarget(ME,NO_UNIT);
+		OrderStopAttacking;
+		SetTargetDesirability(ME,-1);
+		setsensorvisibility(me,false);
+		clearmoveorder(me);	
+	
+		trans DoNothing;
+endstate;
+
+state DoNothing;
+	code
+
+endstate;
+
+state whup;
+
+		var
+			ObjectID foe;
+			boolean	check;
+
+		code
+	
+		SetTarget(me,GroupObjectID(2));
+		OrderAttack(FALSE);
+		Gunnery = 60;
+//			if (sounds_played[21] == FALSE) then
+//				sounds_played[21] = TRUE;
+//				PlaySoundOnce(eso_RidgeLine);
+//			endif;
+		if (mytower <> -1) then
+			if (IsDead(mytower)) then
+				trans towergone;
+			endif;
+		endif;
+		
+		if (LeaveAttackState(attackrange)) then
+			orderstopattacking;
+			trans look;
+		endif;
+
+		if (iswithin(GroupObjectID(2),me,750) == FALSE)then
+			targettrucks = false;
+		endif;
+
+endstate;
+
+
+endfsm.
+//******************************************************************
+

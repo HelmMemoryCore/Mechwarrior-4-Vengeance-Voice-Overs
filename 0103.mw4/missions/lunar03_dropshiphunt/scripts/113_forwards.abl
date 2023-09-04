@@ -1,0 +1,120 @@
+
+
+//------------------------------------------------------------------
+fsm Forwards : integer;
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+  var		
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+    static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+		static integer			mypath;
+		
+		
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+
+
+function Init;
+	code
+		
+		piloting		= 90;
+		gunnery			= 60;
+		eliteLevel		= 60;
+		
+		 	switch (GetMemoryInteger(me,9))
+
+			case 1:
+			mypath = epa_forward1path;
+			endcase;
+			
+			case 2:
+			mypath = epa_forward2path;
+			endcase;
+
+			case 3:
+			mypath = epa_forward3path;
+			endcase;
+
+			
+			endswitch;
+			
+			
+endfunction;
+
+	
+
+ state StartState;
+
+	code
+		SetTargetDesirability(me,-1);
+		SetIgnoreFriendlyFire	(ME,false);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+				trans wait;
+
+endstate;
+
+
+state wait;
+	code
+
+	if ScoutGo == true then
+		trans transit;
+	endif;
+
+endstate;
+
+state transit;
+	code
+
+	OrderMoveTo(MyPath,75,MOVE_NOCYCLE,FALSE,FALSE);	
+
+	if Rallypoint == true then
+		trans Victory;
+	endif;
+	
+endstate;
+
+state Victory;
+	code
+	
+	ordermovetoobject(ena_Rally,50);
+	
+endstate;
+
+
+
+state DeadState;
+	code
+ 	
+		
+		orderDie;											
+
+endstate;
+
+
+endfsm.
+	
+	
+

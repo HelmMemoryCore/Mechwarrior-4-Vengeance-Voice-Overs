@@ -1,0 +1,306 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm AttackListLU04 : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_AttackList:
+//   This script can be used to attack (or defend) a series of targets
+//   contained in a group.  The unit will use a specified tactic
+//   on the first living target in the group, and if that unit is
+//   destroyed, it will switch to the next one.  When there are no
+//   units left in the group, it will go on a rampage, attacking
+//   any enemies it can find.
+
+//------------------------------------------------------------------
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			rampageAttackRange;		// When all my targets are destroyed, at what range do I start shooting?
+
+		static integer			myGroupID;			// The ID of my group ... i.e. this script will
+																			 	// call GroupObjectID(groupID)
+		static integer			tactic;				 	// The tactic to use to attack (or defend) my targets
+		
+		static integer			path;						// My path
+		static integer			moveType;				// How I move along the path
+																	
+		static integer			piloting;		 		// Piloting skill
+		static integer			gunnery;		 		// Gunnery skill/chance to hit
+		static real				  minDelay;		 		// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				  maxDelay;		 		// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;	// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;						// My default mood.
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		rampageAttackRange	= 1200;
+
+		myGroupID						= 0;
+		tactic							= TACTIC_PICK_BEST;
+
+		// driver settings
+	 	myGroupID						= 0;						// script-specific variables
+			
+		piloting						= 50;
+		gunnery							= 20;
+		minDelay						= 1.5;
+		maxDelay						= 3.0;
+		eliteLevel					= 69;
+		attackThrottle 			= 80;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= NEUTRAL_START;
+
+		path								=	epa_SouthWPath;
+	
+	//Use this to set different values for different units using the same brain
+	switch (GetMemoryInteger(me,9))
+
+		case 0:
+		
+	 	myGroupID						= 10;						// Attacking From North West
+																				//SigmaShadowcat				Mem 0
+		path								=	epa_SouthWPath;
+		piloting						= 25;
+		gunnery							= 50;           //when too easy changed from 30
+		minDelay						= 0.5;		//1.5
+		maxDelay						= 1.0;		//3
+		eliteLevel					= 60;			//69
+		attackThrottle 			= 80;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= AGRESSIVE_START;
+		
+		endcase;
+	
+		case 1:
+		
+	 	myGroupID						= 11;						// Attacking From South West
+																				//SigmaHellspawn				Mem 1
+		path								=	epa_WestEnemy;
+		piloting						= 25;		//70
+		gunnery							= 50;           //when too easy changed from 30
+		minDelay						= 0.5;	//1.5
+		maxDelay						= 1.0;	//3
+		eliteLevel					= 55;		//69
+		attackThrottle 			= 80;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= AGRESSIVE_START;
+		
+		endcase;
+			
+		case 2:
+		
+	 	myGroupID						= 11;						// Go for the GOLD...Kill APU's
+																				//SigmaOsiris				Mem 2
+		path								=	epa_ob_apu1path;
+		piloting						= 25;		//70
+		gunnery							= 55;   //55        //when too easy changed from 35
+		minDelay						= 0.5;	//1.5
+		maxDelay						= 1.0;	//3
+		eliteLevel					= 55;		//69
+		attackThrottle 			= 80;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= AGRESSIVE_START;
+		
+		endcase;
+	
+	endswitch;
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay					(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire		(ME,true);
+		SetIsShotRadius		 		 	(ME,isShotRadius);
+		SetEntropyMood		 		 	(ME,mood);
+		SetCurMood							(ME,mood);
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+		
+		//shutdown(me);
+				
+		trans Hangout;
+
+endstate;			
+		
+state Hangout;
+  code
+				SetTargetDesirability(eve_OB_APU1,100);
+				SetTargetDesirability(eve_OB_APU2,100);
+				SetTargetDesirability(eve_OB_APU3,100);
+
+				SetTargetDesirability(etu_base_turret,-1);
+				SetTargetDesirability(etu_base_turret_0001,-1);
+				SetTargetDesirability(etu_base_turret_0002,-1);
+				SetTargetDesirability(etu_base_turret_0003,-1);
+				SetTargetDesirability(etu_base_turret_0004,-1);
+				SetTargetDesirability(etu_base_turret_0005,-1);
+				//SetTargetDesirability(etu_lrm_turret,-1);
+				//SetTargetDesirability(etu_lrm_turret_0001,-1);
+				SetTargetDesirability(etu_lrm_turret_0004,-1);
+				SetTargetDesirability(etu_lrm_turret_0005,-1);
+				SetTargetDesirability(etu_lrm_turret_0006,-1);
+				SetTargetDesirability(etu_lrm_turret_0007,-1);
+				//SetTargetDesirability(etu_ml_cannon,-1);
+				SetTargetDesirability(etu_ml_cannon_0002,-1);
+				SetTargetDesirability(etu_ml_cannon_0007,-1);
+				SetTargetDesirability(etu_ml_cannon_0009,-1);
+				SetTargetDesirability(etu_ml_cannon_0010,-1);
+				SetTargetDesirability(etu_ml_cannon_0011,-1);
+				
+				If (FindEnemy(400,FT_DEFAULT) == TRUE) then	// find an enemy within 500 meters
+					startup(me);
+					trans AttackFirstLivingTargetState;
+				endif;
+										
+				If (GetGlobalTrigger(10) == True) then
+					startup (me);
+					trans AttackPath;
+				endif;
+
+				If (GetGlobalTrigger(3) == True) then
+					startup (me);
+					trans AttackPath;
+				endif;
+
+				trans AttackPath;					//added
+endstate;
+
+	//get to the pass
+	state AttackPath;
+
+		code		
+		
+		If (FindEnemy(400,FT_DEFAULT) == TRUE) then	// find an enemy within 500 meters
+			trans AttackFirstLivingTargetState;
+	 	endif;
+		
+		ordermoveresumepatrol(path,500,move_nocycle,true,true);
+ 				
+	endstate;
+		
+//------------------------------------------------------------------
+//	AttackFirstLivingTargetState: get the first object in my group, set
+//  it as my target, and issue the attack order with my tactic
+//------------------------------------------------------------------
+
+state AttackFirstLivingTargetState;
+
+	var
+		ObjectID next_target;
+
+	code
+		if (GetTarget(ME) == NO_UNIT) then
+			next_target = GroupGetFirstObject(GroupObjectID(myGroupID));
+
+			if (next_target == NO_UNIT) then
+				trans RampageState;
+			endif;
+
+			SetTarget(ME,next_target);
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttackTactic(tactic,TRUE);
+
+			If (GetGlobalTrigger(1) == True) then							 	//Board Dropship time
+				trans BoardState;
+			endif;
+			
+endstate;
+
+//------------------------------------------------------------------
+//	RampageState: no targets remain -- let's kick some ass!
+//------------------------------------------------------------------
+
+state RampageState;
+	code
+		if (GetTarget(ME) == NO_UNIT) then
+			FindEnemy(rampageAttackRange,FT_DEFAULT);
+		endif;
+
+		if (GetTarget(ME) <> NO_UNIT) then
+			if (attackSound <> -1) then	
+				PlaySoundOnce(attackSound);
+			endif;
+
+			OrderAttack(TRUE);
+		endif;
+
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+state BoardState;
+	code
+	//shutdown(me);
+	teleporttohell(me);
+endstate;
+
+endfsm.
+

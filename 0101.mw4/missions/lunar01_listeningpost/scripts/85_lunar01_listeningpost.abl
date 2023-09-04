@@ -1,0 +1,795 @@
+//*********************************************************************************
+
+fsm Mission_Lunar01_ListeningPost : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+var
+			
+		eternal	integer			playermech;
+		static boolean 			PlayerTakeShot;	  //Time to Blow IT check
+		
+		static 	integer			TakeShotRange; 		//range to check
+		
+		static integer			player_group;
+		static integer			combat_group;
+		static integer			all_enemies_group;
+		static integer			SirPeter_group;
+		static integer			Casey_group;
+		static integer			Turret_group;
+		static integer			LRM_group;
+		
+		static integer			cinema_cut;
+		eternal locpoint		Center;
+		eternal locpoint		Units;
+		static locpoint			TurretLocPoint;
+		
+		static integer			onetime;
+		static integer			twotime;
+		static integer			threetime;
+		static integer			fourtime;
+		static boolean			randoneplayed;	
+		static boolean			randtwoplayed;
+		static boolean			randthreeplayed;
+		static boolean			randfourplayed;
+
+/*		GLOBAL TRIGGER DEFINITION
+		0	 = Cinema Started
+		1	 = Mission Won
+		2	 = Destroyed Escaping Vehicles
+		3	 = Destroyed Turret Tower
+		4	 = Tower One  Dead?
+		5	 = Tower Two  Dead?
+		6	 = Distance Sound
+		7	 = Weapon Help
+		8	 = Turrets Fire			playsoundonce (eso_OP1MI1_CAS_D);
+		9	 = Building Boom
+		10 = Take Too Long
+		11 = Battle Loop Started
+		12 = 2ndary Revealed
+		13 = 3rd Revealed
+		14 = Peter Dead?
+		15 = Failed Primary in Any Way
+		18 = LRM Turrets Fire			playsoundonce (eso_OP1MI1_CAS_D);
+		
+		SETTINGS IN MEMORY CELLS
+		SP Turrets			=			0
+		ml Cannon				=			2
+		LRM Turrets			=			3
+		
+		0 = Road Path on West Side
+		2 = North Path runs along crater
+		3 = Units in the Small Crater
+		4 = Rear Path along the south end
+		
+*/
+		
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+		
+		code
+			//Set up mission Variables
+      //INTRODUCING ALL THE PLAYERS
+			playermech = getplayervehicle(epl_player0);	
+			GroupAddObject(GroupObjectId(1),playermech);
+			
+			Player_group = GroupObjectId(10);
+			Combat_group = GroupObjectID(86);
+			All_Enemies_group = GroupObjectID(69);
+			SirPeter_group = GroupObjectID(11);
+			Casey_group = GroupObjectID(12);
+			Turret_group = GroupObjectID(32);
+			LRM_group = GroupObjectID(33);
+			
+			GroupAddObject(Player_group,playermech);
+			GroupAddObject(Player_group,eve_Sir_Peter);					//Add Lancemates
+			GroupAddObject(Player_group,eve_Casey);							//Add Lancemates
+			
+			SetAlignment(eve_Sir_Peter,FRIENDLY);
+			SetAlignment(eve_Casey,FRIENDLY);
+			
+			getlocation(ena_Nav_Alpha,Center);
+			getlocation(ena_Units_Sighted,Units);
+
+			GroupAddObject(Combat_group,eve_srm_carrier);		//Scripted Death Group
+			GroupAddObject(Combat_group,eve_srm_carrier_0001);			
+			GroupAddObject(Combat_group,eve_srm_carrier_0003);
+			//GroupAddObject(Combat_group,eve_bulldog);
+			
+			GroupAddObject(All_Enemies_group,eve_srm_carrier);		//all combat units
+			GroupAddObject(All_Enemies_group,eve_srm_carrier_0001);			
+			GroupAddObject(All_Enemies_group,eve_srm_carrier_0003);
+			//GroupAddObject(All_Enemies_group,eve_bulldog);
+			
+			GroupAddObject(All_Enemies_group,eve_apc);
+			GroupAddObject(All_Enemies_group,eve_apc_0001);
+			GroupAddObject(All_Enemies_group,eve_apc_0003);
+			//GroupAddObject(All_Enemies_group,eve_bulldog);
+			//GroupAddObject(All_Enemies_group,eve_ammo_carrier);
+			//GroupAddObject(All_Enemies_group,eve_cargo_carrier);
+			GroupAddObject(All_Enemies_group,eve_srm_carrier_0001);
+			GroupAddObject(All_Enemies_group,eve_srm_carrier);
+			GroupAddObject(All_Enemies_group,eve_srm_carrier_0003);
+			GroupAddObject(All_Enemies_group,eve_swiftwind);
+			GroupAddObject(All_Enemies_group,eve_swiftwind_0004);
+			GroupAddObject(All_Enemies_group,eve_swiftwind_0002);
+			GroupAddObject(All_Enemies_group,eve_transport);
+			GroupAddObject(All_Enemies_group,eve_transport_0001);
+			//duplicates			
+		
+			GroupAddObject(SirPeter_group,eve_srm_carrier);
+			GroupAddObject(SirPeter_group,eve_srm_carrier_0001);			
+			//GroupAddObject(SirPeter_group,eve_bulldog);
+			GroupAddObject(SirPeter_group,eve_apc_0001);			
+			GroupAddObject(SirPeter_group,eve_srm_carrier_0003);
+			GroupAddObject(SirPeter_group,etu_sp_base_turret);			
+			GroupAddObject(SirPeter_group,eve_srm_carrier_0001);			
+			GroupAddObject(SirPeter_group,eve_srm_carrier);			
+			GroupAddObject(SirPeter_group,eve_transport_0001);
+			GroupAddObject(SirPeter_group,etu_lrm_turret_0000);
+			GroupAddObject(SirPeter_group,etu_lrm_turret_0002);
+			GroupAddObject(SirPeter_group,etu_lrm_turret_0001);
+			GroupAddObject(SirPeter_group,etu_lrm_turret);
+			
+			//GroupAddObject(Casey_group,eve_bulldog); 			            			
+			GroupAddObject(Casey_group,eve_srm_carrier_0001);			
+			GroupAddObject(Casey_group,ebu_base_bldg);			
+			GroupAddObject(Casey_group,etu_ml_cannon_0003);			
+			GroupAddObject(Casey_group,eve_srm_carrier_0003);
+			GroupAddObject(Casey_group,eve_apc_0003);			
+			GroupAddObject(Casey_group,etu_lrm_turret);
+			GroupAddObject(Casey_group,etu_lrm_turret_0000);
+			GroupAddObject(Casey_group,etu_lrm_turret_0001);
+			GroupAddObject(Casey_group,etu_lrm_turret_0002);
+			
+			GroupAddObject(Turret_group,etu_ml_cannon_0002);
+			GroupAddObject(Turret_group,etu_ml_cannon_0003);
+			GroupAddObject(Turret_group,etu_sp_base_turret);
+			
+			GroupAddObject(LRM_group,etu_lrm_turret);
+			GroupAddObject(LRM_group,etu_lrm_turret_0000);
+			GroupAddObject(LRM_group,etu_lrm_turret_0001);
+			GroupAddObject(LRM_group,etu_lrm_turret_0002);
+
+			onetime = rand(78,90);
+			twotime = rand (140,190);
+			threetime = rand(95,130);
+			fourtime = rand(250,340);
+
+			randoneplayed = false;	
+			randtwoplayed = false;
+			randthreeplayed = false;
+			randfourplayed = false;
+				
+			cinema_cut = 0;
+			
+endfunction;
+
+function WeaponWarnings;
+	code
+		
+		if (GetGlobalTrigger(8) == false) then
+			if GroupContainsObject(Turret_group,(whoshot(player_group))) then
+				PlayVoiceOverOnce("VO\OP1\MI1\Fire",Talker_Cas);
+				SetGlobalTrigger(8,true);
+			endif;
+		endif;
+		
+		if (GetGlobalTrigger(18) == false) then
+			if  GroupContainsObject(LRM_group,(whoshot(player_group))) then
+				PlayVoiceOverOnce("VO\OP1\MI1\LRM",Talker_Cas);
+				PlayVoiceOverOnce("VO\OP1\MI1\LRM",Talker_Pet);
+				SetGlobalTrigger(18,true);
+			endif;
+		endif;
+			
+if (not randoneplayed) then
+	if (timegreater(gti_timer_0,onetime)) then
+		playvoiceover("VO\OP1\MI1\Step",talker_cas);
+		randoneplayed = true;
+	endif;
+endif;
+
+if (not randtwoplayed) then
+	if (timegreater(gti_timer_0,twotime)) then
+		playvoiceover("VO\OP1\MI1\Chatter2",talker_pet);
+		randtwoplayed = true;
+	endif;
+endif;
+
+if (not randthreeplayed) then
+	if (timegreater(gti_timer_0,threetime)) then
+		playvoiceover("VO\OP1\MI1\Chatter3",talker_cas);
+		randthreeplayed = true;
+	endif;
+endif;
+
+if (not randfourplayed) then
+	if (timegreater(gti_timer_0,fourtime)) then
+		playvoiceover("VO\OP1\MI1\Chatter4",talker_pet);
+		randfourplayed = true;
+	endif;
+endif; 	
+		
+endfunction;
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+		SpecifyTalker(Talker_Pet,eve_Sir_Peter);
+		SpecifyTalker(Talker_Cas,eve_Casey);
+		
+		Drop(playermech);
+		Drop(eve_Sir_Peter);
+		Drop(eve_Casey);
+		
+		//SetActivationDistance(7000);		
+		StartMusic("Music\Wednesday7",0.5,1.0,50);
+			
+		//Go To Cinema
+		playerai(epl_player0,true);
+		ResetTimer(21);								//Cinema Timer
+		ResetTimer(30);								//Weapon Timer
+		ResetTimer(15);								//Mission Timer
+		ResetTimer(0);								//Chatter Timer
+		ResetTimer(5);								//Chatter Timer
+		starttimer(gti_timer_21);
+		starttimer(gti_timer_30);
+		starttimer(gti_timer_15);
+		starttimer(gti_timer_0);
+		//starttimer(gti_timer_5);
+			
+		SetNavPoint(ena_Nav_Alpha);
+		
+		PlayVoiceOverOnce("VO\OP1\MI1\Intro",Talker_Pet);
+		PlayVoiceOverOnce("VO\OP1\MI1\Intro",Talker_Cas);
+		PlayVoiceOverOnce("VO\OP1\MI1\Intro2",Talker_Pet);
+		PlayVoiceOverOnce("VO\OP1\MI1\Intro2",Talker_Cas);
+
+		trans opening;
+
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code 	
+	SetAudioFXEnabled(true);
+	SetCompositingEnabled(True);	
+		
+		if (GetGlobalTrigger(11) == false) then	
+			if (IsShot(playermech)) or (IsShot(All_Enemies_group)) then
+				SetGlobalTrigger(11,true);
+				//StartMusic("Music\T1Loop",3.5,3.0,40);
+			endif;
+		endif;
+		
+ SetSensorVisibility(All_Enemies_group,true);
+ SetSensorVisibility(Turret_group,true);
+		
+		
+		If (TimeGreater(gti_Timer_21,110)) then
+			HelpMessage(eob_TargEt,6);
+			ResetTimer(21);
+		endif;
+		
+		PlayVoiceOverOnce("VO\OP1\MI1\Intro3",Talker_Pet);						 // "Let's move out."
+		PlayVoiceOverOnce("VO\OP1\MI1\Intro3",Talker_Cas);						 // "Throttle full.."
+	
+		
+		If (TimeGreater(gti_Timer_5,4)) then
+		WeaponWarnings;
+		ResetTimer(5);
+		endif;
+		
+		//************************************
+		//End it all if the player is dead
+		//************************************
+		
+    		If (groupNumDead(Player_group) >= 2) then
+					FailObjective (eob_Objective1);
+          KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP1\MI1\FriendDown",Talker_Rat); // "We have multiple mechs down..."
+          SetGlobalTrigger(15,True);
+					trans lostdead;
+				endif;		
+				
+				if (isdead(playermech)) then														 //Gotta add peter check function
+					FailObjective (eob_Objective1);
+					KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP1\MI1\IanDown",Talker_Rat);		 // "Omega support, omega 2 has ejected..."
+					PlayVoiceOverOnce("VO\OP1\MI1\Down",Talker_Sup);			 // "Roger control, aborting mission"
+          SetGlobalTrigger(15,True);
+					trans lostdead;
+				endif;		
+		
+				
+If not timegreater(gti_Timer_15,93) then					 // 5 trigger ready to blow
+	If (GetGlobalTrigger(7) == false) then
+		If (iswithin(playermech,ena_Nav_Alpha,600)) then			//Surround by global in touchup
+							SetGlobalTrigger (6,True);
+			If timegreater(gti_Timer_15,87) then					 // 5 trigger ready to blow
+							HelpMessage(eob_Punch,6);
+							SetGlobalTrigger (7,True);
+			else
+				If timegreater(gti_Timer_15,81) then					 // 5 trigger ready to blow
+							HelpMessage(eob_Missiles,6);
+				else
+					If timegreater(gti_Timer_15,75) then					 // 5 trigger ready to blow
+							HelpMessage(eob_Small,6);					 									//print help messages
+					endif;
+				endif;
+			endif;
+		endif;
+	endif;
+endif;
+
+				If (isdead (ebu_Objective_Tower_1)) then
+				killeffect(ede_Effect_1);
+				SetGlobalTrigger(4,true);
+				endif;
+				
+				If (isdead (ebu_Objective_Tower_2)) then
+				killeffect(ede_Effect_2);
+				SetGlobalTrigger(5,true);
+				endif;
+				
+				If (isdead (ebu_Objective_Tower_3)) then
+				killeffect(ede_Effect_3);
+				SetGlobalTrigger(3,true);
+				endif;
+				
+				If (GetGlobalTrigger(4) == true) or (GetGlobalTrigger(5) == true) or (GetGlobalTrigger(3) == true) then
+				PlayVoiceOverOnce("VO\OP1\MI1\One",Talker_Cas);  													// "That's One."
+        endif;
+				
+//Mission Objective 1	  Primary  DESTROY Both Communications Towers
+				If (GetGlobalTrigger(1) == false) then
+					If (GetGlobalTrigger(4) == true) and (GetGlobalTrigger(5) == true) and (GetGlobalTrigger(3) == true) then
+						
+						PlayVoiceOverOnce("VO\OP1\MI1\Won",Talker_Rat);													// "We show all communications down.
+						PlayVoiceOverOnce("VO\OP1\MI1\Won",Talker_Pet);													// "Good work..."
+						PlayVoiceOverOnce("VO\OP1\MI1\Won",Talker_Cas);												// "Ah Steiner fall down go boom.."
+						
+						SetGlobalTrigger(1,true);
+						ResetTimer(15);								//Mission Timer
+						starttimer(gti_timer_15);
+						SuccessObjective (eob_Objective1);
+						If (GetGlobalTrigger(12) == true) and (GetGlobalTrigger(2) == false) then
+						trans won;
+						endif;
+					endif;
+				endif;
+			
+//Mission Objective 2	  Secondary  DESTROY ALL Escaping Vehicles
+//After 2 Minutes the Player is Prompted with a New NavPoint: Running Vehicles
+				If timegreater(gti_Timer_15,120) then					 // 5 trigger ready to blow
+					If (GetGlobalTrigger(1) == false) then
+						//SetGlobalTrigger(Runaway,true);
+						SetGlobalTrigger(12,true);
+						RevealObjective (eob_Objective2);
+            PlayVoiceOverOnce("VO\OP1\MI1\Escape",Talker_Rat);														// "We show vehicles moving outward from..."
+            PlayVoiceOverOnce("VO\Generic\RogerControl2",Talker_Ian);														// "We show vehicles moving outward from..."
+					endif;
+				endif;
+				
+				If (GetGlobalTrigger(2) == false) then
+    			If (groupAlldead(All_Enemies_group) == true) then
+      		//playSoundonce(eso_NeedAVoiceOverHere);     //throw a missionOBcheck in here
+		  		SetGlobalTrigger(2,true);
+		  		SuccessObjective (eob_Objective2);
+		  		endif;
+    		endif;		
+
+   //Play Destroyed Building Sound
+				If (GetGlobalTrigger(9) == false) then
+					If isdead(ebu_fuel_tank) or isdead(ebu_factory4_0000) then
+					PlayVoiceOverOnce("VO\OP1\MI1\Boom",Talker_Cas);
+					PlayVoiceOverOnce("VO\OP1\MI1\Boom",Talker_Pet);
+					SetGlobalTrigger(9,true);
+					endif;
+				endif;
+		
+
+//*******************************************
+// Timer Driven Mission Objective Help & Pointers
+//*******************************************						
+		
+//Mission Objective Primary    Destroy Lunar Listening Post
+//After 4 Minute the Player is Prompted with the Target in enemy status
+			If (GetGlobalTrigger(10) == false) then
+				If timegreater(gti_Timer_15,240) then		 //was 240 seconds before test
+					If not isdead(ebu_Objective_Tower_1) then
+						SetGUITarget(GetPlayerVehicle(epl_player0),ebu_Objective_Tower_1);
+					else
+					If not isdead(ebu_Objective_Tower_2) then
+						SetGUITarget(GetPlayerVehicle(epl_player0),ebu_Objective_Tower_2);
+					else
+					If not isdead(ebu_Objective_Tower_3) then
+						SetGUITarget(GetPlayerVehicle(epl_player0),ebu_Objective_Tower_3);
+					endif;
+					endif;
+					endif;
+					//SetGUITarget(GetPlayerVehicle(epl_player0),ebu_Listening_Post);  //Sets ebu_Listen as Ian's Target
+					SetGlobalTrigger(10,true);
+					PlayVoiceOverOnce("VO\OP1\MI1\Hurry",Talker_Pet);
+				endif;
+			endif;
+
+//End Sortie when all objectives are completed
+	    	if (GetGlobalTrigger(1) == true) then
+              trans won;
+				endif;
+															
+endstate;
+
+state lastchance;
+	
+	code
+					
+				If (TimeGreater(gti_Timer_5,4)) then
+				WeaponWarnings;
+				ResetTimer(5);
+				endif;	
+					//playsoundonce(eso_OP1MI1_SUP_B);							 //you've got 2 minutes
+				
+				if (isdead(playermech)) then														 //Gotta add peter check function
+					FailObjective (eob_Objective2);
+          KillVoiceOvers;
+					PlayVoiceOverOnce("VO\OP1\MI1\IanDown",Talker_Rat);
+					PlayVoiceOverOnce("VO\OP1\MI1\Down",Talker_Sup);
+					SetGlobalTrigger(15,True);
+					trans lostdead;
+				endif;		
+				
+				If (TimeGreater(gti_Timer_30,130)) then
+					
+
+						//playsoundonce(eso_OP1MI1_SUP_D);
+					trans lostdead;
+				endif;
+			
+   //Play Destroyed Building Sound
+				If (GetGlobalTrigger(9) == false) then
+					If isdead(ebu_fuel_tank) or isdead(ebu_factory4_0000) then
+					PlayVoiceOverOnce("VO\OP1\MI1\Boom",Talker_Cas);
+					SetGlobalTrigger(9,true);
+          PlayVoiceOverOnce("VO\OP1\MI1\Boom",Talker_Pet);
+					endif;
+				endif;
+		
+				If (GetGlobalTrigger(2) == false) then
+    			If (groupAlldead(All_Enemies_group) == true) then
+      		//playSoundonce(eso_NeedAVoiceOverHere);     //throw a missionOBcheck in here
+		  		SetGlobalTrigger(2,true);
+		  		SuccessObjective (eob_Objective2);
+          trans won;
+		  		endif;
+    		endif;		
+
+endstate;	
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+															
+state opening;
+
+	code
+	SetSensorVisibility(All_Enemies_group,false);
+	SetSensorVisibility(Turret_group,false);
+		
+	SetAudioFXEnabled(false);
+
+	SetCompositingEnabled(False);	
+	
+	if (cinemaskip) then
+		cinema_cut = 0;
+		KillTimer(gti_timer_21);
+		SetGlobalTrigger(0,true);
+		playerai(epl_player0,false);
+		SetAudioFXEnabled(true);
+		KillVoiceOvers;
+		SetAlwaysIgnoreObstacles(FALSE);
+		CinemaEnd;
+		trans sit;	
+	endif;
+
+ 	switch (cinema_cut)
+			
+			case 0:
+				CinemaStart;
+				
+				SetAlwaysIgnoreObstacles(TRUE);
+//Mission Objective Primary    Learn the HUD
+				
+				SetActiveCamera (eca_CameraShip_drop);
+				
+				FadeToBlack(0.0);
+				
+	/* 		Targetfollowobject(playermech);
+				targetoffset(0.0,8.0,0.0,0.0,false);
+				Cameraoffset(0.0,35.0,0.0,0.0,true);
+	*/			
+				Targetfollowobject(playermech);
+				targetoffset(0.0,5.0,0.0,0.0,false);
+				
+					
+				Camerafollowobject(playermech);
+				
+					Cameraoffset(-100.0,20.0,500.0,0.0,true);
+					Cameraoffset(150.0,20.0,-50.0,4.0,true);
+					
+			SetCameraFootShake(playermech,100);
+				
+				FadeFromBlack(6.0);
+
+				StartTimer(gti_Timer_21);
+				ResetTimer(gti_Timer_21);
+				cinema_cut = cinema_cut + 1;
+			
+			endcase;
+			
+			case 1:
+				
+				if (TimeGreater(gti_Timer_21,4)) then
+					ResetTimer(gti_Timer_21);
+					Cameraoffset(150.0,20.0,-50.0,0.0,true);
+					Cameraoffset(0.0,40.0,-50.0,3.0,true);
+					cinema_cut = cinema_cut + 1;
+				endif;
+				
+			endcase;
+						
+			case 2:
+	
+				if (TimeGreater(gti_Timer_21,3)) then
+					Cameraoffset(0.0,80.0,-50.0,0.0,true);
+					Cameraoffset(0.0,60.0,-30.0,4.0,true);
+				endif;
+				
+				if (TimeGreater(gti_Timer_21,12)) then
+				SetActiveCamera (eca_CameraShip2);
+				Targetfollowobject(playermech);
+				targetoffset(0.0,5.0,0.0,0.0,false);
+				endif;
+				
+				if (TimeGreater(gti_Timer_21,37)) then
+					ResetTimer(gti_Timer_21);
+					Targetfollowobject(ebu_listening_post);
+					camerafollowobject(ebu_listening_post);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(250.0,45.0,0.0,0.0,true);
+          PlayVoiceOverOnce("VO\OP1\MI1\Close",Talker_Pet);
+					Cameraoffset(85.0,45.0,120.0,11.0,true);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			
+			endcase;
+
+			case 3:
+				
+				if (timegreater(gti_Timer_21,11)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					playerai(epl_player0,false);
+					
+				SetAlwaysIgnoreObstacles(FALSE);
+				
+					cinemaend;
+					trans sit;	
+				endif;
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+
+state won;
+	var
+	
+		integer			wimpy;
+			
+	code
+			SetCompositingEnabled(False);	
+			settargetdesirability(playermech,-1);
+      StartMusic("Music\Victory2",3.5,3.0,50);
+
+			StartTimer(gti_Timer_21);
+			ResetTimer(gti_Timer_21);
+			
+			if (isdead(eve_sir_peter)) then														 //Gotta add peter check function
+				PlayVoiceOverOnce("VO\OP1\MI1\Complete2",Talker_Rat);
+			else
+				PlayVoiceOverOnce("VO\OP1\MI1\Complete",Talker_Pet);
+				PlayVoiceOverOnce("VO\OP1\MI1\Complete",Talker_Rat);
+				PlayVoiceOverOnce("VO\OP1\MI1\Complete",Talker_Cas);
+				SetGlobalTrigger(1,true);
+			endif;
+				
+				AddWeaponSalvage("AC5",1);
+				AddWeaponSalvage("Flamer",1);
+				AddWeaponSalvage("MediumLaser",2);
+				AddWeaponSalvage("SmallLaser",2);
+				AddWeaponSalvage("LRM5",1);
+				AddWeaponSalvage("MachineGun",2);
+				AddWeaponSalvage("SmallPulseLaser",2);
+				AddWeaponSalvage("SRM2",2);
+
+			wimpy = GetDifficulty;
+			
+			If (wimpy == EASY_DIFFICULTY) then
+				AddMechInstanceSalvage("Uziel");
+			endif;
+				
+			trans won1;
+
+endstate;
+
+state won1;
+	code
+			
+			if (timegreater(gti_Timer_21,4)) then
+				ResetTimer(gti_Timer_21);
+				trans won2;
+			endif;
+			
+endstate;
+
+state won2;
+	code
+			playerai(epl_player0,true);
+		
+			if (cinemaskip) then
+				KillVoiceOvers;
+				KillTimer(gti_timer_21);
+				SetGlobalTrigger(0,true);
+				playerai(epl_player0,false);
+				SetAudioFXEnabled(true);
+				FadeToBlack(1.0);
+				SetAlwaysIgnoreObstacles(FALSE);
+				EndMission(true,1);
+				//CinemaEnd;								Without the cinema end...this is a nice transition to shell
+			endif;
+			
+			switch (cinema_cut)
+					case 0:
+						CinemaStart;
+						SetAlwaysIgnoreObstacles(TRUE);
+						SetActiveCamera (eca_CameraShip2);
+						FadeToBlack(0.0);				
+						ResetTimer(gti_Timer_21);
+            cinema_cut = cinema_cut + 1;
+					endcase;
+					
+					case 1:
+							ResetTimer(gti_Timer_21);
+							Targetfollowobject(ebu_Listening_Post);
+							camerafollowobject(playermech);
+							targetoffset(0.0,2.0,0.0,0.0,false);
+							Cameraoffset(150.0,45.0,0.0,0.0,true);
+							Cameraoffset(65.0,45.0,75.0,15.0,true);
+							FadeFromBlack(2.0);
+							cinema_cut = cinema_cut + 1;
+
+					endcase;
+		
+					case 2:
+						if (timegreater(gti_Timer_21,2)) then
+								Destroy(ebu_Listening_Post);
+						endif;
+						if (TimeGreater(gti_Timer_21,12)) then
+						ResetTimer(gti_Timer_21);
+						SetActiveCamera (eca_CameraShip2);
+						Targetfollowobject(playermech);
+						targetoffset(0.0,5.0,0.0,0.0,false);
+						camerafollowobject(playermech);
+						Cameraoffset(-30.0,45.0,-40.0,3.0,true);
+						Cameraoffset(30.0,15.0,-10.0,15.0,true);
+						cinema_cut = cinema_cut + 1;
+						endif;
+					endcase;
+					
+					case 3:
+						if (timegreater(gti_Timer_21,25)) then
+							killtimer(gti_timer_21);
+							playerai(epl_player0,false);							
+							FadeToBlack(1.0);				
+							endmission(true,1);
+						endif;
+					endcase;
+				endswitch;
+		endstate;
+
+
+state lostdead;
+  code
+		SetAudioFXEnabled(False);	 					
+		SetCompositingEnabled(False);	
+		StartMusic("Music\Defeat",3.5,3.0,50);
+    trans lostdead2;
+endstate;
+
+state lostdead2;
+	code
+		EndMission(false,25);
+
+ 	switch (cinema_cut)
+      case 0:
+				CinemaStart;
+				SetActiveCamera (eca_CameraShip2);
+        FadeToBlack(0.0);
+				
+        StartTimer(gti_Timer_21);
+				cinema_cut = cinema_cut + 1;
+			
+			endcase;
+			
+			case 1:
+	//			if (TimeGreater(gti_Timer_21,12)) then
+					ResetTimer(gti_Timer_21);
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,2.0,0.0,0.0,false);
+					Cameraoffset(150.0,45.0,0.0,0.0,true);
+					Cameraoffset(65.0,45.0,75.0,11.0,true);
+					FadeFromBlack(2.0);
+					cinema_cut = cinema_cut + 1;
+		//		endif;
+			endcase;
+
+			case 2:
+				if (timegreater(gti_Timer_21,29)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					FadeToBlack(1.0);				
+					endmission(false,1);
+					cinemaend;
+					trans sit;	
+				endif;
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+endfsm.
+

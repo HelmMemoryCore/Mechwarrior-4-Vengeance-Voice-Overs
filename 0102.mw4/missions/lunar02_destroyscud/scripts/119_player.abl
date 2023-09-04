@@ -1,0 +1,80 @@
+
+//*********************************************************************************
+
+fsm playeraifsm : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+			OrderMoveLookOut;
+
+			if (GetGlobalTrigger(55) == true) then
+				trans VictoryState;
+			endif;
+
+			if (GetGlobalTrigger(10) == true) then
+				trans MoveState;
+			endif;
+	endstate;
+	
+	state MoveState;
+		code
+			if (GetGlobalTrigger(55) == true) then
+				trans VictoryState;
+			endif;
+
+			ordermovetorigid(epa_Player_Path,600,move_nocycle,true,true);
+	endState;
+
+	state VictoryState;
+		code
+			OrderMoveSit(FALSE);
+	endstate;
+
+  state deadState;
+		code
+  endstate;
+
+
+endfsm.
+//******************************************************************
+

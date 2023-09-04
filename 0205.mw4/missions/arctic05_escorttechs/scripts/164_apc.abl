@@ -1,0 +1,97 @@
+
+//*********************************************************************************
+
+fsm technicians : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer	mytimer;
+	static integer	mypath;
+	static integer	counter;
+	
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+
+	mypath = epa_mentorfirstpath;	
+	
+
+	counter = 1;
+	mytimer = gti_timer_17;
+	
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		
+		
+		trans sit;
+	endstate;
+
+	
+	
+	
+	state sit;
+		code
+		if (blockdown) then
+			trans go;
+		endif;
+		
+	endstate;
+	
+	
+
+	state go;
+		code
+
+orderformationmove((groupobjectid(20)),mypath,50,move_nocycle,1,FORMTYPE_NORMAL,false);
+ 								
+	endstate;
+
+
+					
+  state deadState;
+		code
+			orderDie;
+  endstate;
+
+
+endfsm.
+//******************************************************************
+

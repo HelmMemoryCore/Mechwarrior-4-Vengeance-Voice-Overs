@@ -1,0 +1,172 @@
+
+
+
+
+//*********************************************************************************
+fsm NonComScript : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; // When do I start shooting?
+																
+	static integer			piloting; 	// piloting skill
+	static integer			gunnery; // hit chance,
+	static integer 			speed;			 // What speed so I move at?
+	static integer 			elitelevel; // % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																	// and other things that would normally be determined by combat experience
+
+ 	static integer			isshotradius;	//how far away from me will I detect an enemy shot.
+	static integer			movetype;		//how will it move down the path?
+
+	static integer 			deathsound; // plays when it dies
+	
+
+	static Boolean			reachedendofpath;	//Have I gotten to the end of the path?
+																			//Note: This only gets set if movetype is set to move_nocycle.
+	static integer			path;		 //what path am I following?
+	static Boolean 			attackersdistractit;	// if FALSE, it won't leave the path, even when things
+		// are shooting it. It will shoot back. Defaults to true
+// Once unit reaches the end of the path, of course, it attacks freely.
+	static integer	 		castoff;
+	
+//-------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	reachedendofpath = FALSE;						 //false
+	
+	switch (GetMemoryInteger(me,9))
+
+		case 0:
+		
+		piloting = 30;							
+		gunnery = 60;													
+		elitelevel = 30;						
+		speed = 600;							 	
+		isshotradius = 40;						 	
+		deathsound = -1;
+		path = epa_gridlock1;
+    movetype = move_nocycle;
+		attackersdistractit = false;
+//		mood = neutral_start;
+    castoff = 30;
+		
+		endcase;
+		
+							
+		case 1:
+		
+		piloting = 30;							
+		gunnery = 60;													
+		elitelevel = 30;						
+		speed = 45;							 	
+		isshotradius = 40;						 	
+		deathsound = -1;
+		path = epa_gridlock1;
+    movetype = move_nocycle;
+		attackersdistractit = false;
+//		mood = neutral_start;
+    castoff = 45;
+		
+		endcase;
+
+		case 2:
+		
+		piloting = 30;							
+		gunnery = 60;													
+		elitelevel = 30;						
+		speed = 30;							 	
+		isshotradius = 40;						 	
+		deathsound = -1;
+		path = epa_gridlock2;
+    movetype = move_nocycle;
+		attackersdistractit = false;
+//		mood = neutral_start;
+    castoff = 90;
+		
+		endcase;
+
+
+	
+	
+	endswitch;
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+    setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+		
+
+		trans wait;
+endstate;			
+
+state deadState;
+  code
+		if (deathsound <> -1) then	
+			PlaySoundOnce(deathsound);
+		endif;		
+						
+		orderDie;
+endstate;
+
+state wait;
+	code
+		if timegreater(1,90) then
+			trans getaway;
+		endif;
+endstate;
+
+
+state getaway;
+
+
+		code
+		
+OrderMoveResumePatrol(path,speed,movetype,true,FALSE);
+			
+			
+endstate;
+
+
+endfsm.
+//******************************************************************
+

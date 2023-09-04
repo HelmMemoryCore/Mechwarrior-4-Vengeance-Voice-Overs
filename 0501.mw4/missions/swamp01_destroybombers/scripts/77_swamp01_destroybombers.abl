@@ -1,0 +1,550 @@
+
+//*********************************************************************************
+
+fsm mission_swamp01_destroybombers : integer;		
+
+// Timers used
+// 1,2 - bombers
+// 11,12 - snd
+// 21 - cinemas
+// 28,29 sounds
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+	
+		static ObjectiveID Obj1;
+		static ObjectiveID Obj2;
+		static ObjectiveID Obj3;
+		static ObjectiveID Obj4;
+		static ObjectiveID Obj5;
+		
+		static boolean Obj1Success;
+		static boolean Obj2Success;
+		static boolean Obj3Success;
+		static boolean Obj4Success;
+		static boolean Obj5Success;
+
+		eternal integer	bomberDeadCount;
+						
+		integer NavA;
+		
+		eternal Boolean Group3hit;
+		eternal Boolean Group5hit; // True when lone mech in group 3 or 5 is in trouble
+		eternal LocPoint friendLoc3;
+		eternal LocPoint friendLoc5;
+		
+		eternal Boolean BaseAlarm;
+		
+		eternal boolean grouponeatbase;
+		eternal boolean groupsevenatbase;
+		
+		eternal ObjectId playermech;
+		
+		static boolean	alldonebyebye;
+
+		static integer cinema_cut;
+		
+		static locpoint	basecenter;
+		
+		eternal boolean [30]sounds_played;
+		
+		static integer	currentbomberdeadcount;
+		
+		eternal boolean	oneup;
+		
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+
+// obj 1, Primary	- Find Military Base
+// obj 2, Primary	- Destroy all Shilone Bombers
+// obj 3, Primary	- Destroy all defending forces
+// obj 4, Primary   - Destroy Control Tower
+
+
+function init;
+	var
+		integer i;
+
+	code 	
+		
+		GroupAddObject(GroupObjectId(11),eve_SouthPatrol1);
+  	GroupAddObject(GroupObjectId(11),eve_SouthPatrol4);
+  	GroupAddObject(GroupObjectId(12),eve_DropshipDefend2);
+  	GroupAddObject(GroupObjectId(13),eve_Baseguard1);
+		GroupAddObject(GroupObjectId(14),eve_ShortBasePatrol1);
+		GroupAddObject(GroupObjectId(15),eve_RadioTowerGuard1);
+		GroupAddObject(GroupObjectId(16),eve_WaitsOutsideBase1);
+		GroupAddObject(GroupObjectId(17),eve_NorthPatrol1);
+		GroupAddObject(GroupObjectId(17),eve_NorthPatrol2);
+		GroupAddObject(GroupObjectId(18),eve_PatrolChopper1);
+		GroupAddObject(GroupObjectId(18),eve_PatrolChopper2);
+		GroupAddObject(GroupObjectId(18),eve_PatrolChopper3);
+		GroupAddObject(GroupObjectId(19),eve_Bomber_1_1);
+		GroupAddObject(GroupObjectId(19),eve_Bomber_2_1);
+		GroupAddObject(GroupObjectId(19),eve_Bomber_2_2);
+		GroupAddObject(GroupObjectId(19),eve_Bomber_3_1);
+		GroupAddObject(GroupObjectId(19),eve_Bomber_3_2);
+		GroupAddObject(GroupObjectId(19),eve_Bomber_4_1);
+		GroupAddObject(GroupObjectId(19),eve_Bomber_4_2);
+		GroupAddObject(GroupObjectId(19),eve_Bomber_4_3);
+  	
+		// Set unit alignments
+		SetAlignment(eve_SouthPatrol1,ENEMY);
+		SetAlignment(eve_SouthPatrol4,ENEMY);
+		SetAlignment(eve_DropshipDefend2,ENEMY);
+		SetAlignment(eve_LongPatrol,ENEMY);
+		SetAlignment(eve_RealLongPatrol,ENEMY);
+		SetAlignment(eve_pastfueltanks,ENEMY);
+		SetAlignment(eve_Baseguard1,ENEMY);
+		SetAlignment(eve_ShortBasePatrol1,ENEMY);
+		SetAlignment(eve_RadioTowerGuard1,ENEMY);
+		SetAlignment(etu_RadioTowerTurret1,ENEMY);
+		SetAlignment(etu_RadioTowerTurret2,ENEMY);
+		SetAlignment(etu_FrontOfBaseTurret1,ENEMY);
+		SetAlignment(etu_FrontOfBaseTurret2,ENEMY);
+		SetAlignment(eve_WaitsOutsideBase1,ENEMY);
+		SetAlignment(eve_NorthPatrol1,ENEMY);
+		SetAlignment(eve_NorthPatrol2,ENEMY);
+		SetAlignment(eve_PatrolChopper1,ENEMY);
+		SetAlignment(eve_PatrolChopper2,ENEMY);
+		SetAlignment(eve_PatrolChopper3,ENEMY);
+		SetAlignment(eve_Bomber_1_1,ENEMY);
+		SetAlignment(eve_Bomber_2_1,ENEMY);
+		SetAlignment(eve_Bomber_2_2,ENEMY);
+		SetAlignment(eve_Bomber_3_1,ENEMY);
+		SetAlignment(eve_Bomber_3_2,ENEMY);
+		SetAlignment(eve_Bomber_4_1,ENEMY);
+		SetAlignment(eve_Bomber_4_2,ENEMY);
+		SetAlignment(eve_Bomber_4_3,ENEMY);
+		SetAlignment(eve_Thor,ENEMY);
+		SetAlignment(eve_Random,ENEMY);
+		SetAlignment(eve_randomchopper1,ENEMY);
+		SetAlignment(eve_randomchopper2,ENEMY);
+					
+	  Obj1 = eob_FindBase;  // Andrew "GetObjectiveID(int)" is a new function we need
+	  Obj2 = eob_KillBombers;
+	  Obj3 = eob_KillDefenders;
+	  Obj4 = eob_KillTower;
+
+		// Set lancemate stats
+//		SetSkillLevel(eai_mechai_289,70,70,65);
+//		setalignment(eai_mechai_289,friendly);
+	
+//	  NavA = GetNavID(1);		// Andrew "GetNavID(??)" is a new function
+	
+	  Obj1Success = false;		// reset all these
+	  Obj2Success = false;
+	  Obj3Success = false;
+	  Obj4Success = false;
+		alldonebyebye = false;
+
+		BaseAlarm = FALSE;
+		
+		cinema_cut = 0;
+		
+		playermech = getplayervehicle(epl_player0);
+		for i = 0 to 29 do
+			sounds_played[i] = FALSE;
+		endfor;
+		ResetTimer(28);
+		StartTimer(28);
+		
+		getlocation(ebu_controltower,basecenter);
+		
+		currentbomberdeadcount = 0;
+		
+		oneup = false;
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+	
+		//hideNav(NavA);			// Hide the Nav that is located at the Military Base
+			
+		playerai(epl_player0,true);
+		playvoiceover("VO\OP5\MI1\intro",talker_ian);
+		playvoiceover("VO\OP5\MI1\intro",talker_rat);
+		playvoiceover("VO\generic\roger1",talker_ian);
+		playvoiceover("VO\OP5\MI1\intro2",talker_rat);
+		playvoiceover("VO\OP5\MI1\intro3",talker_ian);
+		playvoiceover("VO\OP5\MI1\intro3",talker_rat);
+		playvoiceover("VO\OP5\MI1\intro4",talker_ian);
+		StartMusic("Music\EerieTheory",3.5,3.0,50);
+		trans opening;
+
+endstate;
+
+	
+state deadState;
+	code
+endstate;
+	
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+	
+	//checking the count and printing it
+	//this code is here ONLY for debug purposes
+	if (bomberdeadcount <> currentbomberdeadcount) then
+			print(bomberdeadcount);
+			currentbomberdeadcount = bomberdeadcount;
+	endif;
+	
+	//end it if the player dies
+	
+	if (isdead(playermech)) then
+		endmission(false,12);
+		killvoiceovers;
+		PlayVoiceOver("VO\Generic\Iandestroyed",talker_rat);
+		StartMusic("Music\defeat",3.5,3.0,50);
+		trans lost;
+	endif;
+
+// check for objective 1 	
+		
+	if (not obj1success) then
+		if ((iswithinlocpoint(playermech,basecenter,700)) or (basealarm)) then    	
+			successObjective(Obj1);
+			obj1success = true;
+			playvoiceover("VO\OP5\MI1\IseeYou",talker_ABC);
+			revealObjective(Obj2);
+			revealObjective(Obj3);
+			revealObjective(Obj4);
+			basealarm = TRUE;
+			StartMusic("Music\panarama",3.5,3.0,70);
+		endif; 	
+	endif;
+
+	if (GroupNumDead(GroupObjectId(19)) > 0) then
+		basealarm = true;
+	endif;
+	
+	if (GroupAllDead(GroupObjectId(14))) then
+		basealarm = true;
+	endif; 		
+
+//check for objective 2
+
+	if (not obj2success) then
+			
+		if (GroupAllDead(GroupObjectId(19))) then		// check to see if all the bombers are dead
+			successObjective(Obj2);
+			playvoiceover("VO\OP5\MI1\lastonedead",talker_ian);
+			playlancematesound("VO\OP5\MI1\lastonedead",1);
+			obj2success = true;
+
+		endif;
+		
+	endif;
+
+//check for objective 3
+
+	if (not obj3success) then
+
+	  	if((GroupAllDead(GroupObjectId(15))) and (GroupAllDead(GroupObjectId(14)))) then
+		
+				successObjective(Obj3);
+			
+				obj3success = true;
+
+			endif;
+			
+		endif;
+		
+//check for objective 4
+ 	
+		if(not obj4success) then
+		
+			if (isdead(ebu_controltower)) then	
+		
+				successObjective(Obj4);
+				playvoiceover("VO\OP5\MI1\towerdown",talker_ian);
+				obj4success = true;
+			
+			endif;
+
+		endif;
+	
+
+
+//MISSION END   end mission if all objectives done			
+			
+		if (not alldonebyebye) then
+  	
+			if((obj1success) and (obj2success) and (obj3success) and (obj4success)) then
+		
+				endmission(true,20);
+				alldonebyebye = true;
+				playvoiceover("VO\OP5\MI1\win",talker_rat);
+				playlancematesound("VO\OP5\MI1\win",1);
+				// *** Davelueh Added Salvage Here ***
+				
+				AddWeaponSalvage("AC5",1);
+				AddWeaponSalvage("AC10",1);
+				AddWeaponSalvage("Flamer",1);
+				AddWeaponSalvage("ClanGauss",1);
+				AddWeaponSalvage("LightGauss",1);
+				AddWeaponSalvage("LargeLaser",1);
+				AddWeaponSalvage("MediumLaser",2);
+				AddWeaponSalvage("ClanLBXAC10",1);
+				AddWeaponSalvage("ClanLBXAC20",1);
+				AddWeaponSalvage("ClanLRM10",1);
+				AddWeaponSalvage("ClanLRM15",1);
+				AddWeaponSalvage("ClanLRM20",1);
+				AddWeaponSalvage("LRM5",1);
+				AddWeaponSalvage("LRM15",1);
+				AddWeaponSalvage("LRM20",2);
+				AddWeaponSalvage("ClanMachineGun",2);
+				AddWeaponSalvage("MachineGun",2);
+				AddWeaponSalvage("MRM30",1);
+				AddWeaponSalvage("PPC",1);
+				AddWeaponSalvage("ERPPC",1);
+				AddWeaponSalvage("ERLargePulseLaser",1);
+				AddWeaponSalvage("ERMediumPulseLaser",1);
+				AddWeaponSalvage("ERSmallPulseLaser",2);
+				AddWeaponSalvage("LargePulseLaser",1);
+				AddWeaponSalvage("SmallPulseLaser",1);
+				AddWeaponSalvage("SRM2",1);
+				AddWeaponSalvage("SSRM2",2);
+				AddWeaponSalvage("SSRM6",1);
+				AddWeaponSalvage("ClanUltraAC5",1);
+				AddMechInstanceSalvage("Mauler");
+
+				StartMusic("Music\victory",3.5,3.0,50);
+				enableglobalinvulnerable;
+				settargetdesirability(playermech,-1);
+				resettimer(gti_timer_28);
+				starttimer(gti_timer_28);
+				trans waitforcinema;
+			endif;
+		
+		endif;
+		
+if (not ismusicplaying) then
+	StartMusic("Music\swampambloop",0.0,3.0,30);
+endif;
+		
+endstate;
+
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,4)) then
+			playerai(epl_player0,true);
+			trans won;
+		endif;
+		
+		
+endstate;
+								
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			killvoiceovers;
+			
+			cinemaend;
+			trans sit;	
+	endif;
+
+switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera (eca_cameraship);
+			Fadetoblack(0.0);
+
+			Targetfollowobject(playermech);
+			Camerafollowobject(playermech);
+			SetCameraFootShake(playermech,100);
+
+			targetoffset(0.0,7.0,0.0,0.0,false);
+			Cameraoffset(-40.0,49.0,4.0,0.0,false);
+
+
+			Cameraoffset(-90.0,35.0,12.0,30.0,false);
+
+			startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+
+			case 1:
+				
+				if (timegreater(gti_Timer_21,1)) then
+					
+					Fadefromblack(3.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 3;	
+				endif;
+				
+			endcase;
+
+			case 2:
+				
+				if (timegreater(gti_Timer_21,8)) then
+					
+					Fadetoblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;			
+
+			case 3:
+				
+				if (timegreater(gti_Timer_21,2)) then
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(-100.0,49.0,35.0,0.0,true);
+					Cameraoffset(90.0,15.0,35.0,17.0,true);
+					Fadefromblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;
+							
+			case 4:
+				
+				if (timegreater(gti_Timer_21,22)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+	
+	
+endstate;
+
+state won;
+
+		code
+		
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(true,1);	
+			trans hang;
+	endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(-30.0,125.0,75.0,0.0,false);
+				Cameraoffset(60.0,20.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(false,1);
+			trans hang;
+	endif;
+ 	
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+
+state hang;
+		
+		code
+		
+endstate;
+
+
+endfsm.
+//******************************************************************
+

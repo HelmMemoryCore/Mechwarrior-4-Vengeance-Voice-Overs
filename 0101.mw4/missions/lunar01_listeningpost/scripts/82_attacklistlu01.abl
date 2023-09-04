@@ -1,0 +1,349 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm AttackListLU01 : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_AttackList:
+//   This script can be used to attack (or defend) a series of targets
+//   contained in a group.  The unit will use a specified tactic
+//   on the first living target in the group, and if that unit is
+//   destroyed, it will switch to the next one.  When there are no
+//   units left in the group, it will go on a rampage, attacking
+//   any enemies it can find.
+
+//------------------------------------------------------------------
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			rampageAttackRange;		// When all my targets are destroyed, at what range do I start shooting?
+
+		static integer			myGroupID;			// The ID of my group ... i.e. this script will
+																			 	// call GroupObjectID(groupID)
+		static integer			tactic;				 	// The tactic to use to attack (or defend) my targets
+																	
+		static integer			path;		 				// Path for movie
+		static integer			piloting;		 		// Piloting skill
+		static integer			gunnery;		 		// Gunnery skill/chance to hit
+		static real				  minDelay;		 		// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				  maxDelay;		 		// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;	// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;						// My default mood.
+
+		static integer			friendlyFireFrustrationLevel;
+		static integer			frustration_timer;
+		static integer			attack_player_timer;
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		rampageAttackRange	= 1200;
+
+		myGroupID						= 0;
+		tactic							= TACTIC_PICK_BEST;
+
+		// driver settings
+	 	myGroupID						= 0;						// script-specific variables
+			
+		piloting						= 50;
+		gunnery							= 30;
+		minDelay						= 1.5;
+		maxDelay						= 3.0;
+		eliteLevel					= 70;
+		attackThrottle 			= 80;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= AGRESSIVE_START;
+	
+		friendlyFireFrustrationLevel	= 0;
+	
+	//Use this to set different values for different units using the same brain
+	switch (GetMemoryInteger(me,9))
+
+		case 0:
+		
+	 	myGroupID						= 10;						// Lancemate One
+			
+		piloting						= 25;		//90;
+		gunnery							= 55;		//95;
+		minDelay						= 0.25;	//1.5;
+		maxDelay						= 1;		//2.0;
+		eliteLevel					= 60;		//85;
+		attackThrottle 			= 90;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= AGRESSIVE_START;
+		frustration_timer				= gti_Timer_25;
+		attack_player_timer				= gti_Timer_26;
+		endcase;
+	
+		
+		case 1:
+										
+	 	myGroupID						= 69;						// Lancemate Two	 SIR PETER 		
+	 	//myGroupID						= 11;						// Lancemate Two	 SIR PETER 		
+		piloting						= 25;
+		path 								= epa_L1Path1;
+		gunnery							= 60;
+		minDelay						= 0.5;
+		maxDelay						= 0.75;
+		eliteLevel					= 60;
+		attackThrottle 			= 90;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= AGRESSIVE_START;
+		frustration_timer				= gti_Timer_23;
+		attack_player_timer				= gti_Timer_24;
+		
+		endcase;
+		
+		case 2:
+		
+	 	myGroupID						= 69;					 // Lancemate Three			 Casey
+	 	//myGroupID						= 12;					 // Lancemate Three			 Casey
+			
+		piloting						= 25;		//90;
+		path 								= epa_L1Path2;
+		gunnery							= 60;		//80;
+		minDelay						= 0.5;	//2.5
+		maxDelay						= 1.0;	//3
+		eliteLevel					= 55;
+		attackThrottle 			= 90;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= AGRESSIVE_START;
+		frustration_timer				= gti_Timer_27;
+		attack_player_timer				= gti_Timer_28;
+		
+		endcase;
+		
+	endswitch;
+
+	StartTimer(frustration_timer);
+	SetTimer(frustration_timer,100);
+endfunction;
+
+function CheckIfPlayerShotMe : integer;
+	var
+		ObjectID who_shot;
+
+	code
+		if (Not TimeGreater(frustration_timer,8)) then
+			return (0);
+		endif;
+		
+		if (Not IsShot(ME)) then
+			return (0);
+		endif;
+
+		who_shot = WhoShot(me);
+
+		if (who_shot <> getplayervehicle(epl_player0)) then
+			return (0);
+		endif;
+
+		ResetTimer(frustration_timer);
+
+		if (friendlyFireFrustrationLevel == 0) then
+			if (GetMemoryInteger(me,9) == 1) then
+				PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_PET);
+			endif;
+			
+			if (GetMemoryInteger(me,9) == 2) then
+				PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_CAS);
+			endif;
+			
+			friendlyFireFrustrationLevel = 1;
+		else
+			if (friendlyFireFrustrationLevel == 1) then
+				if (GetMemoryInteger(me,9) == 1) then
+					PlayVoiceOverOnce("VO\Generic\CheckFire2",TALKER_PET);
+				endif;
+				
+				if (GetMemoryInteger(me,9) == 2) then
+					PlayVoiceOverOnce("VO\Generic\CheckFire2",TALKER_CAS);
+				endif;
+				
+				friendlyFireFrustrationLevel = 2;
+			else
+				if (friendlyFireFrustrationLevel == 2) then
+					if (GetMemoryInteger(me,9) == 1) then
+						PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_PET);
+					endif;
+					
+					if (GetMemoryInteger(me,9) == 2) then
+						PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_CAS);
+					endif;
+					
+					friendlyFireFrustrationLevel = 3;
+				else
+					PlayVoiceOverOnce("VO\Generic\KillIan1",TALKER_RAT);
+					StartTimer(attack_player_timer);
+					ResetTimer(attack_player_timer);
+					trans KillPlayerState;
+				endif;
+			endif;
+		endif;
+
+		return (1);
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay					(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire		(ME,false);
+		SetIsShotRadius		 		 	(ME,isShotRadius);
+		SetEntropyMood		 		 	(ME,mood);
+		SetCurMood							(ME,mood);
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+				
+		trans CinemaMove;
+
+endstate;			
+
+	//get to the pass
+	state CinemaMove;
+
+		code
+		SetAttackThrottle				(ME,35);
+		
+		If (FindEnemy(150,FT_DEFAULT) == TRUE) then	// find an enemy within 500 meters
+			if ordermoveto(path,70,move_nocycle,true,false) then
+				trans AttackFirstLivingTargetState;
+			endif;
+	 	endif;
+		
+		ordermoveto(path,80,move_nocycle,true,false);
+ 				
+	endstate;
+
+//------------------------------------------------------------------
+//	AttackFirstLivingTargetState: get the first object in my group, set
+//  it as my target, and issue the attack order with my tactic
+//------------------------------------------------------------------
+
+state AttackFirstLivingTargetState;
+
+	var
+		ObjectID next_target;
+
+	code
+		CheckIfPlayerShotMe;
+
+		SetAttackThrottle				(ME,100);
+		
+		if (GetTarget(ME) == NO_UNIT) then
+			next_target = GroupGetFirstObject(GroupObjectID(myGroupID));
+
+			if (next_target == NO_UNIT) then
+				trans RampageState;
+			endif;
+
+			SetTarget(ME,next_target);
+		endif;
+
+		OrderAttackTactic(TACTIC_RUSH,TRUE);
+
+endstate;
+
+//------------------------------------------------------------------
+//	RampageState: no targets remain -- let's kick some ass!
+//------------------------------------------------------------------
+
+state RampageState;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GetTarget(ME) == NO_UNIT) then
+			FindEnemy(rampageAttackRange,FT_DEFAULT);
+		endif;
+
+		if (GetTarget(ME) <> NO_UNIT) then
+			if (attackSound <> -1) then	
+				PlaySoundOnce(attackSound);
+			endif;
+
+		OrderAttackTactic(TACTIC_RUSH,TRUE);
+		endif;
+
+endstate;
+
+//------------------------------------------------------------------
+//	KillPlayerState: too much friendly fire -- get pissed and attack the player
+//------------------------------------------------------------------
+
+state KillPlayerState;
+	code
+		if (TimeGreater(attack_player_timer,6)) then
+			SetFiringDelay			(ME,0.0,0.0);
+			SetSkillLevel			(ME,100,500,100);
+
+			SetAutoTargeting(ME,FALSE);
+			SetTarget(ME,getplayervehicle(epl_player0));
+			OrderAttackTactic(TACTIC_CIRCLE_OF_DEATH,TRUE);
+		endif;
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

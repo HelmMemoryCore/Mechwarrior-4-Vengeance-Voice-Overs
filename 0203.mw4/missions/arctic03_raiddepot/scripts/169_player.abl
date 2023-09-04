@@ -1,0 +1,113 @@
+
+//*********************************************************************************
+
+fsm playeraifsm : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+  				// Path for movie
+		static integer			piloting;		 		// Piloting skill
+		static integer			gunnery;		 		// Gunnery skill/chance to hit
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things.  It indicates a general level of combat experience.
+		
+
+		static integer			attackThrottle;	// My attack throttle
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+		piloting						= 100;
+		gunnery							= 30;
+		eliteLevel					= 100;
+		attackThrottle 			= 35;
+		
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+		
+		trans go;
+	endstate;
+	
+	state go;
+		code
+		
+
+		OrderMoveResumePatrol(epa_playerpath,65,move_nocycle,true,false);
+
+		if SecondCin == true then
+			trans MOVEEND;
+		endif;
+		
+	endstate;
+	
+  state deadState;
+		code
+  endstate;
+	
+	state MoveEnd;
+		code
+		
+		//OrderFormationMove(GroupObjectID(1),epa_ENDPath,75,MOVE_NOCYCLE,FORMATION_11WEDGE,FORMTYPE_DENSE,false);
+		OrderMoveResumePatrol(epa_endpath,65,move_nocycle,true,false);
+
+		if (FindEnemy(500,FT_DEFAULT)) then
+			trans Attack;
+		endif;
+
+		
+  endstate;
+	
+	state Attack;
+	code
+		if (LeaveAttackState(800)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans MoveEnd;
+		endif;
+		
+		OrderAttack(FALSE);
+																																
+endstate;
+
+
+endfsm.
+//******************************************************************
+

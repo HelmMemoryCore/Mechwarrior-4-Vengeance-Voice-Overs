@@ -1,0 +1,270 @@
+
+//*********************************************************************************
+
+fsm choppers : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer		detect;
+	static integer		gunnery;
+	static integer		piloting;
+	static real				mindelay;
+	static real				maxdelay;
+	static integer		level;
+	
+	static integer	mypath;
+	static integer	movetype;
+	static integer	mytimer;
+	static integer	tech1;
+	static integer	tech2;
+	static integer	tech3;
+	
+	static boolean	endedpath;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	detect = 450;
+	piloting = 50;
+	gunnery = 50;
+	
+	mypath = epa_chopperpath1;
+	movetype = move_nocycle;
+					
+	mytimer = gti_timer_1;
+	tech1 = eve_techs1;
+	tech2 = eve_techs2;
+	tech3 = eve_techs3;
+												
+  if (getmemoryinteger(me,2) == 2) then
+  	mytimer = gti_timer_2;
+		tech1 = eve_techs2;
+		tech2 = eve_techs3;
+		tech3 = eve_techs1;
+  endif;
+	
+	 if (getmemoryinteger(me,2) == 3) then
+  	mytimer = gti_timer_3;
+		tech1 = eve_techs3;
+		tech2 = eve_techs1;
+		tech3 = eve_techs2;
+  endif;
+	
+	endedpath = false;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,piloting,gunnery,63);
+		setEntropyMood (me,NEUTRAL_START);
+		setfiringdelay(me,0.1,0.3);
+//		setignorefriendlyfire(me,true);
+//		setshotradius(me,80);
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+		
+		
+		
+		
+		
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+
+	if (blockdown) then
+		starttimer(mytimer);
+		trans takeoff;
+	endif;
+	
+	if (isShot (me)) then
+  	baseattacked = true;
+	endif;
+
+	if (baseattacked) then
+		starttimer(mytimer);
+		detect = 600;
+		trans takeoff;
+	endif;
+			
+	endstate;
+	
+		
+		
+		
+		
+		
+	state takeoff;
+	
+	  var
+    integer mytime;
+	
+		code
+		
+		mytime = 115 + (getmemoryinteger(me,1));
+		
+		if (blockdown) then
+			if (timegreater(mytimer,mytime)) then
+				if (orderTakeOff(60)) then
+						//print("taken off!");
+						resettimer(mytimer);
+						killtimer(mytimer);
+						trans search;
+				endif;
+			endif;
+		
+		else
+		
+			if (ordertakeoff(60)) then
+				resettimer(mytimer);
+				killtimer(mytimer);
+				trans search;
+			endif; 		
+		endif;
+					
+	endstate;
+	
+			
+			
+			
+			
+			
+		state getem;
+
+		var
+			ObjectID foe;
+		
+		code
+		
+		foe = tech1;
+		
+		if (isdead(tech1)) then
+			if (isdead(tech2)) then
+				foe = tech3;
+			else
+				foe = tech2;
+			endif;
+		endif;
+		
+		if (iswithin(me,playermech,400)) then
+			foe = playermech;
+		endif;
+	
+		
+		setTarget (me,foe);
+		setcurmood(ME,AGRESSIVE_START);
+  	trans attack;
+		 				
+	endstate;
+	
+	
+	
+	
+	
+	
+	state search;
+	
+	  var
+			ObjectID foe;
+	
+		code
+		
+		if (endedpath) then
+			trans getem;
+		endif;
+		
+		if (blockdown) then
+			//print("CHOPPERS AWAY!!!!!!!");
+				if (orderMoveto(mypath,200,movetype,TRUE,FALSE)) then
+					endedpath = true;
+					trans getem;
+				endif;
+		endif; 	
+		
+		if (setmytarget(detect)) then
+			if (blockdown) then
+				endedpath = true;
+			endif;
+			trans attack;
+	 	endif;
+		
+					
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+	  var
+		real		adjust;
+    real adjusteddetect;
+		integer	finaldetect;
+
+
+		code
+		
+		if (LeaveAttackState(detect*2)) then
+			orderstopattacking;
+			trans search;
+		endif;
+		
+    orderAttack (true);
+		
+		if ((isShot (me)) and (rand(0,8) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+		
+ 		
+	endstate;
+
+
+endfsm.
+//******************************************************************
+

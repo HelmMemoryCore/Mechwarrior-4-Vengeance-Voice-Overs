@@ -1,0 +1,40 @@
+
+fsm Cones : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+
+function Init;
+	code
+
+endfunction;
+
+state StartState;
+
+	code
+		SetSensorVisibility(ME,FALSE);
+		SetAlignment(ME,2);
+
+		trans SitState;
+
+endstate;
+
+state SitState;
+	code
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.
+

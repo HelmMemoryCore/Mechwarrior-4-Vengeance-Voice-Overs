@@ -1,0 +1,249 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm Attack : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_Patrol:
+//   Follows a path.  If anything comes near, it goes off and attacks it,
+//   and then comes back to the path when there's nothing left to attack.
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start shooting?
+		static integer			withdrawRange;		// At what range do I withdraw from combat entirely?
+
+		static integer			path;				// final path
+		static integer			moveType;			// How I move along the path
+		static boolean			canLeavePath;		// Can I leave the path if attacked? (TRUE by default)
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			findTypes;			// What kind of enemies to look for
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+		static integer			speed;				// The speed at which I move along the path
+
+		static integer			takeOffDistance;	// My take-off distance if I'm an airplane (ignored if not an airplane)
+		static integer			mygroup;
+		static boolean			GoCode;
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 500;
+		withdrawRange	= attackrange * 3 / 2;
+		moveType		= move_nocycle;
+		canLeavePath	= true;
+		speed			= 50;
+		takeOffDistance	= 150;
+	
+		// driver settings
+		
+switch (GetMemoryInteger(me,9))
+	case 1:	//MadCat 2		
+		piloting		= 75;
+		gunnery			= 70;
+		minDelay		= 0.5;
+		maxDelay		= 1.0;
+		eliteLevel		= 85;
+		attackThrottle	= 90;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		path			= epa_AttackPath2 ;
+		findTypes		= FT_DEFAULT + FT_UNARMED;
+		Mygroup = GroupObjectID(2);
+		GoCode = Patrol1Go;
+	endcase;
+	
+	case 2:	//Catapults		
+		piloting		= 75;
+		gunnery			= 70;
+		minDelay		= 0.5;
+		maxDelay		= 1.0;
+		eliteLevel		= 85;
+		attackThrottle	= 80;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		path = epa_AttackPath1;
+		findTypes		= FT_DEFAULT + FT_UNARMED;
+		Mygroup = GroupObjectID(3);
+		GoCode = Attack2Go;
+	endcase;
+		
+endswitch
+
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+
+		trans Wait;
+		
+
+		
+endstate;			
+
+state wait;
+	code
+	
+		if (FindEnemy(attackRange,findTypes)) then
+			trans AttackState;
+		endif;
+
+		if GoCode == true then
+			trans FollowPathState;
+		endif;
+	
+	
+endstate;
+
+//------------------------------------------------------------------
+//	FollowPathState: follow our path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state FollowPathState;
+	code
+		if (FindEnemy(attackRange,findTypes)) then
+			trans AttackState;
+		endif;
+
+		OrderFormationMove(MyGroup,path,speed,movetype,FORMATION_2x6Line,FORMTYPE_DENSE,true);			
+			
+	//########################################################
+	//## Do I want to make sure they get to the end first? ##	
+	//#######################################################	
+		
+//		if GetGlobalTrigger(99) == TRUE
+//			then ClearMoveOrder(me);
+//			canleavepath = false;
+//			path = epa_EscapePath;
+//			trans ESCAPE;
+//		endif;
+
+endstate;
+
+//------------------------------------------------------------------
+//	AttackState: attack my current target, or return to path if done
+//------------------------------------------------------------------
+
+state AttackState;
+	code
+		//##########################################################
+    //## Should I dial back Gunnery while targeting the arty? ##
+		//##########################################################
+		
+		
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+//				if GetGlobalTrigger(99) == FALSE then
+					trans FollowPathState;
+//				else
+//					trans Escape;
+//				endif;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttack(canLeavePath);
+
+		if ((isShot (me)) and (rand(0,3) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+
+	
+endstate;
+
+
+//---------------------------------------------------------------
+//    Chase:  Attempt to find player and destroy him
+//--------------------------------------------------------------
+//state ESCAPE;
+//	code
+//	
+//	OrderFormationMove(GroupObjectID(4),epa_escapepath,speed,movetype,FORMATION_Line,FORMTYPE_DENSE,true);			
+//	
+//		
+//	if (FindEnemy(attackRange,findTypes)) then
+//			trans AttackState;
+//	endif;
+//
+//	
+//endstate;
+
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

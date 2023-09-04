@@ -1,0 +1,231 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Patrol must be changed to some other unique identifier
+fsm HeloPatrol : integer;
+
+//This unit patrols a specific path and attacks anything that comes near it.
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; 		// When do I start shooting?
+																
+	static integer			piloting;  		 	// piloting skill
+	static integer			gunnery; 				// hit chance,
+	static real					mindelay;				//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;	 		 	//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;				 	// What speed so I move at?
+	static integer 			elitelevel;			// % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																			// and other things that would normally be determined by combat experience
+
+ 	static integer			isshotradius;		//how far away from me will I detect an enemy shot.
+	static integer			movetype;				//how will it move down the path?
+
+	static Boolean 			attacksoundplayed;
+	static integer 			attacksound; 		// plays when it first attacks
+	static integer 			deathsound;		 	// plays when it dies
+	
+	static integer			mood;						//What is my normal mood?
+	
+	static Boolean			reachedendofpath;	//Have I gotten to the end of the path?
+																			 //Note: This only gets set if movetype is set to move_nocycle.
+	static integer			Base;						 //Where is my Base?  Am i too good for my HOME?
+	static integer			path;						 //what path am I following?
+	static Boolean 			attackersdistractit;	// if FALSE, it won't leave the path, even when things
+																						// are shooting it. It will shoot back. Defaults to true
+																						// Once unit reaches the end of the path.  It attacks freely.
+	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	//These variables should not be changed by the designer without good reason
+	reachedendofpath = FALSE;						 				//false
+	attacksoundplayed = FALSE;									//false
+
+	
+	//Use this to set different values for different units using the same brain	
+	switch (GetMemoryInteger(me,9))
+
+		case 1:															 //Beginning Patrol
+		
+		attackrange = 500;				
+		piloting = 60;							
+	  gunnery = 50;					//20	
+		mindelay = 0.5;							
+		maxdelay = 1.0;				//2					
+		elitelevel = 30;						
+	  speed = 600;							 	
+		isshotradius = 80;						 	
+		attacksound = -1;
+		deathsound = -1;
+		path = epa_Helo1Path;
+		movetype = move_circle;
+		attackersdistractit = TRUE;
+		mood = neutral_start;
+		
+		endcase;
+		
+		case 2:																 //Base Choppers
+		
+		attackrange = 600;				
+		piloting = 60;							
+	  gunnery = 50;				//20		
+		mindelay = 0.25;		//1				
+		maxdelay = 1.0;			//1.5						
+		elitelevel = 30;						
+	  speed = 600;							 	
+		isshotradius = 80;						 	
+		attacksound = -1;
+		deathsound = -1;
+		path = epa_Helo2Path;
+		movetype = move_circle;
+		attackersdistractit = TRUE;
+		mood = neutral_start;
+		
+		endcase;
+		
+		case 3:									 							//Elite Mountain Squad
+		
+		attackrange = 600;				
+		piloting = 65;							
+	  gunnery = 45;				//20		
+		mindelay = 0.5;			//1.5				
+		maxdelay = 1.0;			//2						
+		elitelevel = 30;						
+	  speed = 600;							 	
+		isshotradius = 180;						 	
+		attacksound = -1;
+		deathsound = -1;
+		path = epa_Helo3Path;
+		movetype = move_circle;
+		attackersdistractit = TRUE;
+		mood = neutral_start;
+		
+		endcase;
+		
+	endswitch;
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+				
+		If(OrderTakeOff(20)) then;
+			trans patrol;
+		endif;	
+endstate;			
+
+state deadState;
+  code
+		if (deathsound <> -1) then	
+			PlaySoundOnce(deathsound);
+		endif;		
+						
+		orderDie;
+endstate;
+
+	state patrol;
+
+  var
+    ObjectID foe;
+
+		code
+
+	//head down the path.  If this has already been done
+	// or if there is no path set then look around.
+			if ((path <> -1) and (reachedendofpath == FALSE)) then
+					if ((orderMoveto(path,speed,movetype,true,true)) == TRUE) then
+						reachedendofpath = TRUE;
+					endif; 			
+			else	 		 		
+				ordermovelookout;			
+			endif;
+			
+		//Find me a target
+		if (setmytarget(attackrange)) then
+			trans attack;
+	 	endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+		
+		code
+
+			
+		if (LeaveAttackState(attackrange*3/2)) then
+			orderstopattacking;
+			orderMoveResumePatrol(path,speed,movetype,true,true);
+			trans patrol;
+		endif;
+		
+		//the ever popular attack order
+    orderAttack (attackersdistractit);
+		
+		//play the attack sound if one exists
+		if ((attacksound <> -1) and (attacksoundplayed == FALSE)) then	
+			attacksoundplayed = true;
+			PlaySoundOnce(attacksound);
+		endif;	
+		
+		//maybe swap targets when I am shot.
+		if ((isShot (me)) and (rand(0,75) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+ 			
+					
+	endstate;
+
+
+endfsm.
+//******************************************************************
+

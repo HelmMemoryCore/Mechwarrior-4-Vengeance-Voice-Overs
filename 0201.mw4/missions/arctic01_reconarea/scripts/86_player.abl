@@ -1,0 +1,119 @@
+
+//*********************************************************************************
+
+fsm playeraifsm : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+		static integer			path;		 				// Path for movie
+		static integer			piloting;		 		// Piloting skill
+		static integer			gunnery;		 		// Gunnery skill/chance to hit
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;	// My attack throttle
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+		path								= epa_PlayerPath;
+		piloting						= 100;
+		gunnery							= 30;
+		eliteLevel					= 100;
+		attackThrottle 			= 35;
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+	If not isdead(playermech) then
+	 	EnableGlobalInvulnerable;
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+		
+		drop(playermech);
+		
+		trans go;
+	else
+		KillVoiceOvers;
+		endmission(false,15);
+		StartMusic("Music\Defeat",0.5,0.25,50);
+		KillVoiceOvers;
+		trans Loser;
+	endif;
+	
+	endstate;
+	
+  state Loser;
+		code
+			PlayVoiceOverOnce("VO\Generic\IanDestroyed",Talker_Rat);
+	endstate;
+	
+	state go;
+		code
+		
+		//OrderMoveFollow(eve_Casey,-15,-15);
+		ordermoveto(path,65,move_nocycle,true,true);
+		
+		if (missionwon == true) then
+			trans DropBoard;
+		endif;
+		
+	endstate;
+	
+  state DropBoard;
+		code
+  	
+		//if ordermovetoobject(ena_NavPointPlay,80) then
+		if ordermoveto(epa_PlayerDone,80,move_nocycle,true,true) then
+			PlayerEnd = True;
+			trans LookAround;
+		endif;
+		
+	endstate;
+
+	state LookAround;
+		code
+
+		ordermovelookout;
+		
+	endstate;
+
+	state deadState;
+		code
+
+	endstate;
+
+endfsm.
+//******************************************************************
+

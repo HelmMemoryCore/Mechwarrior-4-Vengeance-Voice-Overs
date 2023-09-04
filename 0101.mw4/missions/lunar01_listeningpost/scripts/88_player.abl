@@ -1,0 +1,113 @@
+
+//*********************************************************************************
+
+fsm playeraifsm : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+		static integer			path;		 				// Path for movie
+		static integer			piloting;		 		// Piloting skill
+		static integer			gunnery;		 		// Gunnery skill/chance to hit
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;	// My attack throttle
+		
+		eternal integer			teleportNav;
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+		path								= epa_L1Path1;
+		piloting						= 35;
+		gunnery							= 60;
+		eliteLevel					= 60;
+		attackThrottle 			= 35;
+		
+		teleportnav 				= ena_DropNav;																	//To start the fight
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+		
+				if (timegreater(gti_Timer_21,5)) then
+					trans go2;
+				endif;
+	endstate;
+	
+state go;
+	
+	var
+		LocPoint my_nav;
+	
+	code
+				
+			GetLocation(TeleportNav,my_nav);
+			Teleport(me,my_nav);
+			trans go2;
+				
+endstate;
+
+	state go2;
+		code
+		
+		OrderMoveFollow(eve_Casey,-3,-3);
+		//ordermoveResumePatrol(path,65,move_nocycle,true,true);
+		
+		if (GetGlobalTrigger(1) == true) then
+			trans Winner;
+		endif;
+		
+	endstate;
+	
+	state Winner;
+		code
+		
+		if (OrderMoveToObject(ena_Units_Sighted,50) == true) then
+			ordermovelookout;
+		endif;
+		
+	endstate;
+
+	state deadState;
+		code
+  endstate;
+
+
+endfsm.
+//******************************************************************
+

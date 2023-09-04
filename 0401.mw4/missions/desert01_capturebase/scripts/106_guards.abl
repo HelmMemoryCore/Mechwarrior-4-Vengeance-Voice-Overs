@@ -1,0 +1,197 @@
+
+//*********************************************************************************
+
+fsm Guardians : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+  var
+	
+	static integer	mytruck;
+	static integer	offsetx;
+	static integer	offsetz;
+	static integer	attackrange;
+	static integer	piloting;
+	static integer	gunnery;
+	static real			mindelay;		
+	static real			maxdelay;		
+	static integer 	elitelevel;
+	static integer	mood;
+	
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+	
+		switch (GetMemoryInteger(me,9))
+
+		case 0:	 //first in line
+		
+		attackrange = 500;				
+		piloting = 30;							
+		gunnery = 65;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 30;						 						 	
+		mood = agressive_start;
+		offsetx =	 0;
+		offsetz =	20;
+		
+		endcase;
+		
+		case 1:	 //second in line
+		
+		attackrange = 500;				
+		piloting = 30;							
+		gunnery = 65;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 30;							 						 	
+		mood = agressive_start;
+		offsetx =	 0;
+		offsetz =	10;
+		
+		endcase;
+
+
+		case 2:	 //second to last in line
+		
+		attackrange = 500;				
+		piloting = 30;							
+		gunnery = 65;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 30;							 						 	
+		mood = agressive_start;
+		offsetx =	 0;
+		offsetz =	-30;
+		
+		endcase;
+
+
+		case 3:	 //last in line
+		
+		attackrange = 500;				
+		piloting = 30;							
+		gunnery = 65;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 30;							 						 	
+		mood = agressive_start;
+		offsetx =	 0;
+		offsetz =	-40;
+		
+		endcase;
+
+		
+	endswitch;
+
+endfunction;
+
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		setEntropyMood (me,mood);
+		setfiringdelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);				
+				
+		trans tankwait;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+state tankwait;
+	code
+		if cargogo == true then
+			trans sit;
+		endif;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+			
+		code
+
+// 		if (isDead(mytruck) == FALSE) then
+//			OrderMoveFollow(mytruck,offsetx,offsetz);
+//			else OrderMoveTo(ConvoyPath,Convoyspeed,MOVE_NOCYCLE,TRUE,FALSE);
+//		endif;
+//
+//OrderFormationMove(GroupObjectID(23),convoypath,convoyspeed,MOVE_NOCYCLE,FORMATION_WEDGE,FORMTYPE_DENSE,false);
+OrderFormationMove(GroupObjectID(23),tankpath,600,MOVE_NOCYCLE,1,FORMTYPE_DENSE,false);
+
+
+
+//OrderMoveTo(ConvoyPath,ConvoySpeed,MOVE_NOCYCLE,TRUE,FALSE);
+		
+		if (FindEnemy(attackrange,FT_DEFAULT)) then
+			trans Attack;
+		endif;
+			
+	
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+  var
+    ObjectID foe;
+
+
+		code
+		orderAttack (false);
+		
+		if (LeaveAttackState(attackrange)) then
+			orderstopattacking;
+			trans sit;
+		endif;
+			
+			
+	endstate;
+	
+
+						
+endfsm.
+//******************************************************************
+		

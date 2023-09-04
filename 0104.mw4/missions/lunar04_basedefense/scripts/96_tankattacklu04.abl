@@ -1,0 +1,466 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Patrol must be changed to some other unique identifier
+fsm TankAttackLU04 : integer;
+
+//This unit patrols a specific path and attacks anything that comes near it.
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; 		// When do I start shooting?
+																
+	static integer			piloting;  		 	// piloting skill
+	static integer			gunnery; 				// hit chance,
+	static real					mindelay;				//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;	 		 	//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;				 	// What speed so I move at?
+	static integer 			elitelevel;			// % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																			// and other things that would normally be determined by combat experience
+
+ 	static integer			isshotradius;		//how far away from me will I detect an enemy shot.
+	static integer			movetype;				//how will it move down the path?
+
+	static Boolean 			Snipers;					//They are Powered down Snipers		TACTIC_STAND_GROUND
+	static Boolean 			Rangers;				//They are Powered down Rangers		TACTIC_STAND_GROUND
+	
+	static integer			myGroupID;			// The ID of my group ... i.e. this script will
+																			 // call GroupObjectID(groupID)
+	static integer 			attacksound; 		// plays when it first attacks
+	static integer 			deathsound;		 	// plays when it dies
+	
+	static integer			mood;						//What is my normal mood?
+	
+	static Boolean			reachedendofpath;	//Have I gotten to the end of the path?
+																			 //Note: This only gets set if movetype is set to move_nocycle.
+	static integer			Base;						 //Where is my Base?  Am i too good for my HOME?
+	static integer			path;						 //what path am I following?
+	static Boolean 			attackersdistractit;	// if FALSE, it won't leave the path, even when things
+																						// are shooting it. It will shoot back. Defaults to true
+																						// Once unit reaches the end of the path.  It attacks freely.
+	
+	static Boolean 			Proceed;
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	//These variables should not be changed by the designer without good reason
+	reachedendofpath = FALSE;						 				//false
+	Proceed = FALSE;														//false
+	Snipers = FALSE;															//They are not in hiding
+	Rangers = FALSE;
+	
+	//Use this to set different values for different units using the same brain	
+	switch (GetMemoryInteger(me,9))
+
+		case 0:																 //				Convoy of Enemy's
+				
+	 	myGroupID						= 20;							
+		
+		attackrange = 350;				
+		piloting = 25;							
+	  gunnery = 40;						
+		mindelay = 0.25;							
+		maxdelay = 1.0;									
+		elitelevel = 50;						
+	  speed = 30;							 	
+		isshotradius = 80;						 	
+		attacksound = -1;
+		deathsound = -1;
+		path = epa_EnemyPath;
+		movetype = move_nocycle;
+		attackersdistractit = TRUE;
+		mood = neutral_start;
+		
+		endcase;
+		
+		case 1:															 //		Snipers Bravo		TACTIC_STAND_GROUND
+		
+	 	myGroupID						= 21;							
+		
+		attackrange = 850;				
+		piloting = 30;							
+	  gunnery = 45;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;		//2							
+		elitelevel = 60;						
+	  speed = 30;							 	
+		isshotradius = 80;						 	
+		attacksound = -1;
+		deathsound = -1;
+		path = epa_SniperPath;
+		movetype = move_nocycle;
+		Snipers = TRUE;
+		attackersdistractit = TRUE;
+		mood = neutral_start;
+		
+		SetTargetDesirability(eve_OB_APU3,100);
+		
+		endcase;
+		
+		case 2:																 //		Rangers Theta		TACTIC_STAND_GROUND
+				
+	 	myGroupID						= 22;							
+		
+		attackrange = 850;				
+		piloting = 35; //90 						
+	  gunnery = 40;						
+		mindelay = 0.25;	//1.5						
+		maxdelay = 1.0;		//2.5							
+		elitelevel = 50;						
+	  speed = 65;							 	
+		isshotradius = 80;						 	
+		attacksound = -1;
+		deathsound = -1;
+		path = epa_RangePath;
+		movetype = move_nocycle;
+		Rangers = TRUE;
+		attackersdistractit = TRUE;
+		mood = neutral_start;
+		
+		SetTargetDesirability(eve_OB_APU1,100);
+		SetTargetDesirability(eve_OB_APU2,100);
+		
+		endcase;
+		
+		
+	endswitch;
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+		if (Snipers == true) or (Rangers == true) then
+			shutdown(me);
+			trans hangout;
+		else
+			trans patrol;
+		endif;
+
+endstate;			
+
+state deadState;
+  code
+		
+		If (Rangers == true) then
+				Engaged = True;
+		endif;		
+						
+		orderDie;
+endstate;
+
+state Hangout;
+  code
+
+				If ((isShot (me)))	then
+					startup(me);
+					trans Special;
+				endif;
+				
+				if ((iswithin(me,(groupobjectid(1)),250)) == true) then
+					startup(me);
+					trans Special;
+				endif;
+						
+				If (Engaged == true) then
+					startup (me);
+					trans Special;
+				endif;
+
+				If (Rangers == true) then
+					startup (me);
+					trans Special;
+				endif;
+
+endstate;
+
+	
+	state Special;
+
+  var
+
+		ObjectID foe;
+
+		code
+					
+
+	//***********************************************************
+	// This section rem'd due to bad path problem with formations.
+	//***********************************************************
+	/*																															
+			if ((path <> -1) and (reachedendofpath == FALSE)) then
+					if ((OrderFormationMove(GroupObjectID(myGroupID),path,speed,movetype,FORMATION_11Wedge,FORMTYPE_NORMAL,true)) == TRUE) then
+						reachedendofpath = TRUE;
+					endif; 			
+			endif;
+	*/
+
+	//***********************************************************
+	//head down the path.  If this has already been done
+	// or if there is no path set then look around.
+	//***********************************************************
+	
+			if ((path <> -1) and (reachedendofpath == FALSE)) then
+					if ((OrderMoveResumePatrol(path,speed,movetype,true,true)) == TRUE) then
+						reachedendofpath = TRUE;
+					endif; 			
+			endif;
+		
+		//Find me a target
+			if (reachedendofpath == true) then
+				trans SpecialKill;
+			endif;
+			
+	endstate;
+
+state SpecialKill;
+  code
+		
+		switch (GetMemoryInteger(me,8))
+		
+		case 0:															//		Snipers Bravo		TACTIC_STAND_GROUND
+			proceed = true;
+		endcase;
+		 			
+		case 1:															//		eve_lrm_theta1
+			
+		If not IsDead(eve_lrm_theta1) then
+			if ((OrderMoveResumePatrol(epa_T1,speed,movetype,true,true)) == TRUE) then
+				proceed = true;
+			endif;
+		endif;
+				
+		endcase;
+		
+		case 2:															//	 eve_lrm_theta2 		
+			
+		If not IsDead(eve_lrm_theta2) then
+			if ((OrderMoveResumePatrol(epa_T2,speed,movetype,true,true)) == TRUE) then
+				proceed = true;
+			endif;
+		endif;
+		
+		endcase;
+		
+		case 3:															//	 eve_bulldog_theta
+			
+		If not IsDead(eve_bulldog_theta) then
+			if ((OrderMoveResumePatrol(epa_T3,speed,movetype,true,true)) == TRUE) then
+				proceed = true;
+			endif;
+		endif;
+		
+		endcase;
+	
+	endswitch;
+		
+		if proceed == true then
+			trans SpecialKillAction;
+		endif;
+	
+endstate;
+
+	state SpecialKillAction;
+		
+		code
+		Engaged = true;
+		OrderAttackTactic (TACTIC_STAND_GROUND,True);
+		//***********************************************************
+		// Check target? Should snipers be shooting some special thing?
+		//***********************************************************
+		SetTargetDesirability(eve_OB_APU3,100);
+		SetTargetDesirability(eve_OB_APU2,99);
+		SetTargetDesirability(eve_OB_APU1,98);
+
+		//maybe swap targets when I am shot.
+		if (isShot (me)) then
+  		setTarget(me,whoShot(me));
+		endif;
+		
+		SetAutoTargeting(me,False);       //take this out when PT fixes isdead bug
+	 	
+		switch (GetMemoryInteger(me,9))
+		
+		case 1:															 //		Snipers Bravo		TACTIC_STAND_GROUND
+		SetAutoTargeting(me,False);
+		
+		If not IsDead(eve_OB_APU3) then
+		settarget(me,eve_OB_APU3);
+		endif;
+		
+		if isdead(eve_OB_APU3) then
+			setTarget(me,playermech);
+			trans attack;
+		endif;
+		
+		endcase;
+		
+		case 2:																 //		Rangers Theta		TACTIC_STAND_GROUND
+		
+		SetAutoTargeting(me,False);
+
+
+	If not isdead(me) then
+		If not IsDead(eve_OB_APU1) then
+				settarget(me,eve_OB_APU1);
+		else
+			If not IsDead(eve_OB_APU2) then
+				settarget(me,eve_OB_APU2);
+			else
+				If not IsDead(eve_OB_dropship) then
+					settarget(me,eve_OB_dropship);
+				else
+				trans attack;
+				endif;
+			endif;
+		endif;
+	endif;
+	
+/*		If not isdead(me) then
+			If not IsDead(eve_OB_APU1) then
+				If not IsDead(eve_lrm_theta1) then
+					settarget(eve_lrm_theta1,eve_OB_APU1);
+				endif;
+			endif;
+			
+			If not IsDead(eve_OB_APU2) then
+				If not IsDead(eve_lrm_theta2) then
+					settarget(eve_lrm_theta2,eve_OB_APU2);
+				endif;
+			endif;
+			
+			If not IsDead(eve_OB_APU1) then
+				If not IsDead(eve_bulldog_theta) then
+					settarget(eve_bulldog_theta,eve_OB_APU1);
+				endif;
+			endif;
+		endif;
+*/		
+		endcase;
+		
+	endswitch;
+		
+		if iswithin(me,playermech,60) then
+			trans attack;
+		endif;
+		
+	endstate;
+
+	state patrol;
+
+  var
+
+		ObjectID foe;
+
+		code
+	
+	//***********************************************************
+	// This section rem'd due to bad path problem with formations.
+	//***********************************************************
+  /*		if ((path <> -1) and (reachedendofpath == FALSE)) then
+					if ((OrderFormationMove(GroupObjectID(myGroupID),path,speed,movetype,FORMATION_11Wedge,FORMTYPE_NORMAL,true)) == TRUE) then
+						reachedendofpath = TRUE;
+					endif; 			
+			endif;
+		*/
+		
+	
+	//***********************************************************
+	//head down the path.  If this has already been done
+	// or if there is no path set then look around.
+	//***********************************************************
+	
+			if ((path <> -1) and (reachedendofpath == FALSE)) then
+					if ((OrderMoveResumePatrol(path,speed,movetype,true,true)) == TRUE) then
+						reachedendofpath = TRUE;
+					endif; 			
+			else	 		 		
+				OrderMoveToObject((playermech),200);			
+			endif;
+	
+		//Find me a target
+			if (setmytarget(attackrange)) then
+				trans attack;
+			endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+		
+		code
+			
+		SetAutoTargeting(me,True);
+		
+		if (LeaveAttackState(attackrange*3/2)) then
+			orderstopattacking;
+			orderMoveResumePatrol(path,speed,movetype,true,true);
+			trans patrol;
+		endif;
+		
+		//the ever popular attack order
+    orderAttack (attackersdistractit);
+		
+		//if the ridge tanks are in a fight, then the ambush is set
+		If (Rangers == true) then
+				Engaged = True;
+				Rangers = False;
+		endif;
+				
+		//maybe swap targets when I am shot.
+		if ((isShot (me)) and (rand(0,75) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+					
+	endstate;
+
+endfsm.
+//******************************************************************
+

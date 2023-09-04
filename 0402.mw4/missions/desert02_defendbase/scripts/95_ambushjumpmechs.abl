@@ -1,0 +1,314 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Sentry must be changed to some other unique identifier
+fsm AmbushJumpMechs : integer;
+		
+
+
+// 		Behavior: Sits stationary and looks around. When an enemy comes within
+//   alertrange it moves towards the unit
+//	When the unit comes within attackrange it attacks
+//	Whenit kills the unit it can either go back to it's start point or not,
+//	depending on different settings in the brain.
+
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			AttackRange; // When do I start shooting?
+	static integer			BreakAttackRange; // At what range do I stop the Ambush Tatic?	
+	static integer			FallbackToPosition;	//Used to "step" the locations the unit should "fallbackto"
+	static integer 			FallbackLocation;	// The current Fallback Location that the unit should go to
+	static integer			PathPoint1;	//Actual Pathpoints for Fallback positions
+	static integer			PathPoint2;
+	static integer			piloting; 	// piloting skill (1-5),
+	static integer			gunnery; // hit chance,
+	static real					mindelay;		//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;		//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;			 // What speed so I move at?
+	static integer 			elitelevel; // % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																	// and other things that would normally be determined by combat experience
+  static integer			isshotradius;	//how far away from me will I detect an enemy shot.
+  static integer			mood;	//What is my normal mood?
+  static Boolean 			attacksoundplayed;	//Am I attacking?
+	
+	//if set to -1 the below sounds effectively do not exist
+	static integer 			attacksound; // plays when the unit first attacks
+	static integer 			deathsound; // plays when the unit dies
+	static boolean			derail;
+ // static locpoint			mystart; //Where was the unit when the mission started
+ //static boolean			movetostart;	//should the unit move back to it's start point when it's done fighting?
+	static objectid			whoIshooting;	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+																				
+	//These variables should not be changed by the designer without good reason
+	FallbackToPosition = 0;						 //Init the Stepping varable
+	Attacksoundplayed = FALSE;									//false
+	Derail = false;
+	whoIshooting = 0;
+	
+			Piloting = 70;												//3
+			gunnery = 75;											//30
+			mindelay = 0.1;											//1.5
+			maxdelay = 0.3;											//3.0
+			elitelevel = 72;										//30
+
+	//These are the variables that are normally changed by the designer
+	//in order to change behavior
+  //Use this to set different values for different units using the same brain
+																			 // defaults are below
+
+	switch (GetMemoryInteger(me,9))
+
+		case 1:
+		
+			attackrange = 600;
+			BreakAttackRange = 350;
+			PathPoint1 = epa_A1Fallback1;
+			PathPoint2 = epa_A1Fallback2;
+			FallbackLocation = PathPoint1;
+			speed = 600;												//600 (max speed)
+			isshotradius = 80;										//80	
+			attacksound = -1;                   //-1 (no sound)
+			deathsound = -1;                    //-1 (no sound)	
+			mood = neutral_start;								//neutral_start
+		
+		endcase;
+
+		case 2:
+		
+			attackrange = 450;
+			BreakAttackRange = 250;
+			PathPoint1 = epa_A1Fallback2;
+			PathPoint2 = epa_A2Fallback2;
+			FallbackLocation = PathPoint1;
+			speed = 600;												//600 (max speed)
+			isshotradius = 80;										//80	
+			attacksound = -1;                   //-1 (no sound)
+			deathsound = -1;                    //-1 (no sound)	
+			mood = neutral_start;								//neutral_start
+			FallbackToPosition = 0;
+			Attacksoundplayed = TRUE;
+			
+		endcase;
+
+		case 3:
+		
+			attackrange = 400;									//500
+			BreakAttackRange = 200;
+			PathPoint1 = epa_A2Fallback1;
+			PathPoint2 = epa_A2Fallback2;
+			FallbackLocation = PathPoint1;
+			speed = 600;												//600 (max speed)
+			isshotradius = 80;										//80	
+			attacksound = -1;                   //-1 (no sound)
+			deathsound = -1;                    //-1 (no sound)	
+			mood = neutral_start;								//neutral_start
+			Attacksoundplayed = TRUE;
+			
+		endcase;
+		
+	endswitch;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+		shutdown(me);
+		trans josephus;
+		
+endstate;			
+
+				
+//------------------------------------------------------------------
+
+state deadState;
+  code
+		if (deathsound <> -1) then	
+			PlaySoundOnce(deathsound);
+		endif;
+		orderDie;
+endstate;
+
+state josephus;
+  code
+
+if ((isshot(me)) or (iswithin(playermech,me,attackrange))) then
+	startup(me);
+	trans wait;
+endif;
+
+endstate;
+
+				
+//------------------------------------------------------------------
+state Wait;
+	code
+
+	OrderMoveLookout;
+						
+		//find me an enemy
+if (setmytarget(attackrange)) then
+	attackrange = 450;
+	
+	if (fallbacklocation == -1) then
+		whoIshooting = gettarget(me);
+		trans attack;
+	else
+		whoIshooting = gettarget(me);
+		trans ambush;
+	endif;
+	
+endif;
+			
+endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+state Ambush;
+
+		
+	code
+
+		if (LeaveAttackState(attackrange*3/2)) then
+			orderstopattacking;;				
+			trans wait;
+		endif;
+		
+		//Ambush with the Jump&Shoot Tactic
+    OrderAttackTactic(TACTIC_JUMP_AND_SHOOT,true);		
+		
+		if ((isWithin(whoIshooting,me,BreakAttackRange) == True) or (TacticIsFinished(me))) then
+			OrderStopAttacking;
+			FallBackToPosition = FallBackToPosition + 1;
+			
+			switch (FallBacktoPosition)
+
+				case 1:
+					FallBackLocation = PathPoint1;
+					derail = false;
+        endcase;
+		
+				case 2:
+					FallBackLocation = PathPoint2;
+					derail = false;
+        endcase;
+	  	
+				case 3:
+					FallBackLocation = -1;
+					attackrange = 700;
+					derail = true;
+        endcase;
+
+			endswitch;
+
+			trans Fallback;	
+    endif;
+																	
+																
+		//play the attack sound if one exists
+		if  (attacksoundplayed == FALSE) then	
+			attacksoundplayed = true;
+			Playvoiceover("VO\OP4\MI2\attention",talker_SFQ);
+			Playlancematesound("VO\OP4\MI2\attention",1);
+		endif;
+ 	
+	
+	endstate;
+	
+state Attack;
+		
+	code
+
+		if (LeaveAttackState(attackrange*3/2)) then
+			orderstopattacking;;				
+			trans wait;
+		endif;
+		
+		//Ambush with the Jump&Shoot Tactic
+    OrderAttack(true);
+		
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     Fallback state : description
+//
+//------------------------------------------------------------------
+state Fallback;
+	
+	var
+		ObjectID target;
+		
+	code
+		
+		//Decide where to fallbackto or if at final position attack				
+		if (FallBackLocation <> -1) then
+      if (OrderMoveto(FallbackLocation,speed,MOVE_NOCYCLE,true,false) == true) then
+        OrderStopAttacking;
+				shutdown(me);
+				trans Josephus;
+			endif;
+		endif;		
+		
+		//find me an enemy
+		if (GetTarget(me) == no_unit ) then
+	 		setmytarget(attackrange);	
+		else
+			OrderAttack (derail);
+    endif;
+		
+	
+ 	
+endstate;
+	
+endfsm.
+//******************************************************************
+

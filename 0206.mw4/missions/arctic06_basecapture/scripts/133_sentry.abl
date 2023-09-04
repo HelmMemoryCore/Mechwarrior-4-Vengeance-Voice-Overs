@@ -1,0 +1,224 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm Generic_SentryReinforcement : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_SentryReinforcement:
+//   Performs sentry, attacking anything that comes near.
+//   Once a trigger is set, goes to a predefined point and
+//   attacks anything within range at that point.
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+	static integer			attackRange1;		// At what range do I start shooting when I'm attacking?
+	static integer			withdrawRange1;		// At what range do I give up?
+	static integer			attackRange2;		// At what range do I start shooting (as a reinforcement)?
+	static integer			withdrawRange2;		// At what range do I stop shooting (as a reinforcement)?
+	
+	static LocPoint			destination;		// The destination to move to when ready
+																
+	static integer			piloting;			// Piloting skill
+	static integer			gunnery;			// Gunnery skill/chance to hit
+	static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+	static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;				// What speed so I move at?
+	static integer 			elitelevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+												// and other things.  It indicates a general level of combat experience.
+	static integer			attackThrottle;		// My attack throttle
+	static integer			findTypes;			// What kind of enemies to look for
+
+ 	static integer			isshotradius;		// How far away from me will I detect an enemy shot?
+
+	static integer 			attackSound;		// The attack sound I play when I first attack
+	static integer 			deathSound;			// The sound I play when I die
+
+	static integer			mood;				// My default mood.
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange1	= 800;
+		withdrawRange1	= attackRange1 * 3 / 2;
+		attackRange2	= 800;
+		withdrawRange2	= attackRange2 * 3 / 2;
+		destination[0]	= -528;
+		destination[1]	= 50;
+		destination[2]	= 867;
+
+		// driver settings
+		piloting		= 50;
+		gunnery			= 50;
+		minDelay		= 0.5;
+		maxDelay		= 1.0;
+		elitelevel		= 55;
+		attackThrottle	= 70;
+		speed			= 600;
+		isshotradius	= 80;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+		SetTargetDesirability(me,-1);		
+		trans WaitState1;
+
+endstate;
+
+//------------------------------------------------------------------
+//	WaitState: wait something to happen (my original state)
+//------------------------------------------------------------------
+state WaitState1;
+	code
+	
+	If IWhack == true then
+	SetTargetDesirability(me,75);
+		trans WaitState2;
+	endif;
+	
+		If whack == true then
+	 SetTargetDesirability(me,-1);
+	endif;
+
+	 OrdermoveLookout;
+	
+endstate;
+
+
+state WaitState2;
+	code
+		if Alert == true then
+			trans MoveToPointState;
+		endif;
+
+		if (FindEnemy(attackRange1,findTypes)) then
+			trans Attack1State;
+		endif;
+
+		OrderMoveLookOut;
+
+endstate;
+
+//------------------------------------------------------------------
+//	Attack1State: attack someone (before I'm called as a reinforcement)
+//------------------------------------------------------------------
+
+state Attack1State;
+	code
+		if (LeaveAttackState(withdrawRange1)) then
+			trans WaitState2;
+		endif;
+
+		if Alert == True then
+			trans Attack2State;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttack(TRUE);
+
+endstate;
+
+//------------------------------------------------------------------
+//	MoveToPointState: go to the destination, and attack when we get there
+//------------------------------------------------------------------
+
+state MoveToPointState;
+	code
+		if (OrderMoveToLocPoint(destination,speed,true,true)) then
+			OrderStopAttacking;
+		endif;
+		
+			if (FindEnemy(attackRange2,findTypes)) then
+				trans Attack2State;
+			endif;
+		
+
+endstate;
+
+//------------------------------------------------------------------
+//	Attack2State: attack a target (after I'm called as a reinforcement)
+//------------------------------------------------------------------
+
+state Attack2State;
+	code
+		if (LeaveAttackState(withdrawRange2)) then
+			trans MoveToPointState;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttack(TRUE);
+
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+  code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		GoNumber = GoNumber + 1;
+
+		
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

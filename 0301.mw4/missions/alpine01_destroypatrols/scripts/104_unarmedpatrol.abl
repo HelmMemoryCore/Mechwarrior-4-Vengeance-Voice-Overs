@@ -1,0 +1,155 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm Generic_UnarmedPatrol : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_UnarmedPatrol:
+//   Follows a path and runs from enemies.
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			fleeRange;			// At what range do I start running?
+		static integer			stopFleeingRange;	// At what range do I consider myself out of danger?
+
+		static integer			path;				// My path
+		static integer			moveType;			// How I move along the path
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+		static integer			speed;				// The speed at which I move along the path
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		fleeRange		= 500;
+		stopFleeingRange	= fleeRange + 500;
+		path			= -1;
+		moveType		= move_nocycle;
+		speed			= 85;
+
+		// driver settings
+		piloting		= 50;
+		gunnery			= 30;
+		minDelay		= 1.5;
+		maxDelay		= 3.0;
+		eliteLevel		= 90;
+		attackThrottle	= 80;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		
+				switch (getmemoryinteger(me,9))
+
+	case 1:
+		//AlphaMechs
+		path = epa_scoutpath;
+	endcase;
+						
+	case 2:
+		//BetaMechs
+		path = epa_scoutpath2;
+	endcase;
+	
+	
+	endswitch;
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+				
+		trans FollowPathState;
+
+endstate;
+
+//------------------------------------------------------------------
+//	FollowPathState: follow our path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state FollowPathState;
+	code
+
+		
+		if (OrderMoveto(path,speed,moveType,true,false)) then
+			trans hang;
+		endif;
+		
+
+endstate;
+
+state hang;
+	code
+
+endstate;
+
+
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

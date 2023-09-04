@@ -1,0 +1,140 @@
+
+//*********************************************************************************
+
+fsm roadblockguardingMech : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer		detect;
+	static integer		gunnery;
+	static integer		piloting;
+	static real				mindelay;
+	static real				maxdelay;
+	static integer		level;
+	
+	static integer speed;
+	static integer	movetype;
+	static integer	path;
+	static boolean	soundplayed;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	detect = 525;
+	piloting = 47;
+	gunnery = 67;
+	
+	path = epa_blockguardpath;
+	speed = 75;
+	movetype = move_seesaw;
+	soundplayed = false;
+	
+ // if (getmemoryinteger(me,1) == 2) then
+ // 	detect = 450;
+ // endif;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,piloting,gunnery,63);
+		setEntropyMood (me,NEUTRAL_START);
+		setfiringdelay(me,0.1,0.3);
+
+//		setignorefriendlyfire(me,true);
+//		setshotradius(me,80);
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+
+			orderMoveto(path,speed,movetype,true,false);
+
+		
+		if (turretshit) then
+			detect = 600;
+			path = epa_blockalarmpath;
+			speed = 200;
+			movetype = move_circle;
+		endif;
+
+		if (setmytarget(detect)) then
+			trans attack;
+	 	endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+
+
+		code
+
+		if (LeaveAttackState(detect*3/2)) then
+			orderstopattacking;				
+			trans sit;
+		endif;
+		
+    orderAttack (true);
+		
+		if (not soundplayed) then
+				soundplayed = true;
+				//print("blockguard1 played!!!");
+		endif;
+					
+	endstate;
+
+
+endfsm.
+//******************************************************************
+

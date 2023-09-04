@@ -1,0 +1,162 @@
+
+//*********************************************************************************
+
+fsm PrisonerTruck : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+  var
+		static integer which_truck;
+		static Boolean my_death_processed;
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+code
+	 my_death_processed = FALSE;
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		which_truck = getmemoryinteger(me,0);
+		if (which_truck > 3) then
+			which_truck = 3;
+		endif;
+		SetTargetDesirability(me,-1);
+	 // startexecute(me);
+		trans sit;
+
+endstate;
+
+state deadState;
+	code
+		if (my_death_processed == FALSE) then
+			if ((truck_rescued[which_truck] == 0) or (truck_rescued[which_truck] == 2)) then
+				num_prisoners_killed = num_prisoners_killed + 1;
+//				print(5000 + num_prisoners_killed);
+			
+				if (getAlignment(WhoDestroyed(me)) == FRIENDLY) then
+					if (sounds_played[8] == FALSE) then
+						sounds_played[8] = TRUE;
+						PlayVoiceOverOnce("VO\OP4\MI6\FRIENDLY",TALKER_FO1);
+					endif;
+				else					
+					if ((num_prisoners_killed < 2) and (sounds_played[1] == FALSE)) then
+						sounds_played[1] = TRUE;
+						PlayVoiceOverOnce("VO\OP4\MI6\BusDown",TALKER_Fox);
+					endif;
+				endif;
+			
+//			truck_finished[which_truck] = 1;
+			
+			endif;
+		
+			my_death_processed = TRUE;
+			
+		endif;
+		orderDie;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+	var
+	code
+		if (player_has_been_seen == true) or (convoy_underway == true) then	
+			trans normal;
+		endif;	
+endstate;
+
+
+
+state normal;
+
+	var
+
+		ObjectID foe;
+
+	code
+	
+		//initial move order, done so long as convoy is not captured
+		if (Convoy_stopped == false) then
+			OrderMoveto(epa_ConvoyPath,convoy_speed,MOVE_NOCYCLE,TRUE,FALSE);
+		endif;
+
+		
+					
+	if (convoy_stopped == true) then
+		ClearMoveOrder(me);		
+		OrderMoveSit(FALSE);			 										
+	endif;
+					
+	if (timegreater(gti_Timer_14,20)) then
+			 	trans transit;
+	endif;
+	 	
+ 	// has chopper rescued me?
+endstate;
+
+
+state transit;
+
+var
+
+code
+
+ //OrderFormOnSpot((GroupObjectId(12)),lz,lz2,80,1,FORMTYPE_DENSE,FALSE);  		
+ // OrderMoveToLocPoint(lz,80,TRUE,FALSE);		
+OrderMoveResumePatrol(epa_LZPath,600,MOVE_NOCYCLE,FALSE,FALSE);	
+
+	if (timegreater(gti_timer_14,60)) then
+		if JulesSound == false then
+			PlayLancemateSound("VO\OP4\MI6\PBI",1);
+			JulesSound = true;
+		endif;
+	endif;
+
+	
+if (iswithinLocPoint(me,lz,50)) then
+	ClearMoveOrder(me);
+	orderMoveSit(FALSE);
+//	truck_captured[which_truck] = 1;
+ endif;
+
+ 	if (truck_rescued[which_truck] > 0) then
+		ShutDown(me);
+	endif; 																
+		
+endstate;
+
+endfsm.

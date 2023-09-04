@@ -1,0 +1,923 @@
+
+//*********************************************************************************
+
+fsm mission_O202A : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+			
+		eternal integer playermech;
+		eternal boolean	turretshit;
+		eternal boolean	wayclear;
+		eternal boolean	bridgedown;
+		eternal boolean	madeit;
+		
+		
+		static integer	cinema_cut;
+		
+		static boolean	eastturretsdown;
+		static boolean	westturretsdown;
+		eternal boolean	blockdown;
+		eternal boolean	baseattacked;
+		static Boolean	APCTimerset;
+		
+		static boolean	onedown;
+		static boolean	threedown;
+		static boolean	fourdown;
+		static boolean	fivedown;
+		static boolean	turretsound;
+		static boolean	safesoundplayed;
+		static boolean	soundplayed;
+		
+		static locpoint	missionendspot;
+		
+		eternal boolean	checkme;
+		
+		static boolean	unitonethere;
+		static boolean	unittwothere;
+		static boolean	unitthreethere;
+		
+		static boolean	soundoneplayed;
+		
+		static boolean	peter2played;
+		static boolean	peter3played;
+		eternal boolean	techsattacked;
+		
+		eternal boolean	soundplayed2;
+		
+		static integer	mentorrange;
+		
+		static boolean	safezonerevealed;
+		
+		static boolean	nearbridge;
+		static boolean	crossingbridge;
+		
+		eternal integer	incnum;
+		static boolean	incplayed1;
+		static boolean	incplayed2;
+		static boolean	incplayed3;
+		static boolean	incplayed4;
+		static boolean	incplayed5;
+
+		eternal integer	attnum;
+		static boolean	attplayed1;
+		static boolean	attplayed2;
+		static boolean	attplayed3;
+		static boolean	attplayed4;
+		static boolean	attplayed5;
+		static boolean	thitplayed;
+		
+		static boolean	onedeadplayed;
+		
+		static integer	gametimer;
+		static integer	counter;
+		static integer	counter2;
+		static integer	counter3;
+		
+		static boolean	warningplayed;
+		
+		static boolean	playerthere;
+		
+		//Navpoint Check Variables
+		static integer	checkrange;
+		static boolean	alphareached;
+		static boolean	betareached;
+
+			
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+	
+			//Navpoint Check Declarations
+		checkrange = 150;
+		alphareached = false;
+		betareached = false;
+		
+		playerthere = false;
+
+
+		 playermech = getplayervehicle(epl_player0);	
+ 	
+			GroupAddObject(GroupObjectId(3),etu_eastroadturrets1);
+			GroupAddObject(GroupObjectId(3),etu_eastroadturrets2);
+			GroupAddObject(GroupObjectId(3),etu_eastroadturrets3);
+			GroupAddObject(GroupObjectId(3),etu_eastroadturrets4);			
+			SetGroupAI(groupobjectid(3),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(5),eve_blocktank1);
+			GroupAddObject(GroupObjectId(5),eve_blocktank4);
+			GroupAddObject(GroupObjectId(5),eve_blocktank5);			
+			SetGroupAI(groupobjectid(5),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(5),eve_roadblockguardmech);
+			GroupAddObject(GroupObjectId(6),eve_ambush1);
+			GroupAddObject(GroupObjectId(6),eve_ambush2);
+			GroupAddObject(GroupObjectId(6),eve_ambush3);
+			
+			GroupAddObject(GroupObjectId(14),eve_final1);
+			GroupAddObject(GroupObjectId(14),eve_final2);
+			GroupAddObject(GroupObjectId(14),eve_final3);
+			//GroupAddObject(GroupObjectId(14),eve_final5);
+			//GroupAddObject(GroupObjectId(14),eve_final6);
+			GroupAddObject(GroupObjectId(14),eve_final7);
+			
+			SetGroupAI(groupobjectid(14),GROUPAI_MOODSQUAD);
+			
+			//GroupAddObject(GroupObjectId(15),eve_throat1);
+			//GroupAddObject(GroupObjectId(15),eve_throat2);
+			//GroupAddObject(GroupObjectId(15),eve_throat3);
+			
+			//********************************
+			//Things what go after the APCs
+			//********************************
+			GroupAddObject(GroupObjectId(8),eve_chopper1);
+			GroupAddObject(GroupObjectId(8),eve_chopper2);
+			GroupAddObject(GroupObjectId(8),eve_chopper3);
+			
+			SetGroupAI(groupobjectid(8),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(9),eve_basetank1);
+			GroupAddObject(GroupObjectId(9),eve_basetank2);
+			
+			SetGroupAI(groupobjectid(9),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(10),eve_basemech1);
+			GroupAddObject(GroupObjectId(11),eve_basemech2);
+			GroupAddObject(GroupObjectId(12),eve_northmech1);
+						
+			GroupAddObject(GroupObjectId(13),eve_southmech);
+			
+			GroupAddObject(GroupObjectId(15),eve_grasspatrol1);
+			GroupAddObject(GroupObjectId(15),eve_grasspatrol2);
+			GroupAddObject(GroupObjectId(15),eve_grasspatrol3);
+			
+			SetGroupAI(groupobjectid(15),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(16),eve_townpatrol1);
+			
+			
+			//*********************************
+			//things what are the apcs and the mentor
+			//*********************************
+			GroupAddObject(GroupObjectId(20),eve_techs1);
+			GroupAddObject(GroupObjectId(20),eve_techs2);
+			GroupAddObject(GroupObjectId(20),eve_techs3);
+			GroupAddObject(GroupObjectId(20),eve_mentor);
+			SetGroupAI(groupobjectid(20),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(21),eve_techs1);
+			GroupAddObject(GroupObjectId(21),eve_techs2);
+			GroupAddObject(GroupObjectId(21),eve_techs3);
+			
+			
+			//*******************************
+			//Alignment Changes
+			//*******************************
+			
+			//SetAlignment(etu_westroadturrets1,enemy);
+			//SetAlignment(etu_westroadturrets2,enemy);
+//			SetAlignment(etu_westroadturrets3,enemy);
+//			SetAlignment(etu_westroadturrets4,enemy);
+			SetAlignment(etu_eastroadturrets1,enemy);
+			SetAlignment(etu_eastroadturrets2,enemy);
+			SetAlignment(etu_eastroadturrets3,enemy);
+			SetAlignment(etu_eastroadturrets4,enemy);
+			SetAlignment(eve_blocktank1,enemy);
+			SetAlignment(eve_blocktank4,enemy);
+			SetAlignment(eve_blocktank5,enemy);
+			SetAlignment(eve_roadblockguardmech,enemy);
+			SetAlignment(eve_ambush1,enemy);
+			SetAlignment(eve_ambush2,enemy);
+			SetAlignment(eve_ambush3,enemy);
+			SetAlignment(eve_final1,enemy);
+			SetAlignment(eve_final2,enemy);
+			SetAlignment(eve_final3,enemy);
+			SetAlignment(eve_final7,enemy);
+			//SetAlignment(eve_throat1,enemy);
+			//SetAlignment(eve_throat2,enemy);
+			//SetAlignment(eve_throat3,enemy);
+			
+			//********************************
+			//Things what go after the APCs
+			//********************************
+			SetAlignment(eve_chopper1,enemy);
+			SetAlignment(eve_chopper2,enemy);
+			SetAlignment(eve_chopper3,enemy);
+			SetAlignment(eve_basetank1,enemy);
+			SetAlignment(eve_basetank2,enemy);
+			SetAlignment(eve_basemech1,enemy);
+			SetAlignment(eve_basemech2,enemy);
+			SetAlignment(eve_northmech1,enemy);
+
+			SetAlignment(eve_southmech,enemy);
+			 		
+			//*********************************
+			//things what are the apcs and the mentor
+			//*********************************
+			SetAlignment(eve_techs1,friendly);
+			SetAlignment(eve_techs2,friendly);
+			SetAlignment(eve_techs3,friendly);
+			SetAlignment(eve_mentor,friendly);
+
+			
+		cinema_cut = 0;
+		
+		turretshit = false;
+		wayclear = false;
+		eastturretsdown = false;
+		westturretsdown = false;
+		blockdown = false;	
+		bridgedown = true;
+		baseattacked = false;	
+		apctimerset = false;
+		madeit = false;
+		
+		onedown = false;
+		threedown = false;
+		fourdown = false;
+		fivedown = false;
+		
+		turretsound = false;
+		safesoundplayed = false;
+		
+		
+		checkme = false;
+		
+		unitonethere = false;
+		unittwothere = false;
+		unitthreethere = false;	
+		
+		//Lancemate data
+//		SetSkillLevel(eai_mechai_253,50,75,75);
+//		setattackthrottle(eai_mechai_253,80);
+//		setsquadtargetingradius(eai_mechai_253,325);
+
+		soundoneplayed = false; 	
+		soundplayed2 = false;		
+		soundplayed = false;
+		
+		safezonerevealed = false;
+		
+		peter2played = false;
+		peter3played = false;
+		techsattacked = false;
+		
+		nearbridge = false;
+		crossingbridge = false;
+		
+		mentorrange = 190;
+		
+		incnum = 0;
+		incplayed1 = false;
+		incplayed2 = false;
+		incplayed3 = false;
+		incplayed4 = false;
+		incplayed5 = false;
+
+		attnum = 0;
+		attplayed1 = false;
+		attplayed2 = false;
+		attplayed3 = false;
+		attplayed4 = false;
+		attplayed5 = false;
+		thitplayed = false;
+		
+		onedeadplayed = false;
+		
+		gametimer = gti_timer_0;
+		counter = 0;
+		counter2 = 0;
+		counter3 = 0;
+		
+		warningplayed = false;
+		
+															
+endfunction;
+
+
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+			playvoiceover("VO\OP2\MI5\intro",talker_rat);
+			playvoiceover("VO\OP2\MI5\intro",talker_ian);
+			playvoiceover("VO\OP2\MI5\intro",talker_gon);
+			playvoiceover("VO\OP2\MI5\introreply",talker_ian);
+			playvoiceover("VO\OP2\MI5\introreply",talker_gon);
+			playvoiceover("VO\OP2\MI5\introreply2",talker_ian);
+			playlancematesound("VO\OP2\MI5\introreply3",1);
+			playvoiceover("VO\OP2\MI5\introreply3",talker_gon);
+			playvoiceover("VO\OP2\MI5\introreply3",talker_ian);
+			settargetdesirability(eve_techs1,1);
+			settargetdesirability(eve_techs2,1);
+			settargetdesirability(eve_techs3,10);
+			playerai(epl_player0,true);
+			starttimer(gti_timer_0);
+			setnavPoint(ena_nav_alpha);
+			//revealObjective(eob_destroyturrets);
+			StartMusic("Music\kickit",3.5,3.5,50);
+			trans opening;
+			//trans sit;
+
+endstate;
+
+	
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+	
+				//PlayVoiceOverOnce("VO\Generic\Startup1",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+
+	
+	if (isdead(playermech)) then
+		Endmission(false,12);
+		killvoiceovers;
+		PlayVoiceOver("VO\Generic\Iandestroyed",talker_rat);
+		StartMusic("Music\defeat",2.0,2.0,70);
+		trans lost;
+	endif;
+
+//**********************************
+//CHECKING TO SEE IF THE PLAYER IS IN RANGE OF THE MENTOR
+//**********************************
+	
+if (not playerthere) then	
+	if (iswithin(playermech,(groupobjectid(20)),mentorrange)) then
+		playvoiceover("VO\OP2\MI5\range",talker_gon);
+		playvoiceover("VO\OP2\MI5\revous",talker_sgt);
+		playvoiceover("VO\OP2\MI5\revous",talker_Ian);
+		playvoiceover("VO\OP2\MI5\revousreply",talker_Sgt);
+		setnavpoint(ena_nav_beta);
+		blockdown = true;
+		successobjective(eob_destroyturrets);
+		revealObjective(eob_escortapcs);
+		StartMusic("Music\core",2.0,3.0,60);
+		onedown = true;
+		setnavpoint(ena_nav_beta);
+		playerthere = true;
+	endif;
+endif;
+	
+if (not blockdown) then
+	//If it's been too long then send the signal telling the taanks
+	//at the roadblock to attack the mentor and the APCs
+	if (timegreater(gti_timer_0,500)) then
+		techsattacked = true;
+	endif;
+endif;
+
+if (blockdown) then
+	if (not apctimerset) then
+		starttimer(gti_timer_10);
+		apctimerset = true;
+	endif;
+endif;
+//***************************
+//Objective check 3, escorting the APCS
+//***************************
+
+
+if (groupnumdead(groupobjectid(21)) > 1) then
+	Endmission(False,17);
+	failobjective(eob_escortapcs);
+	playvoiceover("VO\OP2\MI5\condead",talker_sgt);
+	playvoiceover("VO\OP2\MI5\condeadreply",talker_rat);
+	enableglobalinvulnerable;
+	settargetdesirability(playermech,-1);
+	trans lost;
+endif;
+
+if (not unitonethere) then
+	if ((iswithin(eve_techs1,ena_nav_Beta,335)) or (isdead(eve_techs1))) then
+		//print("unitone made it!!!");
+		unitonethere = true;
+	endif;
+endif;
+
+if (not unittwothere) then
+	if ((iswithin(eve_techs2,ena_nav_Beta,335)) or (isdead(eve_techs2))) then
+		//print("unittwo made it!!!");
+		unittwothere = true;
+	endif;
+endif;
+
+if (not unitthreethere) then
+	if ((iswithin(eve_techs3,ena_nav_Beta,335)) or (isdead(eve_techs3))) then
+		//print("unitthree made it!!!");
+		unitthreethere = true;
+	endif;
+endif;
+
+
+if (not threedown) then
+	if (unitonethere) then
+		if (unittwothere) then
+			if (unitthreethere) then
+				//if (groupalldead(groupobjectid(14))) then
+					Successobjective(eob_escortapcs);
+					revealObjective(eob_blowbridge);
+					playvoiceover("VO\OP2\MI5\xed",talker_sgt);
+					playvoiceover("VO\OP2\MI5\xed",talker_rat);
+					threedown = true;
+				//endif;
+			endif;
+		endif;
+	endif;
+endif;
+
+
+//*************************************
+//Objective check 5, the bridge
+//******************************
+
+if (not fivedown) then
+	if (threedown) then
+			if (isdead(ebu_finalbridge)) then
+				Successobjective(eob_blowbridge);
+				playvoiceover("VO\OP2\MI5\bridgedwn",talker_ian);
+				fivedown = true;
+			endif;
+	endif;
+endif;
+
+if (not threedown) then
+	if (isdead(ebu_finalbridge)) then
+		endmission(false,19);
+		playvoiceover("VO\OP2\MI5\bridgeearly",talker_rat);
+		playvoiceover("VO\OP2\MI5\bridgeearly",talker_ian);
+		playvoiceover("VO\OP2\MI5\bridgeearly",talker_rat);
+		failobjective(eob_escortapcs);
+		trans lost;
+	endif;
+endif;
+
+
+//****************************
+//success everything
+//****************************
+
+		if (threedown) then
+			if (fivedown) then
+				if (onedown) then
+					endmission(true,31);
+					playvoiceover("VO\OP2\MI5\won",talker_ian);
+					playlancematesound("VO\OP2\MI5\won",1);
+					playvoiceover("VO\OP2\MI5\won",talker_rat);
+					playvoiceover("VO\OP2\MI5\wonreply",talker_ian);
+					playvoiceover("VO\OP2\MI5\wonreply",talker_rat);
+					playvoiceover("VO\OP2\MI5\wonreply2",talker_ian);
+					if (playlancematesound("VO\OP2\MI5\wonreply2",1)) then
+					 playvoiceover("VO\OP2\MI5\wonreply3",talker_ian);
+					 playlancematesound("VO\OP2\MI5\wonreply3",1);
+					endif;
+					reveallancemate("Jules Gonzales");
+					StartMusic("Music\victory",2.0,3.0,60);
+					AddWeaponSalvage("LBXAC20",1);
+					AddWeaponSalvage("ClanLRM10",1);
+					AddWeaponSalvage("MachineGun",1);
+					AddWeaponSalvage("MRM10",2);
+					AddWeaponSalvage("MRM20",1);
+					AddWeaponSalvage("PPC",1);
+					AddWeaponSalvage("ERMediumPulseLaser",1);
+					AddWeaponSalvage("ClanUltraAC5",1);
+					AddMechInstanceSalvage("Uziel");
+					AddMechInstanceSalvage("Raven");
+					starttimer(gti_timer_28);
+					enableglobalinvulnerable;
+					settargetdesirability(playermech,-1);
+					trans waitforcinema;
+				endif;
+			endif;
+		endif;
+
+
+
+			
+//*******************************************
+//All other sounds
+//*******************************************
+
+//First Warning
+if (timegreater(gti_timer_0,270)) then
+	if (not soundoneplayed) then
+		if (not blockdown) then
+			playvoiceover("VO\OP2\MI5\timer1",talker_gon);
+			playvoiceover("VO\OP2\MI5\timer1",talker_ian);
+			playvoiceover("VO\OP2\MI5\timer1reply",talker_gon);
+			playvoiceover("VO\OP2\MI5\timer1reply",talker_ian);
+			playvoiceover("VO\OP2\MI5\roger2",talker_gon);
+			
+		endif;
+	soundoneplayed = true;
+	endif;
+endif;
+
+//Secondwarning
+if (timegreater(gti_timer_0,450)) then
+	if (not peter2played) then
+		if (not blockdown) then
+			playvoiceover("VO\OP2\MI5\timer2",talker_rat);
+			playvoiceover("VO\OP2\MI5\timer2",talker_ian);
+			playlancematesound("VO\OP2\MI5\timer2",1);
+			playvoiceover("VO\OP2\MI5\timer2reply",talker_rat);
+			playlancematesound("VO\OP2\MI5\timer2reply",1);
+			
+		endif;
+	peter2played = true;
+	endif;
+endif;
+
+//telling the player about the bridge
+if (blockdown) then
+	if (not soundplayed) then
+		if (timegreater(gti_timer_10,45)) then
+			soundplayed = true;
+			playvoiceover("VO\OP2\MI5\bridge",talker_RAT);
+			playvoiceover("VO\OP2\MI5\bridge",talker_ian);
+		endif;
+	endif;
+endif;
+
+
+//the two sounds as the apcs get closer to the bridge
+if (not nearbridge) then
+	if (blockdown) then
+		if (timegreater(gti_timer_10,210)) then
+			if (iswithin((groupobjectid(21)),ebu_finalbridge,500)) then
+				nearbridge = true;
+				playvoiceover("VO\OP2\MI5\near",talker_sgt);
+			endif;
+		endif;
+	endif;
+
+else
+
+	if (not crossingbridge) then
+		if (iswithin((groupobjectid(21)),ebu_finalbridge,100)) then
+			crossingbridge = true;
+			playvoiceover("VO\OP2\MI5\xing",talker_sgt);
+		endif;	
+	endif;
+	
+endif;
+
+
+if (not onedeadplayed) then
+	if (groupnumdead(groupobjectid(21)) > 0) then
+		playvoiceover("VO\OP2\MI5\losefirst",talker_sgt);
+		onedeadplayed = true;
+	endif;
+endif;
+
+
+
+//Check for incoming units
+
+if (timegreater(gametimer,counter)) then
+
+		counter = counter + 6;
+
+
+		if (iswithin((groupobjectid(21)),eve_basemech2,800)) then
+				if (not incplayed1) then
+					incplayed1 = true;
+					playvoiceover("VO\OP2\MI5\in1",talker_sgt);
+					playvoiceover("VO\OP2\MI5\in1",talker_ian);
+				endif;
+		endif;
+		
+		if (iswithin((groupobjectid(21)),eve_basemech1,800)) then
+				if (not incplayed2) then
+					incplayed2 = true;
+					playvoiceover("VO\OP2\MI5\in2",talker_sgt);
+					playvoiceover("VO\OP2\MI5\in2",talker_ian);
+				endif;
+		endif;
+			
+		if (iswithin((groupobjectid(21)),eve_northmech1,800)) then
+				if (not incplayed3) then
+					incplayed3 = true;
+					if (playlancematesound("VO\OP2\MI5\in3",1)) then
+						playvoiceover("VO\OP2\MI5\roger3",talker_ian);
+					endif;
+				endif;
+		endif;
+			
+	 if (iswithin((groupobjectid(21)),eve_basetank1,800)) then
+				if (not incplayed4) then
+					incplayed4 = true;
+					playvoiceover("VO\OP2\MI5\in4",talker_sgt);
+				endif;
+	 endif;
+			
+	 if (iswithin((groupobjectid(21)),eve_southmech,800)) then
+				if (not incplayed5) then
+					incplayed5 = true;
+					if (playlancematesound("VO\OP2\MI5\in5",1)) then
+						playvoiceover("VO\OP2\MI5\in6",talker_ian);
+					endif;			
+				endif;
+		endif;			
+	
+endif;
+
+
+if (counter3 < 5) then
+	if (timegreater(gametimer,counter2)) then
+
+		if (isshot(groupobjectid(21))) then
+			counter2 = ((gettimer(gametimer)) + 10);
+			counter3 = counter3 + 1;
+
+			switch counter3
+					
+					case 1:
+							playvoiceover("VO\OP2\MI5\ass1",talker_sgt);
+					endcase; 		
+					case 2:
+							playlancematesound("VO\OP2\MI5\ass2",1);
+					endcase;				
+					case 3:
+							playvoiceover("VO\OP2\MI5\ass3",talker_sgt);
+							playlancematesound("VO\OP2\MI5\ass3",1);		
+					endcase;				
+					case 4:
+							playvoiceover("VO\OP2\MI5\ass4",talker_ian);
+					endcase;				
+					case 5:
+							playlancematesound("VO\OP2\MI5\ass5",1);
+					endcase;
+					
+			endswitch;		
+		
+		endif;
+	endif;
+endif;
+
+if (not warningplayed) then
+	if (isshot(groupobjectid(21))) then
+		if ((whoshot(groupobjectid(21))) == playermech) then
+			playvoiceoveronce("VO\OP2\MI5\shoot",talker_gon);
+			warningplayed = true;
+		endif;
+	endif;
+endif;
+
+
+ 	
+//AMBIENT MUSIC
+if (not ismusicplaying) then
+	StartMusic("Music\urbanambloop",0.0,3.0,40);
+endif;
+
+//*************************************
+//Navpoint Checks
+//*************************************
+
+if (not alphareached) then
+	if (isnavrevealed(ena_nav_alpha)) then
+		if (iswithin(playermech,ena_nav_alpha,checkrange)) then
+			playvoiceover("VO\generic\navalpha",talker_Bet);
+			alphareached = true;
+		endif;
+	endif;
+endif;
+
+if (not betareached) then
+	if (isnavrevealed(ena_nav_beta)) then
+		if (iswithin(playermech,ena_nav_beta,checkrange)) then
+			playvoiceover("VO\generic\navbeta",talker_Bet);
+			betareached = true;
+		endif;
+	endif;
+endif;
+
+				
+endstate;
+
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,4)) then
+			playerai(epl_player0,true);
+			trans won;
+		endif;
+		
+		
+endstate;
+
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			cinemaend;
+			killvoiceovers;
+			revealObjective(eob_destroyturrets);
+			trans sit;	
+	endif;
+
+
+ 	switch (cinema_cut)
+			
+			case 0:
+				CinemaStart;
+				setactivecamera (eca_editorcameraship_168);
+				Fadetoblack(0.0);
+				Fadefromblack(8.0);
+				TargetfollowObject(playermech);
+				Camerafollowobject(playermech);
+				SetCameraFootShake(playermech,100);
+				//overridecamerayaw(90.0,0.0);
+				targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(-95.0,25.0,0.0,0.0,false);
+				Cameraoffset(100.0,25.0,-120.0,37.0,false);
+				startTimer (gti_Timer_21);
+				resettimer (gti_Timer_21);
+				cinema_cut = cinema_cut + 3; 		
+			endcase;
+			
+			case 1:
+									
+				if (timegreater(gti_Timer_21,15)) then
+					cinema_cut = cinema_cut + 1;
+					resettimer (gti_Timer_21);
+					Targetfollowobject(eve_techs2);
+					Camerafollowobject(eve_techs2);
+					Targetoffset(0.0,9.0,0.0,0.0,false);
+					Cameraoffset(0.0,25.0,75.0,0.0,false);
+					Cameraoffset(30.0,45.0,75.0,10.0,false);
+				endif;
+				
+			endcase;
+
+			case 2:
+						
+				if (timegreater(gti_Timer_21,10)) then
+					cinema_cut = cinema_cut + 1;
+					resettimer (gti_Timer_21);
+					//setactivecamera(eca_editorcameraship_419);
+					//Fadetoblack(0.0);
+					//Fadefromblack(3.5);
+					TargetfollowObject(playermech);
+					Camerafollowobject(playermech);
+					targetoffset(0.0,9.0,0.0,0.0,false);
+					Cameraoffset(0.0,25.0,-120.0,0.0,false);
+					Cameraoffset(60.0,40.0,-180.0,12.0,false);	
+				endif;
+				
+			endcase;
+			
+				case 3:
+				
+				if (timegreater(gti_Timer_21,37)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					revealObjective(eob_destroyturrets);
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+	
+	
+endstate;
+
+state won;
+
+		code
+		
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(true,1);	
+			trans hang;
+	endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_editorcameraship_168);
+				Fadetoblack(0.0);
+				Fadefromblack(3.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(-30.0,125.0,75.0,0.0,false);
+				Cameraoffset(60.0,20.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(false,1);
+			trans hang;
+	endif;
+ 	
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_editorcameraship_168);
+				Fadetoblack(0.0);
+				Fadefromblack(3.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+
+state hang;
+		
+		code
+		
+endstate;
+
+endfsm.
+//******************************************************************
+

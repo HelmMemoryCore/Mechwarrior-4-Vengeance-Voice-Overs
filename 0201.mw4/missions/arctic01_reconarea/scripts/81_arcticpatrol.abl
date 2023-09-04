@@ -1,0 +1,269 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Patrol must be changed to some other unique identifier
+fsm ArcticPatrol : integer;
+
+//This unit patrols a specific path and attacks anything that comes near it.
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; 			// When do I start shooting?
+																
+	static integer			piloting; 				// piloting skill
+	static integer			gunnery; 					// hit chance,
+	static real					mindelay;					//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;					//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;			 			// What speed so I move at?
+	static integer 			elitelevel; 			// % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things that would normally be determined by combat experience
+
+ 	static integer			isshotradius;			//how far away from me will I detect an enemy shot.
+	static integer			movetype;					//how will it move down the path?
+
+	static Boolean 			attacksoundplayed;
+	static integer 			attacksound; 			// plays when it first attacks
+	static integer 			deathsound; 			// plays when it dies
+	
+	static integer			mood;							//What is my normal mood?
+	
+	static Boolean			Resumed;				//Have I gotten to the end of the path?
+	static Boolean			reachedendofpath;				//Have I gotten to the end of the path?
+																							//Note: This only gets set if movetype is set to move_nocycle.
+	static integer			path;						 				//what path am I following?
+	static Boolean 			attackersdistractit;		// if FALSE, it won't leave the path, even when things
+																							// are shooting it. It will shoot back. Defaults to true
+																							// Once unit reaches the end of the path, It attacks freely.
+	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	 				
+ 	switch (GetMemoryInteger(me,9))
+
+	case 1:															 //SouthGaurd
+	
+		attackrange = 350;
+		piloting = 40;				//70							
+		gunnery = 50;					//30				 was 65
+		mindelay = 0.5;				//1.5			
+		maxdelay = 1.0;				//3					
+		speed = 60;						//40   most recent 60
+		elitelevel = 60;			//30
+		IsShotRadius = 80;
+		movetype = move_circle;
+		AttackersDistractIt = True;
+		Mood = neutral_start;
+		path = epa_SouthPath;
+		ReachedEndOfPath = False;
+		Resumed = False;
+		Attacksoundplayed = False;					
+		//Attacksound = eso_KillThisWeek;
+		//Deathsound = eso_ItCantBe;
+		
+	endcase;
+		
+	case 2:															 //NorthGaurd
+		
+		attackrange = 500;
+		piloting = 40;			//70						
+		gunnery = 40;				//30			 was 65
+		mindelay = 0.5;			//1				
+		maxdelay = 1.0;			//4						
+		speed = 60;					//40 most recent 80
+		elitelevel = 60;		//60
+		IsShotRadius = 80;
+		movetype = MOVE_SEESAW;
+		AttackersDistractIt = True;
+		Mood = neutral_start;
+		path = epa_N2NWestPath;
+		ReachedEndOfPath = False;
+		Resumed = False;
+		Attacksoundplayed = False;
+		//Attacksound = eso_FinallySomeAction;
+		//Deathsound = eso_WhoAreYou;
+		
+	endcase;
+		
+	case 3:						 									//Z_Leader
+		
+		attackrange = 550;
+		piloting = 50;		//65					
+		gunnery = 45;			//35						 was 70
+		mindelay = 0.25;		//1.5					
+		maxdelay = 1.0;		//3							
+		speed = 75;				//40      most recent 90
+		elitelevel = 65;	//50
+		IsShotRadius = 80;
+		movetype = MOVE_SEESAW;
+		AttackersDistractIt = True;
+		Mood = neutral_start;
+		ReachedEndOfPath = False;
+		path = epa_SeaSawPath;
+		Resumed = False;
+		Attacksoundplayed = False;						
+		//Attacksound = eso_RadioReward;
+		//Deathsound = eso_MadaMada;
+		
+	endcase;
+		
+	case 4:						 									//Rambo
+		
+		attackrange = 400;
+		piloting = 35;		//75					
+		gunnery = 40;			//35					was 65
+		mindelay = 0.5;		//1.5					
+		maxdelay = 1.0;		//3							
+		speed = 50;				//40     most recent 100	 was 60
+		elitelevel = 55;	//40											 was 60
+		IsShotRadius = 80;
+		movetype = MOVE_SEESAW;
+		AttackersDistractIt = True;
+		Mood = neutral_start;
+		ReachedEndOfPath = False;
+		path = epa_RamboPath;
+		Resumed = False;
+		Attacksoundplayed = False;						
+		//Attacksound = eso_RadioReward;
+		//Deathsound = eso_MadaMada;
+		
+	endcase;
+		
+	endswitch;
+ 	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//				         ADD ATTACK STATE IF ALARM = TRUE
+//								NEED TO MAKE Z_LEADER STAY PATROL OR SNIPE UNTIL HE IS SHOT
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+		
+		if (GetMemoryInteger(me,9) == 1) then
+			shutdown(me);
+			trans hangout;
+		else
+			
+			trans patrol;
+		endif;
+endstate;			
+
+state deadState;
+  code
+		if (deathsound <> -1) then	
+			PlaySoundOnce(deathsound);
+		endif;		
+						
+		orderDie;
+endstate;
+
+state hangout;
+  code
+		if (iswithin(me,(groupobjectid(1)),150) or (navareached == true)) or (IsShot (me)) then
+			startup(me);
+			trans patrol;
+		endif;
+				
+endstate;
+
+	state patrol;
+
+  var
+    ObjectID foe;
+
+		code
+
+	//head down the path.  If this has already been done
+	// or if there is no path set then look around.
+			if ((path <> -1) and (reachedendofpath == FALSE)) then
+					if ((orderMoveto(path,speed,movetype,true,true)) == TRUE) then
+						reachedendofpath = TRUE;
+					endif; 			
+			else	 		 		
+				ordermovelookout;			
+			endif;
+			
+		//Find me a target
+		if (setmytarget(attackrange)) then
+			trans attack;
+	 	endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+		
+		code
+
+		speed = 600;
+		
+		if (LeaveAttackState(attackrange*2)) then
+			orderstopattacking;
+			orderMoveResumePatrol(path,speed,movetype,true,true);
+			trans patrol;
+		endif;
+		
+		//the ever popular attack order
+    orderAttack (attackersdistractit);
+		
+		//play the attack sound if one exists
+		if ((attacksound <> -1) and (attacksoundplayed == FALSE)) then	
+			attacksoundplayed = true;
+			PlaySoundOnce(attacksound);
+		endif;	
+		
+		//maybe swap targets when I am shot.
+		if ((isShot (me)) and (rand(0,75) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+ 			
+					
+	endstate;
+
+
+endfsm.
+//******************************************************************
+

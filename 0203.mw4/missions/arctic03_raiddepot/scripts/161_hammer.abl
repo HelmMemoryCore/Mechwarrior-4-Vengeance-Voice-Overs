@@ -1,0 +1,219 @@
+//*********************************************************************************
+
+fsm BringthePain : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+	static integer	gunnery;
+	static integer	attackrange;
+	static real			mindelay;
+	static real			maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+	static integer	attacksound;
+	static integer	mood;
+	static integer	speed;
+	static integer	Wheretogo;
+	static boolean	Wakeup;
+	static boolean	AttackSoundPlayed;
+	
+	static locpoint	Point1;
+	static locpoint	Point2;
+	static locpoint	Point3;
+	static locpoint	Point4;
+
+
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+		
+		wakeup = false;
+		AttackSoundPlayed = false;
+		
+			Point1[0] = 60;
+			Point1[1] = 167;
+			Point1[2] = 1824;
+
+			Point2[0] = 52;
+			Point2[1] = 167;
+			Point2[2] = 1824;
+
+			Point3[0] = 60;
+			Point3[1] = 167;
+			Point3[2] = 1804;
+
+			Point4[0] = 52;
+			Point4[1] = 167;
+			Point4[2] = 1804;
+
+		
+		switch (GetMemoryInteger(me,9))
+			case 0:
+				attackrange = 600;				
+				piloting = 50;							
+				gunnery = 85;						
+				mindelay = 0.0;							
+				maxdelay = 1.0;									
+				elitelevel = 80;
+				attacksound = -1;
+				mood = BRUTAL_END;
+				speed = 70;
+				wheretogo = epa_PainPath;
+			endcase;
+			case 1:
+				attackrange = 500;				
+				piloting = 50;							
+				gunnery = 85;						
+				mindelay = 0.5;							
+				maxdelay = 1.5;									
+				elitelevel = 90;
+				attacksound = -1;
+				mood = BRUTAL_START;
+				speed = 70;
+				wheretogo = epa_PainPath;
+			endcase;
+			case 2:
+				attackrange = 600;				
+				piloting = 60;							
+				gunnery = 80;						
+				mindelay = 0.0;							
+				maxdelay = 1.0;									
+				elitelevel = 80;
+				attacksound = -1;
+				mood = BRUTAL_END;
+				speed = 70;
+				wheretogo = epa_PainPath;
+			endcase;
+			case 3:
+				attackrange = 500;				
+				piloting = 60;							
+				gunnery = 80;						
+				mindelay = 0.5;							
+				maxdelay = 1.5;									
+				elitelevel = 90;
+				attacksound = -1;
+				mood = BRUTAL_START;
+				speed = 70;
+				wheretogo = epa_PainPath;
+			endcase;
+
+		endswitch;
+	endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+			setskilllevel(me,piloting,gunnery,elitelevel);
+			setfiringdelay(me,mindelay,maxdelay);
+			setignorefriendlyfire(me,true);
+			setentropymood(me,mood);
+			setcurmood(me,mood);		
+			SetSensorVisibility(me,false);
+			TeleportToHell(me);
+//
+//	 CURRENTLY I AM HIDING THEM BEYOND THE MOUNTAINS
+//
+//
+//			GetLocation(eve_Hammer1,Point1);
+//			GetLocation(eve_Hammer2,Point2);
+//			GetLocation(eve_Hammer3,Point3);
+//			GetLocation(eve_Hammer4,Point4);
+//			DamnThe(me);
+			trans wait;
+	endstate;
+	
+	state deadState;
+  code
+//Do I want to do some random thing in here....with the "did you see that?" and something else??
+//		if (deathsound <> -1) then	
+//			PlaySoundOnce(deathsound);
+//		endif;								
+		orderDie;
+	endstate;
+
+	state	wait;
+		code
+			
+			if BIGALERT == TRUE then	
+				if StartedTime == false then
+					if SwiftClose == true then
+						StartTimer(gti_timer_13);
+						StartedTime = true;
+					endif;
+				endif;
+			endif;
+				
+				if timegreater(13,27) then
+					Teleport(eve_Hammer1,Point1);
+					Teleport(eve_Hammer2,Point2);
+					Teleport(eve_Hammer3,Point3);
+					Teleport(eve_Hammer4,Point4);
+					Startup(me);
+					SetSensorVisibility(me,true);
+					trans rumble;
+				endif;
+					
+		
+	endstate;																																	
+	
+	state rumble;
+		code
+		OrderMoveResumePatrol(wheretogo,speed,move_nocycle,false,true);
+			if (setmytarget(attackrange)) then
+				trans attack;
+			endif;
+	endstate;
+	
+			
+state Attack;
+	code
+		if (LeaveAttackState(500)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans Rumble;
+		endif;
+
+		OrderAttack(true);
+		
+		if ((isShot (me)) and (rand(0,4) <= 1)) then
+				setTarget(me,whoShot(me));
+			endif;
+			
+
+																																
+endstate;
+																																
+																																		
+endfsm.
+

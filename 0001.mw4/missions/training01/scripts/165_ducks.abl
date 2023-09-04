@@ -1,0 +1,80 @@
+
+fsm Ducks : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+		static ObjectID path;
+
+function Init;
+	code
+
+endfunction;
+
+state StartState;
+
+	code
+//		SetFiringDelay			(ME,minDelay,maxDelay);
+//		SetIgnoreFriendlyFire	(ME,true);
+//		SetIsShotRadius			(ME,isShotRadius);
+//		SetEntropyMood			(ME,mood);
+//		SetCurMood				(ME,mood);
+//		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+//		SetAttackThrottle		(ME,attackThrottle);
+
+		SetSensorVisibility(ME,FALSE);
+
+		path = -1;
+
+		switch (GetMemoryInteger(me,9))
+			case 0:
+				path = epa_Path_Mover0;
+			endcase;
+			case 1:
+				path = epa_Path_Mover1;
+			endcase;
+			case 2:
+				path = epa_Path_Mover2;
+			endcase;
+			case 3:
+				path = epa_Path_Mover3;
+			endcase;
+			case 4:
+				path = epa_Path_Mover4;
+			endcase;
+		endswitch;
+
+		trans SitState;
+
+endstate;
+
+state SitState;
+	code
+		if (GetGlobalTrigger(30) == true) then
+			if (path <> -1) then
+				SetAlignment(ME,ENEMY);
+				SetSensorVisibility(ME,TRUE);
+				trans Waddle;
+			endif;
+		endif;
+endstate;
+
+state Waddle;
+	code
+		OrderMoveTo(path,60,MOVE_CIRCLE,true,false);
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.
+

@@ -1,0 +1,143 @@
+//*********************************************************************************
+
+fsm PicketScript : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+	static integer	gunnery;
+	static integer	attackrange;
+	static integer	withdrawrange;
+	static real			mindelay;
+	static real			maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+	static integer	attacksound;
+	static integer	mood;
+	static integer	speed;
+	
+			
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+		
+		
+		switch (GetMemoryInteger(me,9))
+			case 0:
+				attackrange = 350;				
+				withdrawrange = 500;				
+				piloting = 40;							
+				gunnery = 70;						
+				mindelay = 0.0;							
+				maxdelay = 1.0;									
+				elitelevel = 70;
+				mood = BRUTAL_END;
+				speed = 70;
+      endcase;
+			case 1:
+				attackrange = 250;				
+				piloting = 60;							
+				gunnery = 70;						
+				mindelay = 0.5;							
+				maxdelay = 1.5;									
+				elitelevel = 60;
+				mood = BRUTAL_START;
+				speed = 70;
+        endcase;
+
+		endswitch;
+	endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+			setskilllevel(me,piloting,gunnery,elitelevel);
+			setfiringdelay(me,mindelay,maxdelay);
+			setignorefriendlyfire(me,true);
+			setentropymood(me,mood);
+			setcurmood(me,mood);
+			shutdown(me);
+		trans wait;
+	endstate;
+	
+	
+	state deadState;
+  code				
+		orderDie;
+	endstate;
+
+	
+	state	wait;
+		code
+				
+		if Start == true then
+			Startup(me);
+			trans rampage;
+		endif;	
+					
+		if (FindEnemy(attackRange,FT_DEFAULT)) then
+			Startup(me);
+			trans rumble;
+		endif;	 	
+	endstate;																																	
+	
+	
+	state rampage;
+
+		code
+		
+		if (FindEnemy(attackRange,FT_DEFAULT+FT_UNARMED+FT_BUILDING)) then
+			trans rumble;
+		endif;		
+
+	endstate;
+	
+	
+	state rumble;	
+		
+		code
+
+		if (LeaveAttackState(withdrawrange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans Rampage;
+		endif;
+
+		OrderAttackTactic(TACTIC_RUSH,true); 			
+					
+	endstate;
+																															
+																																		
+endfsm.
+
+

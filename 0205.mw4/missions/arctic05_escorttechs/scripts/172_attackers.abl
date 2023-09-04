@@ -1,0 +1,295 @@
+
+//*********************************************************************************
+
+fsm attackers : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer		detect;
+	static integer		piloting;
+	
+	static integer	mypath;
+	static integer	tech1;
+	static integer	tech2;
+	static integer	tech3;
+	static integer	mygroup;
+	static integer	playerdetect;
+	static integer	mytime;
+	static integer	myshot;
+	static integer	elitelevel;
+
+	
+	static boolean	endedpath;
+	
+	static boolean	onway;
+	
+	static boolean	incincremented;
+	static boolean	sound2played;
+	static boolean	byebye;
+	static integer	wimpy;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	piloting = 47;
+	byebye = false;
+	wimpy = getdifficulty;
+	
+
+
+					
+	switch (getmemoryinteger(me,1))
+	
+
+	case 1:
+		//BaseMech2
+		tech1 = eve_techs1;
+		tech2 = eve_techs2;
+		tech3 = eve_techs3;
+		mygroup = 11;
+		mypath = epa_basepath1;
+		playerdetect = 300;
+		mytime =	50;
+		detect =	775;
+		myshot = 55;
+	endcase;
+	
+	case 2:
+		//the three SRM Carriers
+		tech1 = eve_techs3;
+		tech2 = eve_techs2;
+		tech3 = eve_techs1;
+		mygroup = 9;
+		mypath = epa_SRMCpath;
+		playerdetect = 300;
+		mytime =	140;
+		detect =	600;
+		myshot = 40;
+	endcase;
+	
+	case 3:
+		//BaseMech1
+		tech1 = eve_techs2;
+		tech2 = eve_techs3;
+		tech3 = eve_techs1;
+		mygroup = 10;
+		mypath = epa_Basepath2;
+		playerdetect = 400;
+		mytime =	145;
+		detect =	700;
+		myshot = 60;
+	endcase;
+	
+	case 4:
+		//NorthMechs
+		tech1 = eve_techs2;
+		tech2 = eve_techs3;
+		tech3 = eve_techs1;
+		mygroup = 12;
+		mypath = epa_NorthMechPath;
+		playerdetect = 400;
+		mytime =	245;
+		detect =	700;
+		myshot = 56;
+	endcase;
+	
+	case 5:
+		//SouthMech
+		tech1 = eve_techs2;
+		tech2 = eve_techs3;
+		tech3 = eve_techs1;
+		mygroup = 13;
+		mypath = epa_SouthMechPath;
+		playerdetect = 400;
+		mytime =	300;
+		detect =	650;
+		myshot = 55;
+		byebye = true;
+	endcase;
+	
+	
+	endswitch;
+													
+	endedpath = false;
+	onway = false;
+	sound2played = false;
+	incincremented = false;
+	elitelevel = 56;
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,piloting,myshot,elitelevel);
+		setEntropyMood (me,NEUTRAL_START);
+		setfiringdelay(me,0.4,1.3);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,30);
+
+		if (byebye) then
+			If (wimpy == EASY_DIFFICULTY) then
+				shutdown(me);
+				teleporttohell(me);
+				trans limbo;
+			endif;
+		endif;
+		
+		
+		trans search;
+endstate;
+
+
+state limbo;
+	code
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+	
+	state search;
+	
+		code
+		
+		if (endedpath) then
+			trans getem;
+		endif;
+		
+		ordermovelookout;
+		
+		if (blockdown) then
+			if (timegreater(gti_timer_10,mytime)) then
+				onway = true;
+				trans travel;
+			endif;
+		endif; 	
+		
+		if (setmytarget(detect)) then
+				if (blockdown) then
+					endedpath = true;
+				endif;
+			clearmoveorder(me);
+ 			trans attack;
+	 	endif;
+					
+endstate;
+	
+state travel;
+  code
+
+	if (orderMoveto(mypath,200,move_nocycle,TRUE,true)) then
+		endedpath = true;
+		trans getem;
+	endif;
+
+	if (setmytarget(detect)) then
+		endedpath = true;
+ 		trans attack;
+	 endif;
+
+endstate;
+	
+//***************************************
+//When we go after the APCs
+//***************************************
+	
+	 	state getem;
+
+		var
+			ObjectID foe;
+		
+		code
+		
+		foe = tech1;
+		
+		if (isdead(tech1)) then
+			if (isdead(tech2)) then
+				foe = tech3;
+			else
+				foe = tech2;
+			endif;
+		endif;
+		
+		Ordermovetoobject(foe,600);	
+		
+		if (setmytarget(detect)) then
+ 			trans attack;
+	 	endif;
+		 	 				
+	endstate;
+	
+	
+
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+	  var
+		ObjectID foe;
+
+		code
+		
+foe = gettarget(me);
+
+
+		if (LeaveAttackState(detect*2)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans search;
+		endif;
+
+		orderAttack(true);
+							
+
+if ((isShot (me)) and (rand(0,8) <= 1)) then
+ 	setTarget(me,whoShot(me));
+endif;
+
+	endstate;
+
+
+endfsm.
+//******************************************************************
+

@@ -1,0 +1,363 @@
+
+//*********************************************************************************
+
+fsm Garrison : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+  var
+	
+	static integer	gunnery;
+	static integer	attackrange;
+	static real	mindelay;
+	static real	maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+	static integer	speed;
+	static integer	entropymood;
+	static integer	curmood;
+	Static LocPoint	MySpot;
+	
+	Eternal Boolean Chatter;
+		
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+		
+		attackrange = 500;				
+		piloting = 60;							
+		gunnery = 75;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 70;						
+		speed = 60;
+		entropymood = NEUTRAL_END;
+		Curmood = NEUTRAL_END;
+		Chatter = false;
+		
+ 	switch (GetMemoryInteger(me,9))
+
+		case 0: //North 1 and 2
+		
+		attackrange = 500;				
+		piloting = 60;							
+		gunnery = 55;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 50;						
+		speed = 600;	
+//		ShutDown(me);
+		endcase;
+		
+	 	case 1:	 //South 1 and 2		
+		attackrange = 600;				
+		piloting = 60;							
+		gunnery = 55;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 50;						
+		speed = 600;		
+
+		endcase;
+				
+		case 2:	 //First 1 and 3		
+		attackrange = 700;				
+		piloting = 60;							
+		gunnery = 55;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 50;						
+		speed = 70;	
+//		Shutdown(me);	
+							 			
+		endcase;
+									 	
+		case 3:	//First 2 and 4	
+		attackrange = 500;				
+		piloting = 60;							
+		gunnery = 55;						
+		mindelay = 0.5;							
+		maxdelay = 1.5;									
+		elitelevel = 50;						
+		speed = 70;							 	
+//		shutdown(me);
+		endcase;
+		
+		case 4:	//Second 1 and 3		
+		attackrange = 400;				
+		piloting = 65;							
+		gunnery = 60;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 55;						
+		speed = 50;							 	
+//		shutdown(me);
+		endcase;
+	
+		
+		case 5:	//Second 2 and 4		
+		attackrange = 700;				
+		piloting = 65;							
+		gunnery = 60;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 55;						
+		speed = 50;							 	
+//		shutdown(me);
+		endcase;
+
+	 	endswitch;
+ 	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		setfiringdelay(me,mindelay,maxdelay);
+		setentropymood(me,entropymood);
+		setcurmood(me,CurMood);
+		setignorefriendlyfire(me,true);
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+
+
+state sit;
+			
+		code
+
+	switch (GetMemoryInteger(me,9))
+		
+	case 0:		// North 1 and 2
+			if isdead(ebu_Fuel1) then
+				if 	Play2 == false then
+					Startup(me);
+					PlayLancemateSound("VO\OP4\MI1\Powerup",1);
+					Play2 = true;
+				endif;
+			 Ordermoveto(epa_northpath,600,MOVE_NOCYCLE,false,true);
+		
+ 		endif;
+		
+
+		if (FindEnemy(attackrange,FT_DEFAULT)) then
+						trans Attack;
+		endif;
+
+		
+		
+  endcase;
+
+	
+	case 1:	 // South 1 and 2
+
+			Ordermoveto(epa_southpath,speed,Move_NoCycle,false,true);
+		
+		if (FindEnemy(attackrange,FT_DEFAULT)) then
+			trans Attack;
+		endif;
+			
+			if groupalldead(GroupObjectID(3)) then
+				ordermovetoobject(playermech,600)
+			endif;
+			
+	endcase;
+
+	
+	case 2:		 //First 1 and 3
+		
+			GetLocation(me,Myspot);
+			DamnThe(me);
+			trans hell;
+	
+	endcase;
+	
+	case 3:		//First 2 and 4
+			
+			GetLocation(me,Myspot);
+			DamnThe(me);
+			trans hell;
+			
+	endcase;
+		
+	
+	case 4:		//Second 1 and 3
+			
+			GetLocation(me,Myspot);
+			DamnThe(me);
+			trans hell;
+	
+	endcase;	
+		
+	case 5:		//Second 2 and 4
+						
+			GetLocation(me,Myspot);
+			DamnThe(me);
+			trans hell;
+			
+	endcase;
+	
+	endswitch;				
+					
+	endstate;
+
+	state Hell;
+		code
+		
+	switch (GetMemoryInteger(me,9))
+		
+	case 2:
+		
+			if (started11 == TRUE) then
+				teleport(me,myspot);
+				Startup(me);
+				trans secondtransit
+			endif;
+
+	endcase;
+	
+	case 3:
+	
+ 			if (started11 == TRUE) then
+				teleport(me,myspot);
+				Startup(me);
+				trans secondtransit
+			endif;
+
+	
+	endcase;
+	
+	case 4:
+	
+			if (started13 == TRUE) then
+				teleport(me,myspot);
+				Startup(me);
+				trans secondtransit
+			endif;
+
+	endcase;
+	
+	case 5:
+			
+			if (started13 == TRUE) then
+				teleport(me,myspot);
+				Startup(me);
+				trans secondtransit
+			endif;
+
+  endcase;
+	
+	endswitch;
+	
+	endstate;
+
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state firsttransit;
+	var
+		ObjectID foe;
+	
+	code
+			awake1 = TRUE;	
+			startup(me);
+			OrderMoveToObject(playermech,speed);
+		
+		if (FindEnemy(attackrange,FT_DEFAULT)) then
+			trans attack;
+		endif;
+		
+  endstate;
+
+ 	state secondtransit;
+	var
+		ObjectID foe;
+	code
+			awake2 = TRUE;
+			startup(me);
+		
+		Ordermoveto(epa_secondwavepath,speed,Move_NoCycle,false,true);
+			
+			if (FindEnemy(attackrange,FT_DEFAULT+FT_UNARMED)) then
+				trans attack;
+			endif;
+	
+	endstate;
+
+	
+	
+	
+	state attack;
+  var
+    ObjectID foe;
+
+
+		code
+		
+      orderAttack(true);
+
+
+		if (LeaveAttackState(attackrange)) then
+			orderstopattacking;
+			trans SecondTransit;
+		endif;
+
+		
+		if ((isShot (me)) and (rand(0,3) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+						
+	endstate;
+	
+
+						
+endfsm.
+
+
+//******************************************************************
+
+		

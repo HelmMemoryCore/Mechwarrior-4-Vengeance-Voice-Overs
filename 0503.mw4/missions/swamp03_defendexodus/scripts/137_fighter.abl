@@ -1,0 +1,254 @@
+//*********************************************************************************
+
+fsm fighterscript : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer	gunnery;
+	static integer	attackrange;
+	static real			mindelay;
+	static real			maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+		attackrange = 500;				
+		piloting = 80;							
+		gunnery = 70;						
+		mindelay = 0.0;							
+		maxdelay = 1.5;									
+		elitelevel = 80;
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		setignorefriendlyfire(me,true);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		setfiringdelay(me,mindelay,maxdelay);		
+		trans UP;
+
+	endstate;
+
+	state UP;
+		code
+		if start == true then	
+			if OrderTakeOff(30) == true
+				then trans holding;
+			endif;
+		endif;
+		
+	endstate;
+	
+	
+  state holding;
+		code
+		
+		orderformationmove(GroupObjectID(4),epa_BlueAngels,600,MOVE_CIRCLE,FORMATION_11WEDGE,FORMTYPE_DENSE,FALSE);
+		
+		if timegreater(1,fightersgo) then
+			trans attack1;
+		endif;
+
+//*****************************************************
+//**  THIS IS THE STUFF TO LET THEM ATTACK!!!!! **	
+//***************************************************
+		
+ 	if (FindEnemy(attackRange,FT_DEFAULT)) then
+			trans strafe;
+		endif;
+		
+		
+	endstate;
+	
+	state strafe;
+		code
+		
+		if (LeaveAttackState(attackrange*3/2)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans holding;
+		endif;
+
+		OrderAttack(false); 	
+		
+		if timegreater(1,fightersgo) then
+			trans attack1;
+		endif;
+
+		
+		
+	endstate;
+	
+	state deadState;
+		code
+			orderDie;
+  endstate;
+	
+	
+	state Attack1;
+		code
+		
+		settarget(me,ebu_target1);
+		
+		orderattack(true);
+		
+		if isdead(ebu_target1) then		
+			trans Attack2;
+		endif;
+		
+		if timegreater(1,Castoff) then
+			if (rand(1,4) > 3) then
+				trans Mech;
+			else
+				trans Boat;
+			endif;
+		endif;
+
+	endstate;
+	
+	state Attack2;
+		code
+		
+		settarget(me,ebu_target2);
+		
+		orderattack(true);
+		
+		if isdead(ebu_target2) then		
+			trans Attack3;
+		endif;
+		
+		if timegreater(1,Castoff) then
+			if (rand(1,4) > 3) then
+				trans Mech;
+			else
+				trans Boat;
+			endif;
+		endif;
+
+	endstate;
+	
+		state Attack3;
+		code
+		
+		settarget(me,ebu_target3);
+		
+		orderattack(true);
+		
+		if isdead(ebu_target3) then		
+			trans Attack4;
+		endif;
+		
+		if timegreater(1,Castoff) then
+			if (rand(1,4) > 3) then
+				trans Mech;
+			else
+				trans Boat;
+			endif;
+		endif;
+
+	endstate;
+	
+		state Attack4;
+		code
+		settarget(me,ebu_target4);
+		orderattack(true);
+		if isdead(ebu_target4) then		
+			trans Attack5;
+		endif;
+		
+		if timegreater(1,CastOff) then
+			if (rand(1,4) > 2) then
+				trans Mech;
+			else
+				trans Boat;
+			endif;
+		endif;
+
+		
+	endstate;
+	
+		state Attack5;
+		code
+		settarget(me,ebu_target5);
+		orderattack(true);
+		
+		if isdead(ebu_target5) then		
+			trans Attack6;
+		endif;
+		
+		if timegreater(1,Castoff) then
+			if (rand(1,4) > 3) then
+				trans Mech;
+			else
+				trans Boat;
+			endif;
+		endif;
+
+	endstate;
+	
+		state Attack6;
+		code
+		settarget(me,ebu_target6);
+		orderattack(true);
+		if isdead(ebu_target6) then		
+			trans Boat;
+		endif;
+		
+	
+	endstate;
+	
+	state Mech;
+		code
+		settarget(me,GroupObjectID(1));
+		orderattack(true);		
+	endstate;
+	
+	state Boat;
+		code
+		gunnery = 40;
+		settarget(me,GroupObjectID(8));
+		orderattack(true);		
+	endstate;
+		
+endfsm.
+//******************************************************************
+
+
+

@@ -1,0 +1,243 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Sentry must be changed to some other unique identifier
+fsm Sentry : integer;
+		
+
+
+// 		Behavior: Sits stationary and looks around. When an enemy comes within
+//   alertrange it moves towards the unit
+//	When the unit comes within attackrange it attacks
+//	Whenit kills the unit it can either go back to it's start point or not,
+//	depending on different settings in the brain.
+
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; // When do I start shooting?
+																
+	static integer			piloting; 	// piloting skill (1-5),
+	static integer			gunnery; // hit chance,
+	static real					mindelay;		//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;		//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;			 // What speed so I move at?
+	static integer 			elitelevel; // % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																	// and other things that would normally be determined by combat experience
+
+  static integer			isshotradius;	//how far away from me will I detect an enemy shot.
+	
+	static integer			mood;	//What is my normal mood?
+			
+	static Boolean 			attacksoundplayed;	//Am I attacking?
+	
+	//if set to -1 the below sounds effectively do not exist
+	static integer 			attacksound; // plays when the unit first attacks
+	static integer 			deathsound; // plays when the unit dies
+	
+	static locpoint			mystart; //Where was the unit when the mission started
+	static boolean			movingtostart;	//Is the unit moving to the start point
+	static boolean			movetostart;	//should the unit move back to it's start point when it's done fighting?
+	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+
+																			// defaults are below
+	//These are the variables that are normally changed by the designer
+	//in order to change behavior
+	attackrange = 500;									//500
+	piloting = 60;												//3
+	gunnery = 70;											//30
+	mindelay = 0.5;											//1.5
+	maxdelay = 1.0;											//3.0
+	elitelevel = 70;										//30
+	speed = 600;												//600 (max speed)
+	isshotradius = 80;										//80	
+	attacksound = -1;                   //-1 (no sound)
+	deathsound = -1;                    //-1 (no sound)	
+	movetostart = true;								//False
+	mood = neutral_start;								//neutral_start
+
+	//These variables should not be changed by the designer without good reason
+	attacksoundplayed = FALSE;									//false
+	getlocation(me,mystart);		 				//DO NOT CHANGE THIS LINE!!!
+	movingtostart = false;							//false
+	
+	
+	//Use this to set different values for different units using the same brain
+//	switch (GetMemoryInteger(me,9))
+//
+//		case 0:
+		
+		//attackrange = 500;				
+		//piloting = 3;							
+		//gunnery = 30;						
+		//mindelay = 1.5;							
+		//maxdelay = 3.0;									
+		//elitelevel = 30;						
+		//speed = 600;							 	
+		//isshotradius = 80;						 	
+		//attacksound = -1;
+		//deathsound = -1;
+		//movetostart = false;
+		//mood = neutral_start;	
+		
+//		endcase;
+		
+//	endswitch;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+
+	
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		if (deathsound <> -1) then	
+			PlaySoundOnce(deathsound);
+		endif;
+		
+		orderDie;
+endstate;
+
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+		
+		//Go back to my start point if I am supposed to
+		if (movingtostart == true) then
+			if (orderMovetolocpoint(mystart,speed,true,true) == true) then
+				movingtostart = false;
+			endif;
+		endif;
+		
+		//initial order
+		if (movingtostart == false) then		
+			OrderMoveLookout;
+		endif;
+		
+		//attack anyone who shoots my group if I'm in a group
+		//otherwise attack anyone who shoots at me
+		if (IsShot (me)) then
+			SetTarget(me,whoShot(me));
+			SetCurMood(ME,AGRESSIVE_START);
+			trans Attack;
+		endif;		
+
+				
+		//find me an enemy
+foe = FindObject(ME,FA_ENEMY,FT_DEFAULT,FC_BEST_TARGET,FF_WHO_SHOT + FF_SEEPLAYER,0);
+		
+		if (foe <> no_unit) then
+			//if the enemy is inside my attackrange range then attack it
+			if (IsWithin (foe,(me),attackrange)) then
+				SetTarget (me,foe);
+				trans Attack;
+			endif;		
+		endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	 	var
+			boolean	check;
+		
+		code
+
+		//Go back to the sit state if ANY of the following conditions apply
+		 	
+		//1.  I somehow got here without a legitimate target
+		if (getTarget (me) < 0) then
+				check = true;
+			else
+		//2.  My target is dead			
+			if (isDead (getTarget (me)) == TRUE) then
+				check = true;
+			else 			
+				//3.  My target has gotten too far from me
+				if ((isWithin(getTarget(me),me,(attackrange*3/2))) == FALSE) then
+					check = true;
+				endif;
+			endif;
+		endif;
+		
+		//Get out of the attack state if any of the above is true.	
+		if (check == true) then
+			orderstopattacking;
+			//see if I want to go back to my start point and set things accordingly
+			if (movetostart == true) then			 				
+				movingtostart = true;
+			endif;				
+			trans sit
+		endif;
+		
+			//Attack
+			OrderAttack(true);
+			
+		//play the attack sound if one exists
+		if ((attacksound <> -1) and (attacksoundplayed == FALSE)) then	
+			attacksoundplayed = true;
+			PlaySoundOnce(attacksound);
+		endif;
+ 		
+					
+	endstate;
+	
+endfsm.
+//******************************************************************
+

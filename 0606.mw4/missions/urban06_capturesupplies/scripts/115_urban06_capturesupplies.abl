@@ -1,0 +1,944 @@
+
+//*********************************************************************************
+
+fsm GENERIC : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+			
+		eternal integer playermech;
+		
+		
+		static integer	cinema_cut;
+		
+		static locpoint Gamma0;
+		static locpoint Gamma1;
+		static locpoint Gamma2;
+		static locpoint Gamma3;
+		static locpoint Gamma4;
+		
+		static locpoint Beta0;
+		static locpoint Beta1;
+		static locpoint Beta2;
+		static locpoint Beta3;
+		static locpoint Beta4;
+		
+		static locpoint Skip1;
+		static locpoint Skip2;
+		static locpoint Skip3;
+		static locpoint Skip4;
+		
+		static boolean	AlphaCheck;
+		eternal boolean	BetaDead;
+		static boolean	BetaCheck;
+		static boolean	GammaCheck;
+		eternal boolean YouMayGo;
+		static boolean	TimerCheck;
+		
+		static integer	NumObj;
+		
+		eternal boolean PlayerGo;
+		eternal boolean Fire;
+		eternal boolean	LanceGo;
+		eternal Boolean	Spanky;
+		static Boolean	FirstSounds;
+		static Boolean	SecondSounds;
+		static boolean	NavSwitch;
+		static boolean	Way0;
+		static boolean	Way1;
+		static boolean	Way2;
+		static boolean	Lance1Sound;
+		
+		static integer	door1;
+		static integer	door2;
+		static integer	door3;
+
+
+		
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+
+		 playermech = getplayervehicle(epl_player0);	
+ 	
+			GroupAddObject(GroupObjectId(1),playermech);
+
+
+			GroupAddObject(GroupObjectId(2),eve_Garrison13);
+			GroupAddObject(GroupObjectId(2),eve_Garrison14);
+			GroupAddObject(GroupObjectId(2),eve_Garrison15);
+			GroupAddObject(GroupObjectId(2),eve_Garrison16);
+			SetGroupAI(groupobjectid(2),GROUPAI_MOODSQUAD);
+	
+			GroupAddObject(GroupObjectId(3),eve_Garrison23);
+			GroupAddObject(GroupObjectId(3),eve_Garrison24);
+			GroupAddObject(GroupObjectId(3),eve_Garrison25);
+			GroupAddObject(GroupObjectId(3),eve_Garrison26);
+			SetGroupAI(groupobjectid(3),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(4),eve_Garrison33);
+			GroupAddObject(GroupObjectId(4),eve_Garrison34);
+			GroupAddObject(GroupObjectId(4),eve_Garrison35);
+			GroupAddObject(GroupObjectId(4),eve_Garrison36);
+			SetGroupAI(groupobjectid(4),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(10),eve_Lance1);
+			GroupAddObject(GroupObjectId(10),eve_Lance2);
+			GroupAddObject(GroupObjectId(10),eve_Lance3);
+			GroupAddObject(GroupObjectId(10),eve_Lance4);
+			SetGroupAI(groupobjectid(10),GROUPAI_MOODSQUAD);
+
+			GroupAddObject(GroupObjectId(11),eve_Ambush1);
+			GroupAddObject(GroupObjectId(11),eve_Ambush2);
+			GroupAddObject(GroupObjectId(11),eve_Ambush3);
+			GroupAddObject(GroupObjectId(11),eve_Ambush4);
+			SetGroupAI(groupobjectid(11),GROUPAI_MOODSQUAD);
+			
+			
+			Gamma0[0] = -1184;
+			Gamma0[1] = 49;
+			Gamma0[2] = 968;
+			
+			Gamma1[0] = -1072;
+			Gamma1[1] = 49;
+			Gamma1[2] = 774;
+
+			Gamma2[0] = -1098;
+			Gamma2[1] = 49;
+			Gamma2[2] = 774;
+
+			Gamma3[0] = -1072;
+			Gamma3[1] = 49;
+			Gamma3[2] = 753;
+
+			Gamma4[0] = -1098;
+			Gamma4[1] = 49;
+			Gamma4[2] = 753;
+		
+			Beta0[0] = -1215;
+			Beta0[1] = 49;
+			Beta0[2] = 1742;
+			
+			Beta1[0] = -1052;
+			Beta1[1] = 49;
+			Beta1[2] = 1737;
+
+			Beta2[0] = -1072;
+			Beta2[1] = 49;
+			Beta2[2] = 1737;
+
+			Beta3[0] = -1052;
+			Beta3[1] = 49;
+			Beta3[2] = 1717;
+
+			Beta4[0] = -1072;
+			Beta4[1] = 49;
+			Beta4[2] = 1717;
+	
+			Skip1[0] = 1622;
+			Skip1[1] = 49;
+			Skip1[2] = 1116;
+
+			Skip2[0] = 1642;
+			Skip2[1] = 49;
+			Skip2[2] = 1116;
+
+			Skip3[0] = 1622;
+			Skip3[1] = 49;
+			Skip3[2] = 1136;
+
+			Skip4[0] = 1622;
+			Skip4[1] = 49;
+			Skip4[2] = 1096;
+
+		AlphaCheck = false;	
+		betadead = false;
+		BetaCheck = false;
+		GammaCheck = false;			
+		cinema_cut = 0;
+		NumObj = 0;
+		YouMayGo = false;
+		TimerCheck = false;
+		
+		PlayerGo = false;
+	 	FIRE = FALSE;
+		LanceGo = false; 		
+		NavSwitch = false;
+		Spanky = false;
+		FirstSounds = false;
+		SecondSounds = false;
+		Lance1Sound = false;
+		way0 = false;
+		way1 = false;
+		way2 = false;
+		
+		Door1 = getdamagerating(ebu_Weapon_Bunker_Alpha);
+		Door2 = getdamagerating(ebu_Weapon_Bunker_Beta);
+		Door3 = getdamagerating(ebu_Weapon_Bunker_Gamma);
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+			RevealObjective(eob_FindPrimary);
+			RevealObjective(eob_SearchAlpha);
+			RevealObjective(eob_SearchBeta);
+			RevealObjective(eob_SearchGamma);
+			SetNavPoint(ena_Nav_Alpha);
+			RevealNavPoint(ena_Nav_Beta);
+			RevealNavPoint(ena_Nav_Gamma);
+			StartTimer(gti_timer_1);
+			playerai(epl_player0,true);
+			PlayVoiceOverOnce("VO\OP6\MI6\Intro",talker_Ian);
+			PlayVoiceOverOnce("VO\OP6\MI6\Intro",talker_Rat);
+			PlayVoiceOverOnce("VO\OP6\MI6\AWOL",talker_RAT);
+			PlayVoiceOverOnce("VO\OP6\MI6\AWOL",talker_IAN);
+			PlayVoiceOverOnce("VO\OP6\MI6\Ready",talker_Ian);
+			PlayVoiceOverOnce("VO\OP6\MI6\Ready",talker_Rat);
+			PlayVoiceOverOnce("VO\OP6\MI6\Uglies",talker_Ian);
+			PlayVoiceOverOnce("VO\OP6\MI6\Uglies",talker_Rat);
+			StartMusic("Music\Mystic",3.0,3.5,70);
+			trans opening;
+
+endstate;
+
+	
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+
+	if IsMusicPlaying == false then
+		StartMusic("Music\UrbanAmbLoop",2.0,2.0,20);
+	endif;
+
+	if way0 == false then
+	if iswithin(playermech,ena_Nav_Alpha,150) then
+		PlayVoiceOverOnce("VO\Generic\NavAlpha",Talker_BET);
+    Way0 = true;
+	endif;
+endif;
+
+if way1 == false then
+	if iswithin(playermech,ena_Nav_Beta,150) then
+		PlayVoiceOverOnce("VO\Generic\NavBeta",Talker_BET);
+    Way1 = true;
+	endif;
+endif;
+
+if Way2 == false then
+	if iswithin(playermech,ena_Nav_Gamma,150) then
+		PlayVoiceOverOnce("VO\Generic\NavGamma",Talker_BET);
+		Way2 = true;
+	endif;
+endif;
+
+	
+	
+	
+	if FirstSounds == false then
+		PlayVoiceOverOnce("VO\OP6\MI6\DoesItHurt",Talker_CST);
+		PlayLancemateSound("VO\OP6\MI6\DoesItHurt",1);
+		PlayVoiceOverOnce("VO\OP6\MI6\DoesItHurt2",Talker_CST);
+		PlayVoiceOverOnce("VO\OP6\MI6\DoesItHurt3",Talker_CST);
+		PlayVoiceOverOnce("VO\OP6\MI6\DoesItHurt4",Talker_CST);
+		PlayVoiceOverOnce("VO\OP6\MI6\DoesItHurt5",Talker_CST);
+		FirstSounds = true;
+	endif;
+	
+	if Spanky == false then
+		if PlayVoiceOverOnce("VO\OP6\MI6\HurtHim",Talker_CST) == true then
+			SPANKY = true;
+		endif;
+	endif;
+	
+	if SecondSounds == false then
+		PlayVoiceOverOnce("VO\OP6\MI6\Aff",Talker_CST);
+		PlayVoiceOverOnce("VO\OP6\MI6\WatchOut",Talker_CST);
+		PlayLancemateSound("VO\OP6\MI6\WatchOut",2);
+		PlayVoiceOverOnce("VO\OP6\MI6\KillLeader",Talker_CST);
+		PlayLancemateSound("VO\OP6\MI6\KillLeader",1);
+		SecondSounds = true;
+	endif;
+
+if Lance1Sound == false then
+	if GroupAllDead(GroupObjectID(11)) == true then
+		PlayLancemateSound("VO\OP6\MI6\Lance1Dead",3);
+		PlayVoiceOverOnce("VO\OP6\MI6\Lance1Dead",Talker_IAN);
+		PlayLancemateSound("VO\OP6\MI6\Lance2Dead",1);
+		Lance1Sound = true
+	endif;	
+endif;
+
+if NumObj == 2 then
+	if NavSwitch == true then
+		PlayVoiceOverOnce("VO\OP6\MI6\2ndEmpty",Talker_IAN);
+	else
+		 PlayVoiceOverOnce("VO\OP6\MI6\1stEmpty",Talker_IAN);
+	endif;
+	
+	if BetaDead == true then
+// THESE TELEPORTS GO BACK IN WHEN THE BUILDINGS ARE IN
+		teleport(eve_Lance1,Beta1);
+		teleport(eve_Lance2,Beta2);
+		teleport(eve_Lance3,Beta3);
+		teleport(eve_Lance4,Beta4);
+		SetNavPoint(ena_Nav_Gamma);
+		LanceGo = true;
+		PlayVoiceOverOnce("VO\OP6\MI6\Lesson2",Talker_CST);
+		PlayVoiceOverOnce("VO\OP6\MI6\Lesson2",Talker_RAT);
+		StartMusic("Music\Indecision",2.0,2.5,50);
+    Trans GAMMA;
+	else
+		teleport(eve_Lance1,Gamma1);
+		teleport(eve_Lance2,Gamma2);
+		teleport(eve_Lance3,Gamma3);
+		teleport(eve_Lance4,Gamma4);
+		SetNavPoint(ena_Nav_Beta);
+		LanceGo = true;
+		PlayVoiceOverOnce("VO\OP6\MI6\Lesson2",Talker_CST);
+		PlayVoiceOverOnce("VO\OP6\MI6\Lesson2",Talker_RAT);
+		StartMusic("Music\DFA",2.0,2.5,50);
+		StartMusic("Music\Indecision",2.0,2.5,50);
+		trans	BETA;
+	endif;
+endif;
+
+ if Navswitch == false	then
+//	if isdead(ebu_Weapon_Bunker_Alpha) == true then
+	if getdamagerating(ebu_Weapon_Bunker_Alpha) <= 1 then
+		SuccessObjective(eob_SearchAlpha);
+			PlayVoiceOverOnce("VO\OP6\MI6\1stEmpty",Talker_IAN);
+		Navswitch = true;
+		if rand(1,2) == 1 then
+			setNavPoint(ena_Nav_Gamma);
+		else
+			setNavPoint(ena_Nav_Beta);
+		endif;
+	endif;
+endif;
+
+if AlphaCheck == false then
+	if iswithin(playermech,ebu_Weapon_Bunker_Alpha,200) then
+		PlayVoiceOverOnce("VO\OP6\MI6\CloseToFirst",Talker_IAN);
+		AlphaCheck = true;
+	endif;
+endif;
+	
+
+if BetaCheck == false then
+//	if isdead(ebu_Weapon_Bunker_Beta) == true then
+		
+	if getdamagerating(ebu_Weapon_Bunker_Beta) <= 1 then
+		SuccessObjective(eob_SearchBeta);
+		NumObj = NumObj + 2;
+		BetaDead = true;
+		Betacheck = true;
+	endif
+endif;
+
+if GammaCheck == false then
+//	if isdead(ebu_Weapon_Bunker_Gamma) == true then
+	if getdamagerating(ebu_Weapon_Bunker_Gamma) <= 1 then
+		SuccessObjective(eob_SearchGamma);
+		NumObj = NumObj + 2;
+		GammaCheck = true;
+	endif
+endif;
+			
+//Reveal the objectives
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		KillVoiceOvers;
+		PlayVoiceOverOnce("VO\Generic\IanDestroyed2",talker_RAT);
+		PlayVoiceOverOnce("VO\Generic\Abort2",talker_RAT);
+		StartMusic("Music\Defeat",3.0,3.5,70);
+		endmission(false,13);
+		Trans Lost;
+	endif;
+				
+endstate;
+
+
+state BETA;
+	code;
+
+		if IsMusicPlaying == false then
+		StartMusic("Music\UrbanAmbLoop",2.0,2.0,20);
+	endif;
+
+	if way0 == false then
+	if iswithin(playermech,ena_Nav_Alpha,150) then
+		PlayVoiceOverOnce("VO\Generic\NavAlpha",Talker_BET);
+    Way0 = true;
+	endif;
+endif;
+
+if way1 == false then
+	if iswithin(playermech,ena_Nav_Beta,150) then
+		PlayVoiceOverOnce("VO\Generic\NavBeta",Talker_BET);
+    Way1 = true;
+	endif;
+endif;
+
+if Way2 == false then
+	if iswithin(playermech,ena_Nav_Gamma,150) then
+		PlayVoiceOverOnce("VO\Generic\NavGamma",Talker_BET);
+		Way2 = true;
+	endif;
+endif;
+
+
+	
+	
+	if GroupAllDead(GroupObjectID(10)) == true then
+    PlayVoiceOverOnce("VO\OP6\MI6\TheyDeadBitch",Talker_IAN);
+		PlayVoiceOverOnce("VO\OP6\MI6\TheyDeadBitch",Talker_RAT);
+  endif;	
+
+if TimerCheck == False then
+	if iswithin(playermech,ebu_Weapon_Bunker_Beta,600)	then
+		//playsounds
+		//OPEN THE DAMN DOOR
+		Timercheck = true;
+		StartTimer(gti_timer_2);
+	endif;
+endif;
+	
+	if timegreater(2,5) then
+		PlayVoiceOverOnce("VO\OP6\MI6\LastLesson",Talker_CST);
+		PlayVoiceOverOnce("VO\OP6\MI6\LastLesson",Talker_RAT);
+	endif;
+	
+	if YouMayGo == False then
+	if timegreater(2,6) then
+		SuccessObjective(eob_SearchBeta);
+				// ONCE BUILDINGS ARE IN REMOVE THESE
+		teleport(eve_Castro,Gamma0);
+		SelfDestruct(ebu_Weapon_Bunker_Beta);
+		StartMusic("Music\Daggers",2.0,2.5,50);
+		SetSensorVisibility(GroupObjectID(5),TRUE);
+		YouMayGo = True;
+	endif;
+	endif;
+	
+	if isdead(eve_Castro) then
+		SuccessObjective(eob_SearchGamma);
+		SuccessObjective(eob_FindPrimary);
+		StartMusic("Music\Victory",2.0,2.5,70);
+    PlayVoiceOverOnce("VO\OP6\MI6\DieDie",Talker_IAN);
+		PlayVoiceOverOnce("VO\OP6\MI6\DieDie",Talker_RAT);
+		PlayVoiceOverOnce("VO\OP6\MI6\AwolNoGood",Talker_Rat);
+		PlayVoiceOverOnce("VO\OP6\MI6\NoBodyBack",Talker_RAT);
+		PlayVoiceOverOnce("VO\OP6\MI6\NoBodyBack",Talker_IAN);
+		PlayLanceMateSound("VO\OP6\MI6\NoBodyBack",1);
+		PlayVoiceOverOnce("VO\OP6\MI6\WrapIt",Talker_Ian);
+		EndMission(true,35);
+		
+//		AddWeaponSalvage("AC5",3);
+		AddWeaponSalvage("AC10",3);
+//		AddWeaponSalvage("ClanFlamer",1);
+//		AddWeaponSalvage("Flamer",1);
+    AddWeaponSalvage("Gauss",2);
+		AddWeaponSalvage("ClanGauss",1);
+		AddWeaponSalvage("LightGauss",2);
+    AddWeaponSalvage("BombastLaser",1);
+		AddWeaponSalvage("ERLargeLaser",3);
+		AddWeaponSalvage("ERMediumLaser",4);
+		AddWeaponSalvage("ERSmallLaser",5);
+//		AddWeaponSalvage("LargeLaser",2);
+//		AddWeaponSalvage("MediumLaser",2);
+//		AddWeaponSalvage("SmallLaser",1);
+		AddWeaponSalvage("ClanLBXAC10",1);
+		AddWeaponSalvage("ClanLBXAC20",1);
+		AddWeaponSalvage("LBXAC10",2);
+		AddWeaponSalvage("LBXAC20",2);
+		AddWeaponSalvage("LongTom",4);
+		AddWeaponSalvage("ClanLRM5",2);
+		AddWeaponSalvage("ClanLRM10",3);
+		AddWeaponSalvage("ClanLRM15",2);
+		AddWeaponSalvage("ClanLRM20",1);
+//		AddWeaponSalvage("LRM5",4);
+		AddWeaponSalvage("LRM10",3);
+		AddWeaponSalvage("LRM15",3);
+		AddWeaponSalvage("LRM20",1);
+//		AddWeaponSalvage("ClanMachineGun",3);
+//		AddWeaponSalvage("MachineGun",3);
+		AddWeaponSalvage("MRM10",2);
+		AddWeaponSalvage("MRM20",2);
+		AddWeaponSalvage("MRM30",2);
+		AddWeaponSalvage("MRM40",1);
+		AddWeaponSalvage("ClanNarcBeacon",1);
+		AddWeaponSalvage("NarcBeacon",1);
+		AddWeaponSalvage("PPC",2);
+		AddWeaponSalvage("ERPPC",1);
+		AddWeaponSalvage("ERLargePulseLaser",2);
+		AddWeaponSalvage("ERMediumPulseLaser",1);
+		AddWeaponSalvage("ERSmallPulseLaser",1);
+		AddWeaponSalvage("LargePulseLaser",1);
+		AddWeaponSalvage("MediumPulseLaser",2);
+		AddWeaponSalvage("SmallPulseLaser",3);
+//		AddWeaponSalvage("SRM2",4);
+//		AddWeaponSalvage("SRM4",2);
+//		AddWeaponSalvage("SRM6",1);
+		AddWeaponSalvage("SSRM2",2);
+		AddWeaponSalvage("SSRM4",1);
+		AddWeaponSalvage("SSRM6",2);
+		AddWeaponSalvage("ThunderBolt",2);
+		AddWeaponSalvage("ClanUltraAC2",2);
+		AddWeaponSalvage("ClanUltraAC5",1);
+		AddWeaponSalvage("UltraAC2",4);
+		AddWeaponSalvage("UltraAC5",1);
+		
+		
+		AddMechInstanceSalvage("Daishi");
+		AddMechInstanceSalvage("Thor");
+		AddMechInstanceSalvage("Nova Cat");
+
+		resettimer(gti_timer_28);
+		starttimer(gti_timer_28);
+		trans waitforcinema;
+
+
+		
+		//trans Won;
+	endif;	
+	
+
+	if (isdead(playermech)) then
+		KillVoiceOvers;
+		PlayVoiceOverOnce("VO\Generic\IanDestroyed2",talker_RAT);
+		PlayVoiceOverOnce("VO\Generic\Abort2",talker_RAT);
+		StartMusic("Music\Defeat",3.0,3.5,70);
+		endmission(false,13);
+		Trans Lost;
+	endif;
+endstate;
+
+
+state GAMMA;
+	code
+	if IsMusicPlaying == false then
+		StartMusic("Music\UrbanAmbLoop",2.0,2.0,20);
+	endif;
+
+	if way0 == false then
+	if iswithin(playermech,ena_Nav_Alpha,150) then
+		PlayVoiceOverOnce("VO\Generic\NavAlpha",Talker_BET);
+    Way0 = true;
+	endif;
+endif;
+
+if way1 == false then
+	if iswithin(playermech,ena_Nav_Beta,150) then
+		PlayVoiceOverOnce("VO\Generic\NavBeta",Talker_BET);
+    Way1 = true;
+	endif;
+endif;
+
+if Way2 == false then
+	if iswithin(playermech,ena_Nav_Gamma,150) then
+		PlayVoiceOverOnce("VO\Generic\NavGamma",Talker_BET);
+		Way2 = true;
+	endif;
+endif;
+
+
+	
+	
+	if GroupAllDead(GroupObjectID(10)) == true then
+    PlayVoiceOverOnce("VO\OP6\MI6\TheyDeadBitch",Talker_IAN);
+		PlayVoiceOverOnce("VO\OP6\MI6\TheyDeadBitch",Talker_RAT);
+  endif;	
+	
+	if TimerCheck == False then
+		if iswithin(playermech,ebu_Weapon_Bunker_Gamma,600)	then
+			//playsounds
+			//OPEN THE DAMN DOOR
+			TimerCheck = true;
+			StartTimer(gti_timer_2);
+		endif;
+	endif;
+
+	if timegreater(2,5) then
+		PlayVoiceOverOnce("VO\OP6\MI6\LastLesson",Talker_CST);
+		PlayVoiceOverOnce("VO\OP6\MI6\LastLesson",Talker_RAT);
+	endif;
+
+
+
+	if YouMayGo == False then
+	if timegreater(2,7) then
+		SuccessObjective(eob_SearchGAMMA);
+		StartMusic("Music\Daggers",2.0,2.5,50);
+		// ONCE BUILDINGS ARE IN REMOVE THESE
+		teleport(eve_Castro,Beta0);
+		SelfDestruct(ebu_Weapon_Bunker_Beta);
+		SetSensorVisibility(GroupObjectID(5),TRUE);
+		YouMayGo = TRUE;
+	endif;
+	endif;
+	
+	if isdead(eve_Castro) then
+		SuccessObjective(eob_SearchBeta);
+		SuccessObjective(eob_FindPrimary);
+		StartMusic("Music\Victory",2.0,2.5,70);
+    PlayVoiceOverOnce("VO\OP6\MI6\DieDie",Talker_IAN);
+		PlayVoiceOverOnce("VO\OP6\MI6\DieDie",Talker_RAT);
+		PlayVoiceOverOnce("VO\OP6\MI6\AwolNoGood",Talker_Rat);
+		PlayVoiceOverOnce("VO\OP6\MI6\NoBodyBack",Talker_RAT);
+		PlayVoiceOverOnce("VO\OP6\MI6\NoBodyBack",Talker_IAN);
+		PlayLanceMateSound("VO\OP6\MI6\NoBodyBack",1);
+		PlayVoiceOverOnce("VO\OP6\MI6\WrapIt",Talker_Ian);
+		EndMission(true,35);
+//		AddWeaponSalvage("AC5",3);
+		AddWeaponSalvage("AC10",3);
+//		AddWeaponSalvage("ClanFlamer",1);
+//		AddWeaponSalvage("Flamer",1);
+    AddWeaponSalvage("Gauss",2);
+		AddWeaponSalvage("ClanGauss",1);
+		AddWeaponSalvage("LightGauss",2);
+    AddWeaponSalvage("BombastLaser",1);
+		AddWeaponSalvage("ERLargeLaser",3);
+		AddWeaponSalvage("ERMediumLaser",4);
+		AddWeaponSalvage("ERSmallLaser",5);
+//		AddWeaponSalvage("LargeLaser",2);
+//		AddWeaponSalvage("MediumLaser",2);
+//		AddWeaponSalvage("SmallLaser",1);
+		AddWeaponSalvage("ClanLBXAC10",1);
+		AddWeaponSalvage("ClanLBXAC20",1);
+		AddWeaponSalvage("LBXAC10",2);
+		AddWeaponSalvage("LBXAC20",2);
+		AddWeaponSalvage("LongTom",4);
+		AddWeaponSalvage("ClanLRM5",2);
+		AddWeaponSalvage("ClanLRM10",3);
+		AddWeaponSalvage("ClanLRM15",2);
+		AddWeaponSalvage("ClanLRM20",1);
+//		AddWeaponSalvage("LRM5",4);
+		AddWeaponSalvage("LRM10",3);
+		AddWeaponSalvage("LRM15",3);
+		AddWeaponSalvage("LRM20",1);
+//		AddWeaponSalvage("ClanMachineGun",3);
+//		AddWeaponSalvage("MachineGun",3);
+		AddWeaponSalvage("MRM10",2);
+		AddWeaponSalvage("MRM20",2);
+		AddWeaponSalvage("MRM30",2);
+		AddWeaponSalvage("MRM40",1);
+		AddWeaponSalvage("ClanNarcBeacon",1);
+		AddWeaponSalvage("NarcBeacon",1);
+		AddWeaponSalvage("PPC",2);
+		AddWeaponSalvage("ERPPC",1);
+		AddWeaponSalvage("ERLargePulseLaser",2);
+		AddWeaponSalvage("ERMediumPulseLaser",1);
+		AddWeaponSalvage("ERSmallPulseLaser",1);
+		AddWeaponSalvage("LargePulseLaser",1);
+		AddWeaponSalvage("MediumPulseLaser",2);
+		AddWeaponSalvage("SmallPulseLaser",3);
+//		AddWeaponSalvage("SRM2",4);
+//		AddWeaponSalvage("SRM4",2);
+//		AddWeaponSalvage("SRM6",1);
+		AddWeaponSalvage("SSRM2",2);
+		AddWeaponSalvage("SSRM4",1);
+		AddWeaponSalvage("SSRM6",2);
+		AddWeaponSalvage("ThunderBolt",2);
+		AddWeaponSalvage("ClanUltraAC2",2);
+		AddWeaponSalvage("ClanUltraAC5",1);
+		AddWeaponSalvage("UltraAC2",4);
+		AddWeaponSalvage("UltraAC5",1);
+		
+		AddMechInstanceSalvage("Daishi");
+    AddMechInstanceSalvage("Thor");
+		AddMechInstanceSalvage("Nova Cat");
+		
+		resettimer(gti_timer_28);
+		starttimer(gti_timer_28);
+		trans waitforcinema;
+
+
+		//trans Won;
+	endif;		
+
+	if (isdead(playermech)) then
+		KillVoiceOvers;
+		PlayVoiceOverOnce("VO\Generic\IanDestroyed2",talker_RAT);
+		PlayVoiceOverOnce("VO\Generic\Abort2",talker_RAT);
+		StartMusic("Music\Defeat",3.0,3.5,70);
+		endmission(false,13);
+		Trans Lost;
+	endif;
+	
+endstate;
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,4)) then
+			playerai(epl_player0,true);
+			trans won;
+		endif;
+		
+		
+endstate;
+
+
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			PlayerGo = false;
+			Fire = true;
+			starttimer(gti_timer_20);
+			FadeToBlack(0.0);
+			FadeFromBlack(2.0);
+			Teleport(playermech,Skip1);
+			if GetLancemate(1) <> No_unit then
+				Teleport(GetLancemate(1),Skip2);
+			endif;
+			if GetLancemate(2) <> No_unit then
+				Teleport(GetLancemate(2),Skip3);
+			endif;
+			if GetLancemate(3) <> No_unit then
+			Teleport(GetLancemate(3),Skip4);
+			endif;
+			StartMusic("Music\DFA",2.0,2.5,50);
+			KillVoiceOvers;
+			cinemaend;
+			trans sit;	
+	endif;
+
+ 	switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera (eca_stomper);
+			Fadetoblack(0.0);
+			PlayerGo = True;
+      Targetfollowobject(playermech);
+			camerafollowobject(playermech);
+      targetoffset(0.0,4.0,-5.0,0.0,false);
+			Cameraoffset(220.0,5.0,0.0,0.0,false);
+      Fadefromblack(3.0);
+      startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+			//SetCrouchState(GroupObjectID(11),true);
+			SetCrouchState(eve_Ambush1,true);
+			SetCrouchState(eve_Ambush2,true);
+			SetCrouchState(eve_Ambush3,true);
+			SetCrouchState(eve_Ambush4,true);
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+			
+			case 1:
+			SetCrouchState(eve_Ambush1,true);
+			SetCrouchState(eve_Ambush2,true);
+			SetCrouchState(eve_Ambush3,true);
+			SetCrouchState(eve_Ambush4,true);
+
+			
+				if iswithin(playermech,ena_cinnav,15) then
+				Targetfollowobject(playermech);
+				camerafollowobject(playermech);
+				SetCrouchState(GroupObjectID(11),false);
+				targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(220.0,5.0,0.0,0.0,false);
+				Cameraoffset(70.0,5.0,0.0,7.0,false);
+				Fadefromblack(3.0);
+				startTimer (gti_Timer_21);
+				resettimer (gti_Timer_21);
+				cinema_cut = cinema_cut + 1;
+			endif;
+			
+			endcase;
+			
+			
+				case 2:
+				SetCrouchState(GroupObjectID(11),false);
+        FIRE = TRUE;
+				//KillVoiceOvers;
+				PlayVoiceOverOnce("VO\OP6\MI6\Uglies2",talker_Ian);
+				//PlayVoiceOverOnce("VO\OP6\MI6\Spank",talker_ter);
+//			PlayLancemateSound("VO\OP6\MI6\Spank",1);
+				StartTimer(gti_timer_20);
+
+				if (timegreater(gti_Timer_21,2)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					playerai(epl_player0,false);
+					PlayerGo = false;
+					StartTimer(gti_timer_20);
+					StartMusic("Music\DFA",2.0,2.5,50);
+					cinemaend;
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+endstate;
+
+state won;
+
+		code
+		
+		if (cinemaskip) then
+			cinema_cut = 0;
+			playerai(epl_player0,false);
+			cinemaend;
+			KillVoiceOvers;
+			Endmission(true,1);
+		endif;
+
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				Fadefromblack(0.0);
+				playerai(epl_player0,true);
+				ClearMoveOrder(playermech);
+				setactivecamera (eca_stomper);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,7.0,0.0,0.0,false);
+				Cameraoffset(20.0,100.0,-90.0,0.0,false);
+				Cameraoffset(15.0,1.0,-15.0,5.0,false);
+				startTimer (gti_Timer_21);
+				resettimer (gti_Timer_21);
+				Cinema_Cut = Cinema_Cut+1;
+			endcase;
+			
+			
+			Case 1:
+				If TimeGreater(GTI_Timer_21,5) then
+				Cameraoffset(15.0,1.0,-15.0,0.0,false);
+				Cameraoffset(-15.0,1.0,-15.0,3.0,false);	
+				resettimer (gti_Timer_21);
+				Cinema_Cut = Cinema_Cut+1;
+				endif;
+			endcase;
+
+			Case 2:
+				If TimeGreater(GTI_Timer_21,3) then
+				Cameraoffset(-15.0,1.0,-15.0,0.0,false);
+				Cameraoffset(-15.0,1.0,15.0,3.0,false);	
+				resettimer (gti_Timer_21);
+				Cinema_Cut = Cinema_Cut+1;
+				endif;
+			endcase;
+
+			Case 3:
+				If TimeGreater(GTI_Timer_21,3) then
+				Cameraoffset(-15.0,1.0,15.0,0.0,false);
+				Cameraoffset(15.0,1.0,15.0,3.0,false);	
+				resettimer (gti_Timer_21);
+				Cinema_Cut = Cinema_Cut+1;
+				endif;
+			endcase;
+
+			
+			
+			Case 4:
+			endcase;			
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+		
+		if (cinemaskip) then
+			cinema_cut = 0;
+			playerai(epl_player0,false);
+			KillVoiceOvers;
+			cinemaend;
+			Endmission(false,1);
+		endif;
+
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				Fadefromblack(0.0);
+				playerai(epl_player0,true);
+				setactivecamera (eca_stomper);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(60.0,80.0,-150.0,0.0,false);
+				Cameraoffset(-120.0,20.0,50.0,20.0,false);
+				Cinema_Cut = Cinema_Cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+
+endfsm.
+//******************************************************************
+

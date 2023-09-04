@@ -1,0 +1,92 @@
+
+fsm Psycho : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+
+function Init;
+	code
+
+endfunction;
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,1.0,3.0);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,100);
+		SetEntropyMood			(ME,6);
+		SetCurMood				(ME,6);
+		SetSkillLevel			(ME,0,0,40);
+		SetAttackThrottle		(ME,30);
+
+		SetSensorVisibility(ME,FALSE);
+		Shutdown(ME);
+
+		trans SitState;
+
+endstate;
+
+state SitState;
+	code
+		if (GetGlobalTrigger(33) == true) then
+			Startup(ME);
+
+			SetAlignment(ME,ENEMY);
+
+			OrderMoveTo(epa_Path_OsirisApproach,60,MOVE_NOCYCLE,true,false);
+
+			trans Approach;
+		endif;
+endstate;
+
+state Approach;
+	code
+		if (OrderMoveTo(epa_Path_OsirisApproach,60,MOVE_NOCYCLE,true,false) == true) then
+			trans Attack;
+		endif;
+
+		if (IsWithin(ME,GetPlayerVehicle(epl_player0),200) == true) then
+			trans Attack;
+		endif;
+
+		if (GetGlobalTrigger(36) == true) then
+			SetSensorVisibility(ME,TRUE);
+		endif;
+endstate;
+
+state Attack;
+	var
+		LocPoint point;
+	code
+		if (GetGlobalTrigger(36) == true) then
+			SetSensorVisibility(ME,TRUE);
+
+			GetLocation(eve_daishi,point);
+			SetCombatLeash(ME,point,300);
+
+			SetTarget(ME,GetPlayerVehicle(epl_player0));
+			OrderAttackTactic(TACTIC_CIRCLE,true);
+
+			trans Attacking;
+		endif;
+endstate;
+
+state Attacking;
+	code
+		
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+endfsm.

@@ -1,0 +1,217 @@
+
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Patrol must be changed to some other unique identifier
+fsm Shilones : integer;
+
+//This unit patrols a specific path and attacks anything that comes near it.
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; // When do I start shooting?
+																
+	static integer			piloting; 	// piloting skill
+	static integer			gunnery; // hit chance,
+	static integer 			speed;			 // What speed so I move at?
+	static integer 			elitelevel; // % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																	// and other things that would normally be determined by combat experience
+
+
+	static integer			movetype;		//how will it move down the path?
+
+	static integer 			attacksound; // plays when it first attacks
+	static integer 			deathsound; // plays when it dies
+	
+	static integer			mood;	//What is my normal mood?
+	
+	static integer			PathOne;		 //what path am I following?
+	
+	static Boolean 			derail;	// if FALSE, it won't leave the path, even when things
+  // are shooting it. It will shoot back. Defaults to true
+	
+	
+	static objectid			buildingone;
+	static objectid			buildingtwo;
+	static integer			checktime;
+	
+	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+
+	code
+	
+																					// defaults are below
+	//These are the variables that are normally changed by the designer
+  //in order to change behavior
+	
+	
+	PathOne = epa_shilonepath;
+	buildingone = ebu_objectivebuilding1;
+	buildingtwo =	ebu_objectivebuilding2;
+	
+		
+			attackrange = 1000;											// 500
+			piloting = 60;														//50
+			gunnery = 60;												//30
+			elitelevel = 72;												//30
+			speed = 60;														//600 (max speed)	
+			attacksound = -1;                   //-1 (no sound)
+			deathsound = -1;                    //-1 (no sound)
+			movetype = move_NoCycle;									//move_circle
+			derail = true;					 //true
+			mood = Agressive_start;								//neutral_start
+	
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+	
+		code
+			
+			//SetFiringDelay(me,mindelay,maxdelay);
+			setignorefriendlyfire(me,true);
+			setentropymood(me,mood);
+			setcurmood(me,mood);
+			setskilllevel(me,piloting,gunnery,elitelevel);
+			setattackthrottle(me,80);
+			//setsearchlight(me,on);
+			//startexecute(me);
+			setalignment(me,enemy);
+					
+			trans wait;
+			
+	endstate;			
+
+	state deadState;
+		code
+			if (deathsound <> -1) then	
+				PlaySoundOnce(deathsound);
+			endif;		
+							
+			orderDie;
+	endstate;
+	
+	//wait around for orders
+	state wait;
+		code
+		
+		
+		if (linkupobjectivedone) then
+			checktime = (gettimer(gti_timer_0) + 30);
+			trans hangout;
+		endif;
+		
+		if (iswithin(me,playermech,900)) then
+			trans takeoff;
+		endif; 	
+	
+	endstate;
+	
+	state hangout;
+		code
+		
+		
+		if (gettimer(gti_timer_0) > (checktime))  then
+			trans takeoff;
+		endif;
+		
+		if (iswithin(me,playermech,900)) then
+			trans takeoff;
+		endif;
+											
+	endstate;
+	
+	state takeoff;
+		code
+		
+		if (ordertakeoff(25)) then
+			trans getthere;
+		endif;
+		
+	endstate;
+
+	//get to the pass
+	state getthere;
+
+		code
+		
+	
+	if (ordermoveto(pathone,140,move_nocycle,true,true)) then
+		trans gettarget;
+	endif;
+ 				
+	endstate;
+	
+	
+	//destroy the buildings at the base
+	state gettarget;
+		code
+
+		if (isdead(buildingone)) then
+			settarget(me,buildingtwo);
+			clearmoveorder(me);
+			trans attack;
+		else
+			settarget(me,buildingone);
+			clearmoveorder(me);
+			trans attack;
+		endif;
+
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state Attack;
+	
+		code
+
+				
+			if (LeaveAttackState(attackrange*3/2)) then
+				orderstopattacking;
+				trans gettarget;				
+			endif;
+			
+					
+			//the ever popular attack order
+			orderAttack (derail);
+
+	endstate;
+
+   endfsm.
+//******************************************************************
+

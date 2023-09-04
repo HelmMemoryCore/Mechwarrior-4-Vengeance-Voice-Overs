@@ -1,0 +1,68 @@
+
+fsm Choppers : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+
+function Init;
+	code
+
+endfunction;
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,3.0,8.0);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,100);
+		SetEntropyMood			(ME,7);
+		SetCurMood				(ME,7);
+		SetSkillLevel			(ME,100,0,100);
+		SetAttackThrottle		(ME,50);
+
+		SetSensorVisibility(ME,FALSE);
+
+		trans SitState;
+
+endstate;
+
+state SitState;
+	code
+		if (GetGlobalTrigger(32) == true) then
+			trans TakeOffState;
+		endif;
+endstate;
+
+state TakeOffState;
+	code
+		if (orderTakeOff(20) == true) then
+			SetSensorVisibility(ME,TRUE);
+
+			SetAlignment(ME,ENEMY);
+
+			SetTarget(ME,GetPlayerVehicle(epl_player0));
+			OrderAttack(TRUE);
+
+			trans AttackState;
+		endif;
+endstate;
+
+state AttackState;
+	code
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.
+

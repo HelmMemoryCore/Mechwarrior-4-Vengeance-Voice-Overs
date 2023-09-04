@@ -1,0 +1,671 @@
+
+//*********************************************************************************
+
+fsm  Arctic01_ReconArea : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//    DestroyCommArray=0
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+		eternal ObjectID playermech;
+		static  ObjectID lancemate1;
+    static  ObjectID FuelStation;          		//Enter 320 circle = ALARM
+		static  ObjectID CommArray;            		//Enter 320 circle = ALARM
+		static  ObjectID AlarmTowers;							//Destroy or come 160 meters = ALARM	
+		
+		static  boolean Objective1Win;						//Nav Alpha Clear
+		static  boolean Objective2Win;						//Nav Beta Clear
+		static  boolean Objective3Win;						//Nav Delta Clear
+		static  boolean Objective4Win;						//Primary Pop-Up: FUEL and COMM ARRAY DESTROYED
+		static  boolean Objective5Win;						//Secondary:  ALL COMBAT UNITS DESTROYED
+								
+		eternal boolean NavAreached;							// Player has reached Nav Alpha
+		static  boolean NavBreached;							// Player has reached Nav Beta
+		static  boolean NavDreached;							// Player has reached Nav Deltaa
+		
+		static  boolean EncounterSpoke;						//Encounter  Lancemate sound played
+		static  boolean BaseSpoke;								//BaseEncounter  Lancemate sound played
+		static  boolean IntroSpoke;								//Intro  Lancemate sound played
+		static  boolean DownSpoke;								//Down  Lancemate sound played
+		 		
+		static  boolean BaseEncounter;										//Has the Secondary Objective been Revealed?
+		
+		eternal boolean	engaged;
+		eternal boolean	PlayerEnd;
+		
+		eternal boolean	missionwon;
+		eternal boolean	Landed;
+		
+		static locpoint	PlayerPoint;
+		static locpoint	MatePoint;
+		static locpoint	DropPoint;
+		
+		static integer	teleportPNav;
+		static integer	teleportMNav;
+		static integer	teleportDNav;
+		
+		static integer	cinema_cut;
+		
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+      //INTRODUCING ALL THE PLAYERS
+			playermech = getplayervehicle(epl_player0);	
+			
+//  Grouping of the Hostile HeloCopters 		
+GroupAddObject(GroupObjectId(53),eve_arctic_peregrine_Base);
+GroupAddObject(GroupObjectId(53),eve_arctic_peregrine_N1);
+GroupAddObject(GroupObjectId(53),eve_arctic_peregrine_Mid2);
+
+GroupAddObject(GroupObjectId(56),eve_NorthGaurd);
+GroupAddObject(GroupObjectId(56),eve_Z_Leader);
+GroupAddObject(GroupObjectId(56),eve_Raven);
+
+GroupAddObject(GroupObjectId(99),eve_PatWarctic_bulldog2);
+GroupAddObject(GroupObjectId(99),eve_PatWarctic_bulldog3);
+GroupAddObject(GroupObjectId(99),eve_PatWarctic_bulldog);
+
+GroupAddObject(GroupObjectId(50),ebu_tent1_158);
+GroupAddObject(GroupObjectId(50),eve_snowcat_0001);
+GroupAddObject(GroupObjectId(50),eve_Raven);
+
+//All Hostile
+GroupAddObject(GroupObjectId(69),eve_arctic_peregrine_Base);
+GroupAddObject(GroupObjectId(69),eve_arctic_peregrine_N1);
+GroupAddObject(GroupObjectId(69),eve_arctic_peregrine_Mid2);
+GroupAddObject(GroupObjectId(69),eve_PatWarctic_bulldog2);
+GroupAddObject(GroupObjectId(69),eve_CityArctic_harasser);
+GroupAddObject(GroupObjectId(69),eve_PatWarctic_bulldog3);
+GroupAddObject(GroupObjectId(69),eve_CityArctic_condor);
+GroupAddObject(GroupObjectId(69),eve_PatWarctic_bulldog);
+GroupAddObject(GroupObjectId(69),eve_CityArctic_bulldog);
+GroupAddObject(GroupObjectId(69),eve_arctic_bulldog_145);
+GroupAddObject(GroupObjectId(69),eve_arctic_condor_147);
+GroupAddObject(GroupObjectId(69),eve_arctic_lrm_carrier_151);
+GroupAddObject(GroupObjectId(69),eve_NorthGaurd);
+GroupAddObject(GroupObjectId(69),eve_Z_Leader);
+GroupAddObject(GroupObjectId(69),eve_Raven);
+
+		
+//SetGroupAI(groupobjectid(56),GROUPAI_MOODSQUAD);
+SetGroupAI(groupobjectid(53),GROUPAI_MOODSQUAD);
+		
+			BaseEncounter = false;
+			
+			engaged 			= false;
+			PlayerEnd 		= false;
+		
+			cinema_cut 		= 0;
+			missionwon 		= false; 					
+			landed 				= false; 					
+		
+			Objective1Win = false;
+			Objective2Win = false;
+			Objective3Win = false;
+			Objective4Win = false;
+			Objective5Win = false;
+			
+			EncounterSpoke	= false;
+			BaseSpoke       = false;
+			IntroSpoke      = false;
+			DownSpoke       = false;
+			
+			teleportPNav 		= ena_NavPointPlay;
+			teleportMNav		= ena_NavPointMate;
+			teleportDNav		= ena_Mountain;
+
+	SetTarget(ede_people_arctic,ebu_fuel_tanks_13);
+	SetTarget(ede_people_arctic_0003,ebu_fuel_tanks_11);
+
+	SetTarget(ede_creature_arctic_large_0001,ede_creature_arctic_large);
+	SetTarget(ede_creature_arctic_small,ede_creature_arctic_large);
+	SetTarget(ede_creature_arctic_small_0001,ede_creature_arctic_large);
+	SetTarget(ede_creature_arctic_small_0003,ede_creature_arctic_large);
+	SetTarget(ede_creature_arctic_small_0005,ede_creature_arctic_large);
+	SetTarget(ede_creature_arctic_small_0007,ede_creature_arctic_large);
+
+	SetTarget(ede_creature_arctic_large_0005,ede_creature_arctic_large_0004);
+	SetTarget(ede_creature_arctic_small_0013,ede_creature_arctic_large_0004);
+	SetTarget(ede_creature_arctic_small_0014,ede_creature_arctic_large_0004);
+	SetTarget(ede_creature_arctic_small_0015,ede_creature_arctic_large_0004);
+	SetTarget(ede_creature_arctic_small_0016,ede_creature_arctic_large_0004);
+	SetTarget(ede_creature_arctic_small_0017,ede_creature_arctic_large_0004);
+
+	SetTarget(ede_creature_arctic_large_0009,ede_creature_arctic_large_0008);
+	SetTarget(ede_creature_arctic_small_0023,ede_creature_arctic_large_0008);
+	SetTarget(ede_creature_arctic_small_0024,ede_creature_arctic_large_0008);
+	SetTarget(ede_creature_arctic_small_0025,ede_creature_arctic_large_0008);
+
+	SetTarget(ede_creature_arctic_small_0027,ede_creature_arctic_large_0011);
+
+	SetTarget(ede_creature_arctic_small_0033,ede_creature_arctic_large_0016);
+	SetTarget(ede_creature_arctic_small_0034,ede_creature_arctic_large_0016);
+			
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+		//PlaysoundOnce("VO\OP2\MI1\Intro", 1);
+		//setactivationdistance(6800);
+		StartMusic("Music\Panarama",0.0,3.0,50);
+		
+		playerai(epl_player0,true);
+		ResetTimer(21);								//Cinema Timer
+		starttimer(gti_timer_21);
+
+		//Reveal the objectives
+			SetNavPoint(ena_Nav_Alpha);
+			SetNavPoint(ena_Nav_Beta);
+			SetNavPoint(ena_Nav_Gamma);
+			SetNavPoint(ena_Nav_Alpha);
+						
+			If GetLancemate(1) <> no_unit then
+				Drop((GetLancemate(1)));
+			endif;
+			
+			//shutdown(groupObjectID(99));
+			
+			SetSensorVisibility(GroupObjectID(69),false);
+			SetSensorVisibility(GroupObjectID(50),false);
+			SetCompositingEnabled(False);
+			CinemaStart;
+			
+			trans opening;
+
+endstate;
+	
+state deadState;
+	
+	code
+	
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+			
+	SetSensorVisibility(GroupObjectID(69),True);
+	SetSensorVisibility(GroupObjectID(50),True);
+	
+	SetCompositingEnabled(True);	
+
+	SetAudioFXEnabled(true);
+
+	If (IsMusicPlaying == false) then
+	StartMusic("Music\ArcticAmbloop",0.25,3.0,30)
+	endif;
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		failobjectiveall(20);
+		trans lostdead;
+	endif;
+				
+		If EncounterSpoke == false then	
+			If (iswithin(ena_COMPANY,PlayerMech,300)) then
+        PlayLanceMateSound("VO\OP2\MI1\Encounter",1);
+				EncounterSpoke = true;
+			endif; 					
+		endif; 					
+						
+		//After You Get within Distance		
+		If (BaseEncounter == false) and (BaseSpoke == false) then
+			If (iswithin(ena_Nav_Beta,PlayerMech,300)) then
+				BaseEncounter = true;
+				BaseSpoke = true;
+			PlayLanceMateSound("VO\OP2\MI1\BaseEncounter",1);
+			PlayVoiceOverOnce("VO\OP2\MI1\BaseEncounter", TALKER_IAN);
+			PlayVoiceOverOnce("VO\OP2\MI1\BaseEncounter", TALKER_RAT);
+			PlayVoiceOverOnce("VO\OP2\MI1\BaseEncounterReply", TALKER_IAN);
+			endif;
+		
+			If (iswithin(ebu_Radar_Station_0000,PlayerMech,650)) then					 //350
+				BaseEncounter = true;
+				playlancematesound("VO\OP2\MI1\BaseEncounter",1);
+				PlayVoiceOverOnce("VO\OP2\MI1\BaseEncounter", TALKER_IAN);
+				PlayVoiceOverOnce("VO\OP2\MI1\BaseEncounter", TALKER_RAT);
+				PlayVoiceOverOnce("VO\OP2\MI1\BaseEncounterReply", TALKER_IAN);
+			endif; 					
+						
+		endif;
+						
+	
+//*******************************************
+// Meeting Mission Objectives
+//*******************************************						
+		
+//Mission Objective 1	  Primary    Scout all Nav Points
+					If (Objective1Win == false) then			
+						if iswithin(playermech,ena_Nav_Alpha,150) then
+						Objective1Win = true;
+						PlayVoiceOverOnce("VO\Generic\NavAlpha", TALKER_BET);
+						successobjective(eob_objective1);
+							If (Objective2Win == false) then			
+								SetNavPoint(ena_Nav_Beta);
+							else
+								SetNavPoint(ena_Nav_Gamma);
+							endif;
+						//Assert (Objective2Win == false,69,"Player is within 100 meters of Nav B but there is a malfunction");
+						endif;
+					endif;
+				
+					If (Objective2Win == false) then			
+				 		if iswithin(playermech,ena_Nav_Beta,150) then
+						Objective2Win = true;
+						PlayVoiceOverOnce("VO\Generic\NavBeta", TALKER_BET);
+							If (Objective1Win == true) then			
+								SetNavPoint(ena_Nav_Gamma);
+							else
+								SetNavPoint(ena_Nav_Alpha);
+							endif;
+						successobjective(eob_objective2);
+						//Assert (Objective3Win == false,69,"Player is within 100 meters of Nav B but there is a malfunction");
+						endif;
+					endif;
+							
+					If (Objective3Win == false) then			
+						if iswithin(playermech,ena_Nav_Gamma,150) then
+						PlayVoiceOverOnce("VO\Generic\NavGamma", TALKER_BET);
+						Objective3Win = true;
+							If (Objective2Win == true) then			
+								SetNavPoint(ena_Nav_Alpha);
+							else
+								SetNavPoint(ena_Nav_Beta);
+							endif;
+						successobjective(eob_objective3);
+						endif;
+					endif;
+
+//Mission Objective 5	  Secondary  DESTROY ALL COMBAT UNITS
+		If (Objective5Win == false) then
+			If (groupAlldead(groupobjectid(69)) == true) then
+				Objective5Win = True;
+				SuccessObjective (eob_Objective5);
+			endif;
+		endif;			
+		
+		//End it when all objectives are completed
+			if (missionwon == false) then
+				if (objective3win == true) then
+					if (objective2win == true) then
+						if (objective1win == true) then
+							if (objective5win == true) then
+								//successobjectiveall(120);											//nav d reached
+									missionwon = true;
+									StartTimer(gti_Timer_21);
+									ResetTimer(gti_Timer_21);
+								trans won;
+							else
+								PlayVoiceOverOnce("VO\OP2\MI1\Rerun", TALKER_RAT);
+								PlayVoiceOverOnce("VO\OP2\MI1\Rerun", TALKER_IAN);
+							endif;
+						endif;
+					endif;
+				endif;
+			endif;
+													
+
+endstate;
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+															
+state opening;
+
+	code
+
+	SetAudioFXEnabled(false);
+
+	if (cinemaskip) then
+		KillVoiceOvers;
+		cinema_cut = 0;
+		KillTimer(gti_timer_21);
+		SetGlobalTrigger(0,true);
+		playerai(epl_player0,false);
+		
+			If GetLancemate(1) == no_unit then
+				HelpMessage(eob_NoLancemates,9);
+			else
+				HelpMessage(eob_Lancemates,9);
+			endif;
+
+		PlayVoiceOverOnce("VO\OP2\MI1\Down", TALKER_IAN);
+		PlayVoiceOverOnce("VO\OP2\MI1\Intro", TALKER_RAT);
+		PlayVoiceOverOnce("VO\OP2\MI1\DownReply", TALKER_IAN);
+		CinemaEnd;
+		
+			//if (GetLancemate(1) <> NO_UNIT) then
+			//	LancemateCommand(GetLancemate(1),LANCEMATE_STOP);
+			//endif;
+		
+		trans sit;	
+	endif;
+
+ 	switch (cinema_cut)
+			
+			case 0:
+								
+				SetActiveCamera (eca_CameraShip_0000);
+				
+				FadeToBlack(0.0);
+				
+				Targetfollowobject(playermech);
+				targetoffset(0.0,5.0,0.0,0.0,false);
+			
+			If IntroSpoke == False then	
+				PlayLanceMateSound("VO\OP2\MI1\Intro",1);																													
+				IntroSpoke = True;
+			endif;
+			
+				SetCameraFootShake(playermech,100);
+				
+				FadeFromBlack(6.0);
+
+				cinema_cut = cinema_cut + 1;
+			
+			endcase;
+			
+		case 1:
+				
+			if (TimeGreater(gti_Timer_21,8)) then
+				If DownSpoke == False then
+					PlayVoiceOverOnce("VO\OP2\MI1\Down", TALKER_IAN);
+					PlayLanceMateSound("VO\OP2\MI1\Down",1);
+					DownSpoke = True;
+				endif;
+			endif;
+				
+			if (TimeGreater(gti_Timer_21,14)) then
+        ResetTimer(gti_Timer_21);
+				PlayVoiceOverOnce("VO\OP2\MI1\Intro", TALKER_RAT);
+				SetActiveCamera (eca_CameraShip);
+				Targetfollowobject(eve_Raven);
+				targetoffset(0.0,8.0,0.0,0.0,false);
+				cinema_cut = cinema_cut + 2;
+			endif;
+			
+		endcase;
+						
+			case 2:
+				if (TimeGreater(gti_Timer_21,8)) then
+					cinema_cut = cinema_cut + 1;
+					ResetTimer(gti_Timer_21);
+					SetActiveCamera (eca_CameraShip);
+					SetGlobalTrigger(0,true);
+					FadeToBlack(0.0);
+					FadeFromBlack(3.0);
+				endif;
+	
+			endcase;
+
+			case 3:
+				if (timegreater(gti_Timer_21,11)) then
+					PlayVoiceOverOnce("VO\OP2\MI1\DownReply", TALKER_IAN);
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					playerai(epl_player0,false);
+					cinemaend;
+			
+			If GetLancemate(1) == no_unit then
+				HelpMessage(eob_NoLancemates,9);
+			else
+				HelpMessage(eob_Lancemates,9);
+			endif;
+					
+					//if (GetLancemate(1) <> NO_UNIT) then
+					//	LancemateCommand(GetLancemate(1),LANCEMATE_STOP);
+					//endif;
+					
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+	
+	
+endstate;
+
+state won;
+
+	var
+	
+		integer			wimpy;
+			
+		code
+	
+	If (TimeGreater(gti_Timer_21,4)) then
+			
+			AddMechInstanceSalvage("Cougar");
+			wimpy = GetDifficulty;
+			If (wimpy == EASY_DIFFICULTY) then
+				AddMechInstanceSalvage("Raven");
+			endif;
+		
+			SetCompositingEnabled(False);	
+		
+			playerai(epl_player0,true);
+		
+			StartMusic("Music\Aftermath",3.5,3.0,50);
+		 	
+			If not isdead(playermech) then
+				GetLocation(TeleportPNav,PlayerPoint);
+				Teleport(playermech,PlayerPoint);
+			endif;
+			
+			If not isdead(eve_End_Talon) then
+				GetLocation(TeleportDNav,DropPoint);
+				Teleport(eve_End_Talon,DropPoint);
+			endif;
+			
+			If GetLancemate(1) <> no_unit then
+				If not isdead(GetLancemate(1)) then
+					GetLocation(TeleportMNav,MatePoint);
+					Teleport(GetLancemate(1),MatePoint);
+				endif;
+			endif;
+			
+			EndMission(true,45);								 //I changed for andrew from 35
+			
+			trans won2;
+		
+	endif;
+		
+endstate;
+
+state won2;
+
+		code
+		
+	//SetCompositingEnabled(False);	
+				
+	If (groupAlldead(groupobjectid(69)) == true) then
+		PlayVoiceOverOnce("VO\OP2\MI1\Done", TALKER_IAN);
+		PlayVoiceOverOnce("VO\OP2\MI1\Done", TALKER_RAT);
+		PlayVoiceOverOnce("VO\OP2\MI1\DoneReply", TALKER_IAN);
+		PlayVoiceOverOnce("VO\OP2\MI1\DoneReply", TALKER_RAT);
+	else
+		PlayVoiceOverOnce("VO\OP2\MI1\Rerun", TALKER_RAT);
+		PlayVoiceOverOnce("VO\OP2\MI1\Rerun", TALKER_IAN);
+	endif;
+			trans won3;
+
+endstate;
+
+state won3;
+
+		code
+
+			PlayVoiceOverOnce("VO\OP2\MI1\Elite", TALKER_Rat);
+			
+			if (cinemaskip) then
+				KillVoiceOvers;
+			cinema_cut = 20;
+				
+				KillTimer(gti_timer_21);
+				SetGlobalTrigger(0,true);
+				//playerai(epl_player0,false);
+				//SetAudioFXEnabled(true);
+				FadeToBlack(1.0);
+				EndMission(true,1);
+				//CinemaEnd;								//  SAGE Without the cinema end...this is a nice transition to shell
+			endif;
+ 	
+	switch (cinema_cut)
+			
+			case 0:
+				CinemaStart;
+								
+				SetActiveCamera (eca_CameraShip);
+				
+				FadeToBlack(0.0);				
+
+				StartTimer(gti_Timer_21);
+				ResetTimer(gti_Timer_21);
+				cinema_cut = cinema_cut + 1;
+			
+			endcase;
+			
+			case 1:
+					ResetTimer(gti_Timer_21);
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,2.0,0.0,0.0,false);
+					Cameraoffset(50.0,85.0,0.0,0.0,true);					//45
+					Cameraoffset(-25.0,5.0,-75.0,18.0,true);			//25
+					FadeFromBlack(2.0);
+					cinema_cut = cinema_cut + 1;
+			endcase;
+			
+			case 2:
+				
+				If (PlayerEnd == true) then
+					cinema_cut = cinema_cut + 1;
+				endif;
+				
+			endcase;
+			
+			case 3:
+				if (TimeGreater(gti_Timer_21,18)) then
+					ResetTimer(gti_Timer_21);
+					Targetfollowobject(eve_End_Talon);
+					//Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,2.0,0.0,0.0,false);
+					Cameraoffset(150.0,85.0,0.0,0.0,true);					//45
+					Cameraoffset(-75.0,35.0,-175.0,10.0,true);			//25
+					FadeFromBlack(2.0);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 4:
+				if (TimeGreater(gti_Timer_21,11)) then
+					Cameraoffset(155.0,135.0,75.0,10.0,true);			//25
+				endif;
+				
+				if (timegreater(gti_Timer_21,48)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					cinemaend;
+				endif;
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+
+
+state lostdead;
+
+		code
+		
+	SetCompositingEnabled(False);	
+		
+		StartMusic("Music\Defeat",3.5,3.0,50);
+		EndMission(False,10);
+		trans lostdead2;
+endstate;
+
+state lostdead2;
+
+		code
+		
+			if (cinemaskip) then
+				KillVoiceOvers;
+			cinema_cut = 20;
+				
+				KillTimer(gti_timer_21);
+				SetGlobalTrigger(0,true);
+				playerai(epl_player0,false);
+				//SetAudioFXEnabled(true);
+				FadeToBlack(1.0);
+				EndMission(false,1);
+				//CinemaEnd;							 // trying with Cinema end  Without the cinema end...this is a nice transition to shell
+			endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,20.0,false);
+				PlayVoiceOverOnce("VO\Generic\IanDestroyed",Talker_Rat);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+	
+endfsm.
+

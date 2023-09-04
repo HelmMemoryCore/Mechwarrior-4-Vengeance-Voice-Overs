@@ -1,0 +1,726 @@
+
+//*********************************************************************************
+
+fsm alpine01_destroypatrols : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+			
+		eternal integer playermech;
+		
+		static boolean	alpharevealed;
+		static boolean	betarevealed;
+		static boolean	gammarevealed;
+		static boolean	deltarevealed;
+		
+		static boolean	alphagotten;
+		static boolean	betagotten;
+		static boolean	gammagotten;
+		static boolean	deltagotten;
+		
+		
+		static integer	cinema_cut;
+		
+		static boolean	caseydead;
+		static integer	numgroupsdead;
+		
+		eternal boolean	missionwon;
+		static boolean	status1;			// This is a timer test bool for an audio play
+		static boolean  status2;	    // This is a timer test bool for an audio play
+		
+		//Navpoint Check Variables
+		static boolean	alphareached;
+		static boolean	betareached;
+		static boolean	gammareached;
+		static boolean	deltareached;
+		static boolean	epsilonreached;
+		static integer	checkrange;
+
+		
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+	
+			//Navpoint Check Declarations
+			alphareached = false;
+			betareached = false;
+			gammareached = false;
+			deltareached = false;
+			epsilonreached = false;
+			checkrange = 150;
+	
+			status1 = false;
+			status2 = false;
+			alpharevealed = false;
+			betarevealed = false;
+			gammarevealed = false;
+			deltarevealed = false;
+			alphagotten = false;
+			betagotten = false;
+			gammagotten = false;
+			deltagotten = false;
+			missionwon = false;
+			
+			caseydead = false;
+			numgroupsdead = 0;
+
+			playermech = getplayervehicle(epl_player0);	
+			//setalignment(eve_lancemate1,friendly);
+			//SetSkillLevel(eve_lancemate1,90,50,85); 	
+			//GroupAddObject(GroupObjectId(1),playermech);
+			//GroupAddObject(GroupObjectId(1),eve_lancemate1);
+
+//		    setgroupai(groupobjectid(1),groupai_lancemate);
+			
+			GroupAddObject(GroupObjectId(11),eve_alpha1);
+			GroupAddObject(GroupObjectId(11),eve_alpha2);
+			SetGroupAI(groupobjectid(11),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(12),eve_beta1);
+			GroupAddObject(GroupObjectId(12),eve_beta2);
+			GroupAddObject(GroupObjectId(12),eve_beta3);
+			SetGroupAI(groupobjectid(12),GROUPAI_RADIOSQUAD);
+
+			GroupAddObject(GroupObjectId(13),eve_gamma1);
+			GroupAddObject(GroupObjectId(13),eve_gamma2);
+			SetGroupAI(groupobjectid(13),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(14),eve_delta1);
+			GroupAddObject(GroupObjectId(14),eve_delta2);
+			SetGroupAI(groupobjectid(14),GROUPAI_RADIOSQUAD);
+			
+			SetTarget(ede_deerherd1_0001,ede_deerherd1);
+			SetTarget(ede_deerherd1_0003,ede_deerherd1);
+			SetTarget(ede_deerherd1_0004,ede_deerherd1);
+			SetTarget(ede_deerherd1_0005,ede_deerherd1);
+			SetTarget(ede_deerherd1_0006,ede_deerherd1);
+			SetTarget(ede_deerherd1_0007,ede_deerherd1);
+			SetTarget(ede_deerherd1_0008,ede_deerherd1);
+			SetTarget(ede_deerherd1_0009,ede_deerherd1);
+			SetTarget(ede_deerherd1_0010,ede_deerherd1);
+			SetTarget(ede_deerherd1_0011,ede_deerherd1);
+			SetTarget(ede_deerherd1_0012,ede_deerherd1);
+			SetTarget(ede_deerherd1_0013,ede_deerherd1);
+			SetTarget(ede_deerherd1_0014,ede_deerherd1);
+			SetTarget(ede_deerherd1_0015,ede_deerherd1);
+			SetTarget(ede_deerherd1_0016,ede_deerherd1);
+	
+			// specifytalker(TALKER_FO1,eve_gonzalez);
+			// add in spec talkers for forwards...
+		
+		cinema_cut = 0; 						
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+			playerai(epl_player0,true);
+			PlayVoiceOver("VO\OP3\MI1\Intro",talker_rat);
+			PlayVoiceOver("VO\OP3\MI1\Intro",talker_FO1);
+			PlayVoiceOver("VO\OP3\MI1\Intro2",talker_rat);
+			PlayVoiceOver("VO\OP3\MI1\Intro2",talker_Ian);
+			PlayVoiceOver("VO\generic\goodluck",talker_Rat);
+			PlayLancemateSound("VO\OP3\MI1\Intro3",1);
+			
+			setradarnav(ena_nav_alpha,1);
+			setradarnav(ena_nav_beta,2);
+			setradarnav(ena_nav_gamma,3);
+			setradarnav(ena_nav_delta,4);
+
+			setactivationdistance(1200);
+			starttimer(gti_timer_0);
+			settargetdesirability(eve_scout1,-1);
+			settargetdesirability(eve_scout2,-1);
+			SetSensorVisibility(eve_scout1,FALSE);
+			SetSensorVisibility(eve_scout2,FALSE);
+			StartMusic("Music\Sander",3.5,3.0,50);
+			revealobjective(eob_objwait);
+			trans opening;
+			//trans sit;
+
+endstate;
+
+	
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+
+				//PlayVoiceOverOnce("VO\Generic\Startup1",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		killvoiceovers;
+		PlayVoiceOver("VO\Generic\Iandestroyed",talker_rat);
+    failobjectiveall(12);
+		StartMusic("Music\defeat",3.5,3.0,70);
+		trans lost;
+	endif;
+	
+
+	//***************************************************
+	//Objective 1, Alpha
+	//***************************************************
+	if (not alphagotten) then
+	
+		if (not alpharevealed) then
+			if (timegreater(gti_timer_0,45)) then
+				alpharevealed = true;
+				successobjective(eob_objwait);
+				revealobjective(eob_objectiveAlpha);
+				PlayVoiceOver("VO\OP3\MI1\Alpha",talker_PI4);
+				PlayVoiceOver("VO\OP3\MI1\Alpha",talker_Ian);
+				PlayLancemateSound("VO\OP3\MI1\Alpha",1);
+				setnavpoint(ena_Nav_Alpha);
+			endif;
+		endif;
+		
+		if (groupalldead(groupobjectid(11))) then
+			if (not alpharevealed) then
+				revealobjective(eob_objectiveAlpha);
+				revealnavpoint(ena_Nav_Alpha);
+			endif;
+			alphagotten = true;
+			successobjective(eob_objectivealpha);
+			numgroupsdead = numgroupsdead+1;
+			if (numgroupsdead <> 4) then
+				// Play Alpha Mechs Dead Here
+				PlayVoiceOver("VO\OP3\MI1\AlphaDead",Talker_Ian);
+				PlayVoiceOver("VO\OP3\MI1\AlphaDead",Talker_Rat);
+        //playsoundonce(eso_FORG);
+				//playsoundonce(eso_IANJ);
+				
+				// Case lines removed as he don't have a line here anymore... - davelueh 9/12/00
+				
+				//if (not caseydead) then
+				//	playsoundonce(eso_CASI);
+				//endif;
+				if (betarevealed) then
+					if (not betagotten) then
+						setnavpoint(ena_Nav_Beta);
+					endif;
+				endif;
+			endif;
+		endif;
+		
+	endif;
+	
+	
+	//***************************************************
+	//Objective 2, Beta
+	//***************************************************
+	if (not betagotten) then
+	
+		if (not betarevealed) then
+			if (timegreater(gti_timer_0,119)) then
+				betarevealed = true;
+				revealobjective(eob_objectivebeta);
+				if (not alphagotten) then
+					revealnavpoint(ena_Nav_Beta);
+				else
+					setnavpoint(ena_Nav_Beta);
+				endif;
+				// Play "Beta" Sounds here
+				PlayVoiceOver("VO\OP3\MI1\Beta",Talker_FO2);
+				PlayVoiceOver("VO\OP3\MI1\Beta",Talker_Ian);
+				PlayLancemateSound("VO\OP3\MI1\Beta",2);
+        //playsoundonce(eso_FORC);
+				//playsoundonce(eso_IAND);
+				//playsoundonce(eso_CASE);
+			endif;
+		endif;
+		
+		if (groupalldead(groupobjectid(12))) then
+			if (not betarevealed) then
+				revealobjective(eob_objectivebeta);
+				revealnavpoint(ena_Nav_Beta);
+			endif;
+			betagotten = true;
+			successobjective(eob_objectivebeta);
+			numgroupsdead = numgroupsdead+1;
+      if (numgroupsdead <> 4) then
+				// Play Beta Dead Sounds Here
+				PlayVoiceOver("VO\OP3\MI1\BetaDead",Talker_Fo2);
+				PlayVoiceOver("VO\OP3\MI1\BetaDead",Talker_Ian);
+				PlayVoiceOver("VO\OP3\MI1\BetaDead",Talker_Rat);
+        //playsoundonce(eso_FORH);
+				//playsoundonce(eso_IANK);
+        if (deltarevealed) then
+					if (not deltagotten) then
+						setnavpoint(ena_Nav_delta);
+					endif;
+				endif;
+			endif;
+		endif;
+		
+	endif;
+
+
+	//***************************************************
+	//Objective 3, Gamma
+	//***************************************************	
+	if (not gammagotten) then
+	
+		if (not gammarevealed) then
+			if (timegreater(gti_timer_0,290)) then
+				gammarevealed = true;
+				revealobjective(eob_objectivegamma);
+				if (not betagotten) then
+					revealnavpoint(ena_Nav_Gamma);
+				else
+					setnavpoint(ena_Nav_Gamma);
+				endif;
+				//Play Gamma Sounds here
+				PlayVoiceOver("VO\OP3\MI1\Gamma",Talker_PI3);
+				PlayVoiceOver("VO\OP3\MI1\Gamma",Talker_Ian);
+				PlayLancemateSound("VO\OP3\MI1\Gamma",2);
+
+				//playsoundonce(eso_FORD);
+				//if (caseydead) then
+				//	playsoundonce(eso_CASF);
+				//	playsoundonce(eso_IANE);
+				//else
+				//	playsoundonce(eso_IANF);
+				//endif;
+					
+			endif;
+		endif;
+		
+		if (groupalldead(groupobjectid(14))) then
+			if (not gammarevealed) then
+				revealobjective(eob_objectivegamma);
+				revealnavpoint(ena_Nav_Gamma);
+			endif;
+			gammagotten = true;
+			successobjective(eob_objectivegamma);
+			numgroupsdead = numgroupsdead+1;
+			if (numgroupsdead <> 4) then
+			
+			// Play GammaDead sounds here		
+				PlayVoiceOver("VO\OP3\MI1\GammaDead",Talker_fo3);
+        //playsoundonce(eso_FORI);
+				//playsoundonce(eso_IANL);
+				//if (not caseydead) then
+				//	playsoundonce(eso_CASK);
+				//endif;
+        if (deltarevealed) then
+					if (not deltagotten) then
+						setnavpoint(ena_Nav_Delta);
+					endif;
+				endif;
+			endif;
+		endif;
+		
+	endif;
+	
+	
+	
+//	**************************************************************************
+//	*** Davelueh added a timer and 2 booleans to trigger status sound vo's ***
+//	**************************************************************************
+	
+// use this timer  starttimer(gti_timer_0);															
+
+
+	if status1 == false then
+		if (timegreater(gti_timer_0,150)) then
+      PlayVoiceOver("VO\OP3\MI1\Status",Talker_FO6);
+      status1 = true;
+		endif;
+	endif;
+	
+	if status2 == false then
+		if (timegreater(gti_timer_0,195)) then
+			PlayVoiceOver("VO\OP3\MI1\Status2",Talker_FO6);
+			status2 = true;
+		endif;
+	endif;
+		
+	
+	
+	//***************************************************
+	//Objective 4, Delta
+	//***************************************************
+	if (not deltagotten) then
+	
+		if (not deltarevealed) then
+			if (timegreater(gti_timer_0,240)) then
+				deltarevealed = true;
+				revealobjective(eob_objectivedelta);
+        if (not gammagotten) then
+					revealnavpoint(ena_Nav_Delta);
+				else
+					setnavpoint(ena_Nav_Delta);
+				endif;
+				// Delta Sounds here (one file might need a timer to space it out - davelueh )
+        PlayVoiceOver("VO\OP3\MI1\Delta",Talker_FO1);
+        PlayVoiceOver("VO\generic\ack",Talker_Ian);
+				PlayLancemateSound("VO\OP3\MI1\Delta",2);
+        //if (caseydead) then
+        //  playsoundonce(eso_FORF);
+				//	playsoundonce(eso_IANG);
+				//else
+				//	playsoundonce(eso_FORE);
+				//	playsoundonce(eso_CASG);
+				//	playsoundonce(eso_IANH);
+				//	playsoundonce(eso_CASN);
+				//	playsoundonce(eso_RATD);
+				//endif;
+			endif;
+		endif;
+		
+		if (groupalldead(groupobjectid(13))) then
+			if (not deltarevealed) then
+				revealobjective(eob_objectivedelta);
+				revealnavpoint(ena_Nav_Delta);
+			endif;
+			deltagotten = true;
+			successobjective(eob_objectivedelta);
+      //if (numgroupsdead <> 4) then
+					
+						// ********************* I took out number of groups dead so these lines WOULD Play (ok in new audio ))
+				
+			//	Play DeltaDead Sound here
+			PlayLancemateSound("VO\OP3\MI1\DeltaDead",1);
+			PlayVoiceOver("VO\OP3\MI1\DeltaDead",Talker_Ian);
+			PlayVoiceOver("VO\OP3\MI1\DeltaDead",Talker_Fo1);
+			PlayVoiceOver("VO\OP3\MI1\DeltaDead2",Talker_Ian);
+			PlayVoiceOver("VO\OP3\MI1\DeltaDead2",Talker_Fo1);
+			numgroupsdead = numgroupsdead+1;
+      //	playsoundonce(eso_FORJ);
+			//	playsoundonce(eso_IANM);
+			//	if (not caseydead) then
+			//		playsoundonce(eso_CASL);
+			//	endif;
+			   if (gammarevealed) then
+					if (not gammagotten) then
+						setnavpoint(ena_Nav_Gamma);
+					endif;
+				endif;
+			
+		endif;
+		
+	endif;
+	
+	
+	//***************************************************
+	//End it if all objectives are successful
+	//***************************************************
+if (numgroupsdead == 4) then
+	endmission(true,35);
+  PlayVoiceOver("VO\OP3\MI1\Win",Talker_Rat);
+	PlayVoiceOver("VO\OP3\MI1\Win",Talker_Fo1);
+	PlayVoiceOver("VO\OP3\MI1\Win2",Talker_Rat);
+	PlayVoiceOver("VO\OP3\MI1\Win2",Talker_Sal);
+	PlayVoiceOver("VO\OP3\MI1\Win3",Talker_Rat);
+	PlayVoiceOver("VO\OP3\MI1\Win3",Talker_Ian);
+  //playsoundonce(eso_FORK);
+	//playsoundonce(eso_IANN);
+	//playsoundonce(eso_RATC);
+	//if (not caseydead) then
+	//	playsoundonce(eso_CASM);
+	//endif;
+	missionwon = true;
+	StartMusic("Music\victory",3.5,3.0,50);
+	AddMechInstanceSalvage("Vulture");
+	
+	enableglobalinvulnerable;
+	settargetdesirability(playermech,-1);
+	resettimer(gti_timer_28);
+	starttimer(gti_timer_28);
+	trans waitforcinema;
+endif;		
+ 	
+
+if (not ismusicplaying) then
+	StartMusic("Music\arcticambloop",0.0,3.0,40);
+endif;
+
+//*************************************
+//Navpoint Checks
+//*************************************
+
+if (not alphareached) then
+	if (isnavrevealed(ena_nav_alpha)) then
+		if (iswithin(playermech,ena_nav_alpha,checkrange)) then
+			playvoiceover("VO\generic\navalpha",talker_Bet);
+			alphareached = true;
+		endif;
+	endif;
+endif;
+
+if (not betareached) then
+	if (isnavrevealed(ena_nav_beta)) then
+		if (iswithin(playermech,ena_nav_beta,checkrange)) then
+			playvoiceover("VO\generic\navbeta",talker_Bet);
+			betareached = true;
+		endif;
+	endif;
+endif;
+
+if (not gammareached) then
+	if (isnavrevealed(ena_nav_gamma)) then
+		if (iswithin(playermech,ena_nav_gamma,checkrange)) then
+			playvoiceover("VO\generic\navgamma",talker_Bet);
+			gammareached = true;
+		endif;
+	endif;
+endif;
+
+if (not deltareached) then
+	if (isnavrevealed(ena_nav_delta)) then
+		if (iswithin(playermech,ena_nav_delta,checkrange)) then
+			playvoiceover("VO\generic\navdelta",talker_Bet);
+			deltareached = true;
+		endif;
+	endif;
+endif;
+
+//if (not epsilonreached) then
+//	if (isnavrevealed(ena_nav_epsilon)) then
+//		if (iswithin(playermech,ena_nav_epsilon,checkrange)) then
+//			playvoiceover("VO\generic\navepsilon",talker_Bet);
+//			epsilonreached = true;
+//		endif;
+//	endif;
+//endif;
+
+endstate;
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,3)) then
+			playerai(epl_player0,true);
+			trans won;
+		endif;
+		
+		
+endstate;
+
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			killvoiceovers;
+			cinemaend;
+			trans sit;	
+	endif;
+
+switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera (eca_cameraship);
+			Fadetoblack(0.0);
+
+			Targetfollowobject(eve_scout1);
+			camerafollowobject(eve_scout1);
+			//SetCameraFootShake(playermech,100);
+
+			targetoffset(0.0,4.0,0.0,0.0,false);
+			Cameraoffset(-140.0,49.0,4.0,0.0,false);
+
+
+			Cameraoffset(-90.0,35.0,12.0,35.0,false);
+
+			startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+
+			case 1:
+				
+				if (timegreater(gti_Timer_21,1)) then
+					
+					Fadefromblack(3.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;
+
+			case 2:
+				
+				if (timegreater(gti_Timer_21,8)) then
+					
+					Fadetoblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;			
+
+			case 3:
+				
+				if (timegreater(gti_Timer_21,2)) then
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(-100.0,49.0,35.0,0.0,true);
+					Cameraoffset(90.0,15.0,35.0,17.0,true);
+					Fadefromblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;
+							
+			case 4:
+				
+				if (timegreater(gti_Timer_21,17)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+	
+	
+endstate;
+
+state won;
+
+		code
+		
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(true,1);	
+			trans hang;
+	endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				Fadetoblack(0.0);
+				Fadefromblack(3.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(-30.0,125.0,75.0,0.0,false);
+				Cameraoffset(60.0,20.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(false,1);
+			trans hang;
+	endif;
+ 	
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				Fadetoblack(0.0);
+				Fadefromblack(3.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+
+state hang;
+		
+		code
+		
+endstate;
+
+
+
+endfsm.
+//******************************************************************
+

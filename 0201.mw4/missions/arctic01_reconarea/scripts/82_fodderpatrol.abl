@@ -1,0 +1,299 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm FodderPatrol : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_UnarmedPatrol:
+//   Follows a path and runs from enemies.
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			fleeRange;			// At what range do I start running?
+		static integer			stopFleeingRange;	// At what range do I consider myself out of danger?
+		static integer			fleeSpeed;			// How fast I flee
+		
+		static boolean			Secret;	// I am turned off @ mission Start
+		static boolean			Hung;	  // Set to True if passed through the Hangout State
+	
+		static integer			path;				// My path
+		static integer			moveType;			// How I move along the path
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+		static integer			speed;				// The speed at which I move along the path
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		fleeRange		= 300;
+		stopFleeingRange	= fleeRange + 300;
+		path			= -1;
+		moveType		= move_circle;
+		speed			= 60;
+
+		// driver settings
+	 // piloting		= 50;
+	//	gunnery			= 30;
+	//	minDelay		= 1.5;
+	//	maxDelay		= 3.0;
+	//	eliteLevel		= 30;
+		attackThrottle	= 80;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+
+		Secret = False;
+		Hung = False;
+
+	//Use this to set different values for different units using the same brain	
+	switch (GetMemoryInteger(me,9))
+
+		case 0:															 //Snowcat Fodder
+		
+	  speed = 60;							 	
+		isshotradius = 180;						 	
+		deathsound = -1;
+		path = epa_DozerPathW;
+		movetype = move_circle;
+		//attackersdistractit = TRUE;
+		mood = neutral_start;
+		secret = true;
+		
+		endcase;
+		
+		case 9:															 //Snowcat Fodder
+		
+	  speed = 40;							 	
+		isshotradius = 180;						 	
+		deathsound = -1;
+		path = epa_DozerPathE;
+		movetype = move_circle;
+		//attackersdistractit = TRUE;
+		mood = neutral_start;
+		secret = true;
+		
+		endcase;
+		
+		case 1:															 //First Fodder
+		
+	  speed = 40;							 	
+		isshotradius = 180;						 	
+		deathsound = -1;
+		path = epa_FodderPath;
+		movetype = move_circle;
+		//attackersdistractit = TRUE;
+		mood = neutral_start;
+		
+		endcase;
+		
+		case 2:																 //Base Fodder
+		
+	  speed = 40;							 	
+		isshotradius = 180;						 	
+		deathsound = -1;
+		path = epa_FodderPath2;
+		movetype = move_circle;
+		//attackersdistractit = TRUE;
+		mood = neutral_start;
+		
+ 		endcase;
+		
+		case 5:																 //Base Fodder
+		
+	  speed = 40;							 	
+		isshotradius = 180;						 	
+		deathsound = -1;
+		path = epa_FodderPath;
+		movetype = move_circle;
+		//attackersdistractit = TRUE;
+		mood = neutral_start;
+		
+ 		endcase;
+		
+		case 7:																 //Base Fodder
+		
+	  speed = 40;							 	
+		isshotradius = 180;						 	
+		deathsound = -1;
+		path = -1;
+		movetype = move_circle;
+		//attackersdistractit = TRUE;
+		mood = neutral_start;
+		secret = true;
+		
+ 		endcase;
+			
+	endswitch;
+
+
+endfunction;
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+	code
+		// SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		//SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		//SetAttackThrottle		(ME,attackThrottle);
+		 		
+	switch (GetMemoryInteger(me,9))
+
+		case 0:															 //Snowcat Fodder
+			GroupAddObject(GroupObjectId(51),me);
+			trans SnowCharge;
+		endcase;
+	
+		case 9:															 //Snowcat Fodder
+			GroupAddObject(GroupObjectId(51),me);
+			trans SnowCharge;
+		endcase;
+	
+	endswitch;
+		
+		if (secret == true) then
+			shutdown(me);
+			trans Hangout;
+		else
+		trans FollowPathState;
+		endif;
+
+
+endstate;
+
+//------------------------------------------------------------------
+//	FollowPathState: follow our path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state FollowPathState;
+	code
+		if (FindEnemy(fleeRange,FT_DEFAULT)) then
+			trans FleeState;
+		endif;
+
+		if (path <> -1) then
+			OrderMoveResumePatrol(path,speed,moveType,true,false);
+		else
+			OrderMoveLookOut;
+		endif;
+endstate;
+
+//------------------------------------------------------------------
+//	FleeState: run away from my target
+//------------------------------------------------------------------
+
+state FleeState;
+	code
+     if (LeaveAttackState(stopFleeingRange)) then
+			ClearMoveOrder(ME);
+			SetTarget(ME,NO_UNIT);
+			trans FollowPathState;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderMoveFlee(GetTarget(ME),600);
+
+endstate;
+
+state Hangout;
+  code
+ 		If (isShot (me)) then
+ 			startup(me);
+ 			hung = true;
+ 			trans FleeState;
+ 		endif;
+				
+	/*
+				If ((GetMemoryInteger(me,9)) == 0) then
+					If (SnowCatCharge == true) then
+						trans SnowCharge;
+					endif;
+				endif;
+	*/			
+				if (iswithin(me,(groupobjectid(1)),150) == true) then
+					startup(me);
+					hung = true;
+					trans FleeState;
+				endif;
+						
+endstate;
+
+state SnowCharge;
+	code
+		
+		speed = 70;
+		
+		if (path <> -1) then
+			OrderFormationMove(GroupObjectId(51),path,speed,moveType,Formation_1x12Line,FORMTYPE_SPARSE,true)
+			//OrderMoveResumePatrol(path,speed,moveType,true,false);
+		else
+			trans FleeState;
+		endif;
+
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

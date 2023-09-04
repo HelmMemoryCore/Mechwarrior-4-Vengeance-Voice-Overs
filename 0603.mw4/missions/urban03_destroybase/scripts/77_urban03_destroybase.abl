@@ -1,0 +1,486 @@
+
+//*********************************************************************************
+
+fsm GENERIC : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+			
+		eternal integer playermech;
+		
+		
+		static integer	cinema_cut;
+		
+		eternal boolean	generatordead;
+		static boolean	commcenterdead;
+		static boolean	defendersdead;
+		static boolean	commcenterwarningplayed;
+		eternal integer	numturretsattacking;
+		static boolean	turretsoundplayed;
+		
+		//Navpoint Check Variables
+		static integer	checkrange;
+		static boolean	alphareached;
+		static boolean	betareached;
+		static boolean	gammareached;
+		
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+
+			//Navpoint Check Declarations
+		checkrange = 150;
+		alphareached = false;
+		betareached = false;
+		gammareached = false;
+	
+		 playermech = getplayervehicle(epl_player0);	
+ 	
+			GroupAddObject(GroupObjectId(1),playermech);
+
+			
+			GroupAddObject(GroupObjectId(10),eve_generatorpatrol1);
+			GroupAddObject(GroupObjectId(10),eve_generatorpatrol2);
+			GroupAddObject(GroupObjectId(10),eve_generatorsentry4);
+			SetGroupAI(groupobjectid(10),GROUPAI_RADIOSQUAD);
+			 		
+			GroupAddObject(GroupObjectId(12),eve_unipatrol1);
+			GroupAddObject(GroupObjectId(12),eve_unipatrol2);
+			GroupAddObject(GroupObjectId(12),eve_unipatrol3);
+			GroupAddObject(GroupObjectId(12),eve_unipatrol4);
+			SetGroupAI(groupobjectid(12),GROUPAI_RADIOSQUAD);
+
+			GroupAddObject(GroupObjectId(13),eve_innerpatrol1);
+			GroupAddObject(GroupObjectId(13),eve_innerpatrol4);
+			SetGroupAI(groupobjectid(13),GROUPAI_RADIOSQUAD);
+
+			GroupAddObject(GroupObjectId(14),eve_unisentry1);
+			GroupAddObject(GroupObjectId(14),eve_unisentry2);
+			GroupAddObject(GroupObjectId(14),eve_unisentry4);
+			SetGroupAI(groupobjectid(14),GROUPAI_RADIOSQUAD);
+
+			
+			GroupAddObject(GroupObjectId(21),eve_unipatrol1);
+			GroupAddObject(GroupObjectId(21),eve_unipatrol2);
+			GroupAddObject(GroupObjectId(21),eve_unipatrol3);
+			GroupAddObject(GroupObjectId(21),eve_unipatrol4);
+			GroupAddObject(GroupObjectId(21),eve_innerpatrol1);
+			GroupAddObject(GroupObjectId(21),eve_innerpatrol4);
+			GroupAddObject(GroupObjectId(21),eve_unisentry1);
+			GroupAddObject(GroupObjectId(21),eve_unisentry2);
+			GroupAddObject(GroupObjectId(21),eve_unisentry4);
+
+			
+		cinema_cut = 0; 						
+		generatordead = false;
+		commcenterdead = false;
+		defendersdead = false;
+		commcenterwarningplayed = false;
+		numturretsattacking = 0;
+		turretsoundplayed = false;
+
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+			revealnavpoint(ena_nav_alpha);
+			revealnavpoint(ena_nav_beta);
+			setnavpoint(ena_nav_gamma);
+			
+			revealobjective(eob_DestroyTurretPowerGenerator);
+			revealobjective(eob_DestroyCommCenter);
+			revealobjective(eob_DestroyUniversityUnits);
+			
+			playvoiceover("VO\OP6\MI3\intro",talker_Ian);
+			playvoiceover("VO\OP6\MI3\intro",talker_Rat);
+			playvoiceover("VO\OP6\MI3\intro2",talker_Ian);
+			playvoiceover("VO\OP6\MI3\intro2",talker_Rat);
+			playvoiceover("VO\OP6\MI3\intro3",talker_Ian);
+			playvoiceover("VO\OP6\MI3\intro3",talker_Rat);
+			playlancematesound("VO\OP6\MI3\intro4",1);
+			playlancematesound("VO\OP6\MI3\intro5",1);
+			Playerai(epl_player0,true);
+			StartMusic("Music\Sander",3.5,3.0,50);
+			trans opening;
+
+endstate;
+
+	
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+	
+				//PlayVoiceOverOnce("VO\Generic\Startup1",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+
+	
+	if (not turretsoundplayed) then
+		if (numturretsattacking >	7) then
+			playlancematesound("VO\OP6\MI3\turrets",1);
+			turretsoundplayed = true;
+		endif;
+	endif; 	
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		endmission(false,12);
+		Playerai(epl_player0,true);
+		killvoiceovers;
+		PlayVoiceOver("VO\Generic\Iandestroyed",talker_rat);
+		StartMusic("Music\defeat",3.5,3.0,50);
+		trans lost;
+	endif;
+	
+if (not Commcenterdead) then
+
+	if (not commcenterwarningplayed) then
+		if (iswithin(playermech,ebu_Communications_Center,800)) then
+			playlancematesound("VO\OP6\MI3\commclose",1);
+			commcenterwarningplayed = true;
+		endif;
+	endif;
+
+	if (isdead(ebu_Communications_Center)) then
+		successobjective(eob_destroycommcenter);
+		SetGroupAI(groupobjectid(10),GROUPAI_NONE);
+		SetGroupAI(groupobjectid(12),GROUPAI_NONE);
+		SetGroupAI(groupobjectid(13),GROUPAI_NONE);
+		SetGroupAI(groupobjectid(14),GROUPAI_NONE);
+		playvoiceover("VO\OP6\MI3\commdown",talker_Rat);
+		playlancematesound("VO\OP6\MI3\commdown",1);
+		Commcenterdead = true;
+	endif;
+endif;
+
+if (not generatordead) then
+	if (isdead(ebu_turretpowergenerator)) then
+		successobjective(eob_DestroyTurretPowerGenerator);
+		generatordead = true;
+		playlancematesound("VO\OP6\MI3\gendead",2);
+	endif;
+endif;
+
+if (groupalldead((groupobjectid(21)))) then
+	endmission(true,30);
+	successobjective(eob_DestroyUniversityUnits);
+	playlancematesound("VO\OP6\MI3\win",1);
+	playvoiceover("VO\OP6\MI3\win",talker_Ian);
+	playvoiceover("VO\OP6\MI3\win",talker_Rat);
+	playvoiceover("VO\OP6\MI3\tired",talker_Ian);
+	playvoiceover("VO\OP6\MI3\tired",talker_Rat);
+	Playerai(epl_player0,true);
+	// *** Davelueh added salvage here. ***
+	AddWeaponSalvage("AC5",1);
+	AddWeaponSalvage("AC10",2);
+	AddWeaponSalvage("Flamer",1);
+	AddWeaponSalvage("ClanFlamer",1);
+	AddWeaponSalvage("ClanGauss",1);
+	AddWeaponSalvage("ERLargeLaser",1);
+	AddWeaponSalvage("ERMediumLaser",2);
+	AddWeaponSalvage("LargeLaser",1);
+	AddWeaponSalvage("MediumLaser",1);
+	AddWeaponSalvage("LBXAC10",2);
+	AddWeaponSalvage("ClanLRM5",1);
+	AddWeaponSalvage("ClanLRM20",1);
+	AddWeaponSalvage("LRM10",1);
+	AddWeaponSalvage("PPC",1);
+	AddWeaponSalvage("ERPPC",1);
+	AddWeaponSalvage("ERMediumPulseLaser",1);
+	AddWeaponSalvage("LargePulseLaser",1);
+	AddWeaponSalvage("MediumPulseLaser",2);
+	AddWeaponSalvage("SRM2",1);
+	AddWeaponSalvage("SRM6",1);
+	AddWeaponSalvage("SSRM4",1);
+	AddWeaponSalvage("SSRM6",1);
+	AddWeaponSalvage("ThunderBolt",1);
+	AddWeaponSalvage("ClanUltraAC2",1);
+	AddWeaponSalvage("UltraAC2",1);
+	AddWeaponSalvage("UltraAC5",1);
+  AddMechInstanceSalvage("Mad Cat MKII");
+	StartMusic("Music\victory",3.5,3.0,50);
+	hidelancemate("damonsquire");
+	enableglobalinvulnerable;
+	settargetdesirability(playermech,-1);
+	resettimer(gti_timer_28);
+	starttimer(gti_timer_28);
+	trans waitforcinema;
+
+endif;		
+		
+	
+//AMBIENT MUSIC
+if (not ismusicplaying) then
+	StartMusic("Music\urbanambloop",0.0,3.0,40);
+endif;
+
+//*************************************
+//Navpoint Checks
+//*************************************
+
+if (not alphareached) then
+	if (isnavrevealed(ena_nav_alpha)) then
+		if (iswithin(playermech,ena_nav_alpha,checkrange)) then
+			playvoiceover("VO\generic\navalpha",talker_Bet);
+			alphareached = true;
+		endif;
+	endif;
+endif;
+
+if (not betareached) then
+	if (isnavrevealed(ena_nav_beta)) then
+		if (iswithin(playermech,ena_nav_beta,checkrange)) then
+			playvoiceover("VO\generic\navbeta",talker_Bet);
+			betareached = true;
+		endif;
+	endif;
+endif;
+
+if (not gammareached) then
+	if (isnavrevealed(ena_nav_gamma)) then
+		if (iswithin(playermech,ena_nav_gamma,checkrange)) then
+			playvoiceover("VO\generic\navgamma",talker_Bet);
+			gammareached = true;
+		endif;
+	endif;
+endif;
+
+				
+endstate;
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,4)) then
+			playerai(epl_player0,true);
+			trans won;
+		endif;
+		
+		
+endstate;
+
+
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			Fadefromblack(0.0);
+			KillVoiceOvers;
+			cinemaend;
+			trans sit;	
+	endif;
+
+switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera (eca_cameraship);
+			Fadetoblack(0.0);
+
+			Targetfollowobject(playermech);
+			Camerafollowobject(playermech);
+			SetCameraFootShake(playermech,100);
+
+			targetoffset(0.0,7.0,0.0,0.0,false);
+			Cameraoffset(-40.0,49.0,4.0,0.0,false);
+
+
+			Cameraoffset(-90.0,35.0,12.0,30.0,false);
+
+			startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+
+			case 1:
+				
+				if (timegreater(gti_Timer_21,1)) then
+					
+					Fadefromblack(3.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 3;	
+				endif;
+				
+			endcase;
+
+			case 2:
+				
+				if (timegreater(gti_Timer_21,8)) then
+					
+					Fadetoblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;			
+
+			case 3:
+				
+				if (timegreater(gti_Timer_21,2)) then
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(-100.0,49.0,35.0,0.0,true);
+					Cameraoffset(90.0,15.0,35.0,17.0,true);
+					Fadefromblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;
+							
+			case 4:
+				
+				if (timegreater(gti_Timer_21,22)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+	
+	
+endstate;
+
+state won;
+
+		code
+		
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(true,1);	
+			trans hang;
+	endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(-30.0,125.0,75.0,0.0,false);
+				Cameraoffset(60.0,20.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(false,1);
+			trans hang;
+	endif;
+ 	
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+
+state hang;
+		
+		code
+		
+endstate;
+
+
+endfsm.
+//******************************************************************
+

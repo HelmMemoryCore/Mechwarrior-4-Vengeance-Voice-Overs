@@ -1,0 +1,170 @@
+
+//*********************************************************************************
+fsm Garrison : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; 																
+	static integer			piloting;
+	static integer			gunnery;
+	static real					mindelay;		
+	static real					maxdelay;		
+	static integer 			speed;			
+	static integer 			elitelevel;
+  static integer			isshotradius;	
+	static integer			mood;
+	static Boolean 			attacksoundplayed;
+  static integer 			attacksound;
+	static integer 			deathsound;
+	static locpoint			home;
+	static boolean			movingtohome;
+	static boolean			movetohome;
+	static boolean			powerup;
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	switch (GetMemoryInteger(me,9))
+		case 0:
+			attackrange = 900;
+			piloting = 40;		
+			gunnery = 70;			
+			mindelay = 1.0;		
+			maxdelay = 2.5;		
+			elitelevel = 55;
+			speed = 600;											
+			isshotradius = 100;								 	
+			attacksound = -1;                  	
+			mood = agressive_start;
+			attacksoundplayed = FALSE;
+			getlocation(me,home);		 	
+			movingtohome = false;
+			powerup = false;		
+		endcase;
+		case 1:
+			attackrange = 900;
+			piloting = 35;		
+			gunnery = 60;			
+			mindelay = 1.5;		
+			maxdelay = 3.0;		
+			elitelevel = 55;
+			speed = 600;											
+			isshotradius = 50;								 	
+			attacksound = -1;                  	
+			mood = agressive_end;
+			attacksoundplayed = FALSE;
+			getlocation(me,home);		 	
+			movingtohome = false;
+			powerup = false;	
+		endcase;
+	endswitch;
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		shutdown(me);
+	 trans wait;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+state	wait;
+	code
+		if alert == true then
+			if powerup == false then
+				starttimer(gti_timer_5);
+				powerup = true;
+			endif;
+		endif;
+	
+		if timegreater(5,3) then
+			startup(me);
+			trans sit;
+		endif;
+
+endstate;
+
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+//		if (movingtohome == true) then
+			orderMovetolocpoint(home,speed,true,true);
+//				movingtohome = false;
+//			endif;
+//		else
+			OrderMoveLookout;
+//		endif;
+		
+		if (FindEnemy(attackRange,FT_DEFAULT)) then
+			trans Attack;
+		endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+		
+state Attack;
+	code
+		if (LeaveAttackState(800)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans Sit;
+		endif;
+
+		OrderAttack(true);
+
+	endstate;
+	
+
+	
+endfsm.
+//******************************************************************
+

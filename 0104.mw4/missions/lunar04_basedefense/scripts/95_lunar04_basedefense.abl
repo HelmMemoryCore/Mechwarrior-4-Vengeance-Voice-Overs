@@ -1,0 +1,856 @@
+
+//*********************************************************************************
+
+fsm Mission_Lunar04_BaseDefense : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+			
+		eternal integer playermech;
+		
+		eternal integer FuelNeeded;
+		
+		eternal boolean Engaged;
+		
+		eternal boolean TeleStart;
+		eternal boolean DoorCloseStart;
+
+		eternal boolean LoadingStart;
+		eternal boolean EndingStart;
+		
+		eternal boolean APU1_Evershot;
+		eternal boolean APU2_Evershot;
+		eternal boolean APU3_Evershot;
+		
+		static integer	ArmorMult;
+		static integer	TalonArmor;
+		
+		static integer	cinema_cut;
+		static boolean GaveStuff;
+
+		eternal integer cinema_timer;
+		eternal integer mission_timer;
+		static integer fuel_timer;
+		static integer help_timer;
+		static Boolean radar_message_played;
+		static Boolean enemy_message_played;
+
+		
+/*		GLOBAL TRIGGER DEFINITION
+		0	 = Cinema Started
+		1	 = Mission Won?
+		2	 = All Combat Units Destroyed?
+		3	 = Time To Attack?
+		4	 = First Dropship takes off
+		5	 = 2nd Dropship Hit
+		6	 = OB_APU 1 Destroyed
+		7	 = OB_APU 2 Destroyed
+		8	 = OB_APU 3 Destroyed
+		9	 = Decoy Started
+		10 = Deocy Over With
+		11 = Secondary objective successful?
+		12 = Time for OB DropShip to Launch
+		SETTINGS IN MEMORY CELLS
+		
+*/
+		
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+			FuelNeeded = 					Rand(350,400);				 //240,360
+
+			APU1_Evershot = false;
+			APU2_Evershot = false;
+			APU3_Evershot = false;
+
+			help_timer 				= gti_timer_5;
+			cinema_timer 			= gti_timer_21;
+			mission_timer 		= gti_timer_10;
+			fuel_timer 				= gti_timer_30;
+			
+			radar_message_played = false;
+			enemy_message_played = false;
+
+			TeleStart					= False;
+			DoorCloseStart		= False;
+			
+			LoadingStart 			= False;
+			EndingStart 			= False;
+			GaveStuff					= False;
+			
+			ArmorMult					= 9;
+			TalonArmor = getdamagerating(eve_OB_Dropship);
+		
+			playermech = getplayervehicle(epl_player0);	
+ 	
+			GroupAddObject(GroupObjectId(1),playermech);
+
+			GroupAddObject(GroupObjectId(2),playermech);
+			GroupAddObject(GroupObjectId(2),eve_Casey);
+			GroupAddObject(GroupObjectId(2),eve_Jen);
+			//GroupAddObject(GroupObjectId(2),eve_HellSpawn);
+			//GroupAddObject(GroupObjectId(2),eve_Osiris_0000);
+			SetGroupAI(groupobjectid(2),GROUPAI_MOODSQUAD);
+
+			GroupAddObject(GroupObjectId(3),eve_Casey);
+			GroupAddObject(GroupObjectId(3),eve_Jen);
+			SetGroupAI(groupobjectid(3),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(5),eve_OB_APU1);
+			GroupAddObject(GroupObjectId(5),eve_OB_APU3);
+			GroupAddObject(GroupObjectId(5),eve_OB_APU2);
+			
+			GroupAddObject(GroupObjectId(10),eve_OB_APU3);
+			GroupAddObject(GroupObjectId(10),eve_OB_APU1);
+			GroupAddObject(GroupObjectId(10),eve_OB_APU2);
+			
+			GroupAddObject(GroupObjectId(11),eve_OB_APU2);
+			GroupAddObject(GroupObjectId(11),eve_OB_APU3);
+			GroupAddObject(GroupObjectId(11),eve_OB_APU1);
+			
+			GroupAddObject(GroupObjectId(50),eve_Sigma_HellSpawn);
+			GroupAddObject(GroupObjectId(50),eve_Sigma_Leader);
+			SetGroupAI(groupobjectid(50),GROUPAI_MOODSQUAD);
+			
+			//GroupAddObject(GroupObjectId(X),eve_SOMETHING);
+			
+	//	GroupAddObject(GroupObjectId(20),eve_Harasser);
+	//		GroupAddObject(GroupObjectId(20),eve_Harasser_0000);
+			GroupAddObject(GroupObjectId(20),eve_Vedette);
+			GroupAddObject(GroupObjectId(20),eve_Vedette_0000);
+			GroupAddObject(GroupObjectId(20),eve_srm_carrier);		
+			GroupAddObject(GroupObjectId(20),eve_srm_carrier_0000);		
+			GroupAddObject(GroupObjectId(20),eve_srm_carrier_0001);		
+			SetGroupAI(groupobjectid(20),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(21),eve_Sniper_Bravo1);
+			//GroupAddObject(GroupObjectId(21),eve_Sniper_Bravo2);
+			SetGroupAI(groupobjectid(21),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(22),eve_Bulldog_Theta);
+			GroupAddObject(GroupObjectId(22),eve_LRM_Theta1);
+			GroupAddObject(GroupObjectId(22),eve_LRM_Theta2);
+			SetGroupAI(groupobjectid(22),GROUPAI_MOODSQUAD);
+			
+			//SetGroupAI(groupobjectid(X),GROUPAI_MOODSQUAD);
+	
+			GroupAddObject(GroupObjectId(69),eve_Sigma_HellSpawn);
+			GroupAddObject(GroupObjectId(69),eve_Sigma_Osiris);
+			GroupAddObject(GroupObjectId(69),eve_Sigma_Leader);
+			
+			GroupAddObject(GroupObjectId(69),eve_Vedette);
+			GroupAddObject(GroupObjectId(69),eve_Vedette_0000);
+			GroupAddObject(GroupObjectId(69),eve_srm_carrier);		
+			GroupAddObject(GroupObjectId(69),eve_srm_carrier_0000);		
+			GroupAddObject(GroupObjectId(69),eve_srm_carrier_0001);		
+			
+			
+			GroupAddObject(GroupObjectId(69),eve_Sniper_Bravo1);
+			GroupAddObject(GroupObjectId(69),eve_Bulldog_Theta);
+			GroupAddObject(GroupObjectId(69),eve_LRM_Theta1);
+			GroupAddObject(GroupObjectId(69),eve_LRM_Theta2);
+			
+		cinema_cut = 0; 						
+		
+		
+endfunction;
+
+function Num_APUS_Shot : Integer;
+				
+		var
+			integer rv;
+			
+		code			
+				
+			rv = 0;
+				
+				If (Not IsDead(eve_OB_APU1)) then							 		//APU1 shot?
+					If (IsShot (eve_OB_APU1)) then
+						APU1_Evershot = True;
+					endif;
+				else
+						SetGlobalTrigger(6,True);
+				endif;
+				
+				If (Not IsDead(eve_OB_APU2)) then							 		//APU2 shot?
+					If (IsShot (eve_OB_APU2)) then
+					APU2_Evershot = True;
+					endif;
+				else
+						SetGlobalTrigger(7,True);
+				endif;
+				
+				If (Not IsDead(eve_OB_APU3)) then							 		//APU3 shot?
+					If (IsShot (eve_OB_APU3)) then
+					APU3_Evershot = True;
+					endif;
+				else
+						SetGlobalTrigger(8,True);
+				endif;
+				
+				If (APU1_Evershot == True) then
+					rv = rv +1;
+				endif;
+					
+				If (APU2_Evershot == True) then
+					rv = rv +1;
+				endif;
+					
+				If (APU3_Evershot == True) then
+					rv = rv +1;
+				endif;
+					
+				return (rv);
+
+endfunction; 		
+
+function PumpedFuel : Integer;
+				
+		var
+			integer fuel_pumped;
+			
+		code			
+				
+			fuel_pumped = 5;
+				
+				If (GetGlobalTrigger(6) == False) then							 		//APU1 not Destroyed
+					fuel_pumped = fuel_pumped + 10;
+				endif;
+					
+				If (GetGlobalTrigger(7) == False) then							 		//APU2 not Destroyed
+					fuel_pumped = fuel_pumped + 10;
+				endif;
+				
+				If (GetGlobalTrigger(8) == False) then							 		//APU3 not Destroyed
+					fuel_pumped = fuel_pumped + 10;
+				endif;
+				
+				return (fuel_pumped);
+
+endfunction; 		
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+ code	
+		//SetActivationDistance(7000);		
+		SpecifyTalker(Talker_Jen,eve_jen);
+		SpecifyTalker(Talker_Cas,eve_casey);
+		
+		StartMusic("Music\T1Loop",0.5,1.0,50);
+		
+		//Go To Cinema
+		//playerai(epl_player0,true);
+		starttimer(mission_timer);			//mission timer
+		starttimer(cinema_timer);			//cinema timer
+		starttimer(fuel_timer);			//counter timer
+		starttimer(help_timer);			//help messages timer
+		
+		LoadingStart = True;
+		
+		trans opening;
+		
+endstate;
+
+	
+state deadState;
+	code
+		 trans lostdead;
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+		
+				PlayVoiceOverOnce("VO\Generic\Startup1",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+		
+		PlayVoiceOverOnce("VO\OP1\MI4\Intro2",Talker_Jen);
+		
+		SetSensorVisibility(GroupObjectID(50),true);
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		PlayVoiceOverOnce("VO\OP1\MI4\Surrender",Talker_Rat);
+		Failobjectiveall(35);
+    //EndMission(false,25);
+		trans lostdead;
+	endif;
+	
+If (TimeGreater(help_timer,90)) then		
+ 		killtimer(help_timer);
+		//ResetTimer(help_timer);
+		//radar_message_played = false;
+		//enemy_message_played = false;
+else 				
+ 		If (TimeGreater(help_timer,85)) then
+			If (enemy_message_played == false) then		
+				HelpMessage(eob_enemy,6);
+				enemy_message_played = true;
+			endif;
+ 		else
+ 		If (TimeGreater(help_timer,45)) then
+			If (radar_message_played == false) then
+				HelpMessage(eob_radar,6);
+				radar_message_played = true;
+			endif;
+ 		endif;
+	endif;
+endif;	
+ 	
+	If (TimeGreater(mission_timer,40)) then						
+		SetGlobalTrigger(3,True);
+		SetGlobalTrigger(4,True);
+    PlayVoiceOverOnce("VO\OP1\MI4\PeterGon",Talker_Cas);
+    PlayVoiceOverOnce("VO\OP1\MI4\PeterGon",Talker_Jen);
+  endif;
+		
+//*******************************************
+// Meeting Mission Objectives
+//*******************************************						
+//Mission Objective 1	  Primary
+				If (GetGlobalTrigger(4) == True) then							 		//First DropShip has taken off
+					If (GetGlobalTrigger(12) == True) then							//APU's finished Refueling
+							PlayVoiceOverOnce("VO\OP1\MI4\ShipReady",Talker_Rat);
+							PlayVoiceOverOnce("VO\OP1\MI4\ShipReady",Talker_Cas);
+							PlayVoiceOverOnce("VO\OP1\MI4\ShipReady",Talker_Jen);
+										// I added Jen_K (Mike as Jen because I have no shame - dave)
+              SuccessObjective (eob_Objective1);
+							EndMission(true,45);
+							ResetTimer(cinema_timer);
+							trans won;
+    			endif;
+				endif;		
+
+				If (TimeGreater(fuel_timer,30)) then
+					FuelNeeded = (FuelNeeded - PumpedFuel);
+					//print (FuelNeeded);
+					ResetTimer(fuel_timer);
+				endif;
+				
+				If FuelNeeded <= 0 then																//Mission Ends, You fly away
+				SetGlobalTrigger(12,True);
+				endif;
+
+//Mission Objective 2	  Secondary  DESTROY ALL COMBAT UNITS
+					If (GetGlobalTrigger(11) == False) then							//Combat Units Remain Alive
+						If (groupAlldead(groupobjectid(69)) == true) then
+							SuccessObjective (eob_Objective2);
+							
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear",Talker_Rat);
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear",Talker_Ian);
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear",Talker_Cas);
+								if (not isdead(eve_casey)) then
+									PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear2",Talker_Ian);
+								endif;
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear2",Talker_Jen);
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear2",Talker_Rat);
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear3",Talker_Ian);
+							SetGlobalTrigger(11,true);
+							EndMission(true,45);
+							ResetTimer(cinema_timer);
+							trans won;
+						endif;
+    			endif;
+
+ 	If (GetGlobalTrigger(1) == False) then							 		//Mission Fail Conditions
+ 		If (GetGlobalTrigger(6) == True) and (GetGlobalTrigger(7) == True) and (GetGlobalTrigger(8) == True) then							//APU's Destroyed
+				
+        FailObjective (eob_Objective1);
+ 					If (Not IsDead(eve_OB_Dropship)) then	
+						PlayVoiceOverOnce("VO\OP1\MI4\LostAPU3",Talker_Rat);
+						ResetTimer(30);
+						starttimer(fuel_timer);			//counter timer
+						trans lastchance
+					else
+						EndMission(true,14);
+ 					endif;
+ 				// trans lostdead
+ 		endif;
+ 	endif;		
+
+	Switch (Num_APUS_Shot)
+
+		case 1:
+				PlayVoiceOverOnce("VO\OP1\MI4\DamageAPU",Talker_Rat);
+    endcase;
+		
+		case 2:
+				PlayVoiceOverOnce("VO\OP1\MI4\DamageAPU",Talker_Rat);
+				PlayVoiceOverOnce("VO\OP1\MI4\DamageAPU2",Talker_Rat);
+    endcase;
+				
+		case 3:
+				PlayVoiceOverOnce("VO\OP1\MI4\DamageAPU",Talker_Rat);
+				PlayVoiceOverOnce("VO\OP1\MI4\DamageAPU2",Talker_Rat);
+				PlayVoiceOverOnce("VO\OP1\MI4\DamageAPU3",Talker_Rat);
+		endcase;
+	
+	endswitch;
+	
+	
+	Switch (GroupNumDead(GroupObjectId(5)))
+	
+		case 1:
+				PlayVoiceOverOnce("VO\OP1\MI4\LostAPU",Talker_Rat);
+    endcase;
+
+		case 2:
+				PlayVoiceOverOnce("VO\OP1\MI4\LostAPU2",Talker_Rat);
+    endcase;
+	
+		case 3:
+				PlayVoiceOverOnce("VO\OP1\MI4\LostAPU3",Talker_Rat);
+    endcase;
+
+	endswitch;
+	
+	If (not IsDead(eve_OB_Dropship)) then
+		if ((getdamagerating(eve_OB_Dropship)) < ((ArmorMult * TalonArmor)/10)) then
+			PlayVoiceOverOnce("VO\OP1\MI4\AttackingShip",Talker_Rat);
+		endif;
+  else
+		PlayVoiceOverOnce("VO\OP1\MI4\ShipDead",Talker_Rat);
+		Failobjectiveall(35);
+    //EndMission(false,25);
+		trans lostdead;
+	endif;
+
+endstate;
+
+state lastchance;
+	code
+				
+				If (IsDead(eve_OB_Dropship)) then	
+					PlayVoiceOverOnce("VO\OP1\MI4\ShipDead",Talker_Rat);
+					Failobjectiveall(35);
+          //EndMission(false,25);
+					trans lostdead;
+				endif;
+				
+				//Fail the mission when the player dies
+				If (isdead(playermech)) then
+         PlayVoiceOverOnce("VO\OP1\MI4\Surrender",Talker_Rat);
+					Failobjectiveall(35);
+          //EndMission(false,25);
+					trans lostdead;
+				endif;
+				
+				If (TimeGreater(fuel_timer,150)) then
+					PlayVoiceOverOnce("VO\OP1\MI4\Surrender",Talker_Rat);
+					Failobjectiveall(35);
+          //EndMission(false,25);
+					trans lostdead;
+				endif;
+	
+//Mission Objective 2	  Secondary  DESTROY ALL COMBAT UNITS
+					If (GetGlobalTrigger(11) == False) then							//Combat Units Remain Alive
+						If (groupAlldead(groupobjectid(69)) == true) then
+							SuccessObjective (eob_Objective2);
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear",Talker_Rat);
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear",Talker_Ian);
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear",Talker_Cas);
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear2",Talker_Ian);
+							PlayVoiceOverOnce("VO\OP1\MI4\ScopeClear2",Talker_Jen);
+              //PlaySoundonce(eso_OP1MI4_RAT_M);			Other Dropship comes back for you.
+							//PlaySoundonce(eso_OP1MI4_IAN_D);
+							SetGlobalTrigger(11,true);
+							EndMission(true,45);
+							ResetTimer(cinema_timer);
+							trans won
+            endif;
+    			endif;
+
+endstate;	
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state opening;
+
+	code
+ SetSensorVisibility(GroupObjectID(50),false);
+	
+	if (cinemaskip) then
+		cinema_cut = 0;
+		KillVoiceOvers;
+		KillTimer(cinema_timer);
+		SetGlobalTrigger(0,true);
+		playerai(epl_player0,false);
+		SetAudioFXEnabled(true);
+		SetAlwaysIgnoreObstacles(FALSE);
+		CinemaEnd;
+		trans sit;	
+	endif;
+
+ 	switch (cinema_cut)
+					
+			case 0:
+				CinemaStart;
+				
+				SetAlwaysIgnoreObstacles(TRUE);
+
+//Mission Objective Primary    Learn the HUD
+				
+				SetActiveCamera (eca_CameraShip2);
+				
+				FadeToBlack(0.0);
+				
+				Targetfollowobject(eve_ammo_carrier_0005);
+				targetoffset(0.0,5.0,0.0,0.0,true);
+				
+			SetCameraFootShake(playermech,100);
+				
+				FadeFromBlack(8.0);
+
+	  // PlaySoundonce(eso_OP1MI4_RAT_A1);
+				PlayVoiceOverOnce("VO\OP1\MI4\Intro",Talker_Rat);
+		
+				StartTimer(cinema_timer);
+				ResetTimer(cinema_timer);
+				cinema_cut = cinema_cut + 1;
+			
+			endcase;
+			
+			case 1:
+				if (TimeGreater(cinema_timer,5)) then
+					ResetTimer(cinema_timer);
+				//	PlaySoundonce(eso_OP1MI4_RAT_A2);
+				cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+					/*
+			case 2:
+				if (TimeGreater(cinema_timer,4)) then
+					ResetTimer(cinema_timer);
+					
+				SetActiveCamera (eca_CameraShip);
+	  // PlaySoundonce(eso_OP1MI4_RAT_A3);
+					
+					Targetfollowobject(eve_Sigma_Leader);
+					camerafollowobject(eve_Sigma_Leader);
+					Cameraoffset(20.0,70.0,-150.0,0.0,true);
+          PlayVoiceOverOnce("VO\OP1\MI4\Intro",Talker_Ian);
+          //Cameraoffset(85.0,45.0,120.0,11.0,true);
+					cinema_cut = cinema_cut + 2;
+				endif;
+			endcase;
+		 			*/
+			case 2:
+				if (TimeGreater(cinema_timer,4)) then
+					ResetTimer(cinema_timer);
+					
+					FadeToBlack(0.0);	 															//added 10-12-00
+					FadeFromBlack(3.0);
+		//SetActiveCamera (eca_CameraShip);
+	  //PlaySoundonce(eso_OP1MI4_RAT_A3);
+					
+					camerafollowobject(eve_ammo_carrier_0005);
+					Cameraoffset(-700.0,150.0,900.0,5.0,true);						 //300
+					Targetfollowobject(eve_Sigma_Leader);
+					targetoffset(0.0,5.0,0.0,6.0,true);
+          PlayVoiceOverOnce("VO\OP1\MI4\Intro",Talker_Ian);
+          //Cameraoffset(85.0,45.0,120.0,11.0,true);
+					cinema_cut = cinema_cut + 2;
+				endif;
+			endcase;
+		  			
+			case 3:
+				if (TimeGreater(cinema_timer,8)) then
+					cinema_cut = cinema_cut + 1;
+					ResetTimer(cinema_timer);
+					SetActiveCamera (eca_CameraShip2);
+					SetGlobalTrigger(0,true);
+					FadeToBlack(0.0);
+					FadeFromBlack(3.0);
+				endif;
+	
+			endcase;
+
+			case 4:
+					if (TimeGreater(cinema_timer,6)) then
+					FadeFromBlack(3.0);
+					ResetTimer(cinema_timer);
+          PlayVoiceOverOnce("VO\OP1\MI4\Intro2",Talker_Rat);
+					PlayVoiceOverOnce("VO\OP1\MI4\Intro2",Talker_Cas);
+          Targetfollowobject(eve_OB_APU1);
+          targetoffset(0.0,8.0,0.0,3.0,false);
+					camerafollowobject(eve_OB_APU1);
+					Cameraoffset(-130.0,120.0,200.0,0.0,true);
+					Cameraoffset(90.0,60.0,80.0,10.0,true);
+					//Fadefromblack(2.0);
+					SetAlwaysIgnoreObstacles(FALSE);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+			
+			case 5:
+				if (timegreater(cinema_timer,6)) then
+					cinema_cut = 0;
+					resettimer (cinema_timer);
+					killtimer(cinema_timer);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans sit;	
+				endif;
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state won;
+		
+		code
+
+		settargetdesirability(playermech,-1);
+		StartMusic("Music\DavionTheme",3.5,3.0,50);
+		
+		if (TimeGreater(cinema_timer,4)) then
+			ResetTimer(cinema_timer);
+			trans won1;
+		endif;
+		
+endstate;
+
+state won1;
+
+		code
+		
+			SetCompositingEnabled(False);	
+		
+if (GaveStuff == false)then 	
+		RevealLancemate("Casey Nolan");
+		RevealLancemate("Jen McQuarrie");
+		AddMechInstanceSalvage("Hellspawn");
+		AddWeaponSalvage("AC5",1);
+		AddWeaponSalvage("AC10",1);
+		AddWeaponSalvage("Flamer",1);
+		AddWeaponSalvage("Gauss",1);
+		AddWeaponSalvage("LightGauss",1);
+		AddWeaponSalvage("ClanLRM5",1);
+		AddWeaponSalvage("LRM10",1);
+		AddWeaponSalvage("ERSmallPulseLaser",1);
+		AddWeaponSalvage("SmallPulseLaser",1);
+		AddWeaponSalvage("SRM6",2);
+		AddWeaponSalvage("UltraAC2",1);
+		AddWeaponSalvage("ClanUltraAC2",1);
+		GaveStuff = True;
+endif;		
+
+		SetGlobalTrigger(1,True);
+		EndMission(true,43);							//was 39
+		
+		playerai(epl_player0,true);
+		
+		trans won2;
+		
+endstate;
+
+state won2;
+		
+		code
+			if (cinemaskip) then
+				KillVoiceOvers;
+				KillTimer(cinema_timer);
+				SetGlobalTrigger(0,true);
+				playerai(epl_player0,false);
+				SetAudioFXEnabled(true);
+				FadeToBlack(1.0);
+				SetAlwaysIgnoreObstacles(FALSE);
+				EndMission(true,1);
+				//CinemaEnd;								Without the cinema end...this is a nice transition to shell
+			endif;
+		
+		
+ 	switch (cinema_cut)			
+			case 0:
+				CinemaStart;
+				SetAlwaysIgnoreObstacles(TRUE);
+				StartTimer(cinema_timer);
+				ResetTimer(cinema_timer);
+				SetActiveCamera (eca_CameraShip2);
+				FadeToBlack(0.0);				
+					ResetTimer(cinema_timer);
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,2.0,0.0,0.0,false);
+					Cameraoffset(150.0,45.0,0.0,0.0,true);
+					Cameraoffset(65.0,45.0,75.0,12.0,true);
+					FadeFromBlack(2.0);
+					cinema_cut = cinema_cut + 1;
+							
+			endcase;
+			
+			case 1:
+				
+				if (TimeGreater(cinema_timer,12)) then
+				FadeToBlack(0.0);				
+	 EndingStart = True;
+	 TeleStart = True;
+					ResetTimer(cinema_timer);
+					Targetfollowobject(eve_OB_Dropship);
+					camerafollowobject(eve_OB_Dropship);
+					targetoffset(0.0,2.0,0.0,0.0,false);
+					Cameraoffset(350.0,45.0,250.0,0.0,true);
+					Cameraoffset(-240.0,15.0,300.0,19.0,true);
+					FadeFromBlack(3.0);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 2:
+				if (timegreater(cinema_timer,18)) then
+				DoorCloseStart = True;
+				SetActiveCamera (eca_CameraShip2);
+				FadeToBlack(0.0);				
+					ResetTimer(cinema_timer);
+					Targetfollowobject(eve_OB_Dropship);
+					camerafollowobject(eve_OB_Dropship);
+					targetoffset(0.0,2.0,0.0,0.0,false);
+					Cameraoffset(-550.0,45.0,450.0,0.0,true);
+					Cameraoffset(50.0,-100.0,150.0,18.0,true);
+					FadeFromBlack(2.0);
+					cinema_cut = cinema_cut + 1;
+				
+				endif;
+			endcase;
+			
+			case 3:
+				if (timegreater(cinema_timer,6)) then				 //for Derek
+				FadeToBlack(1.5);
+				endif;
+				
+				if (timegreater(cinema_timer,10)) then
+					cinema_cut = 0;
+					resettimer (cinema_timer);
+					killtimer(cinema_timer);
+					playerai(epl_player0,false);
+					cinemaend;
+				endif;
+			endcase;
+		endswitch;
+	
+endstate;
+
+state lostdead;
+
+		code
+		 					
+		StartMusic("Music\Defeat",3.5,3.0,50);
+			
+		EndMission(false,14);
+		trans lostdead2;
+
+endstate;
+
+state lostdead2;
+
+		code
+		 					
+			if (cinemaskip) then
+				KillVoiceOvers;
+				KillTimer(cinema_timer);
+				SetGlobalTrigger(0,true);
+				playerai(epl_player0,false);
+				SetAudioFXEnabled(true);
+				FadeToBlack(1.0);
+				EndMission(false,1);
+				//CinemaEnd;								Without the cinema end...this is a nice transition to shell
+			endif;
+		
+
+ 	switch (cinema_cut)
+			
+			case 0:
+				CinemaStart;
+				
+//Mission Objective Primary    Learn the HUD
+				
+				SetActiveCamera (eca_CameraShip2);
+				
+				FadeToBlack(0.0);
+				
+	 // 		Targetfollowobject(playermech);
+	//			camerafollowobject(playermech);
+	//			targetoffset(0.0,2.0,0.0,0.0,false);
+	//			Cameraoffset(40.0,40.0,0.0,0.0,true);
+				
+
+				StartTimer(cinema_timer);
+	//			ResetTimer(cinema_timer);
+				cinema_cut = cinema_cut + 1;
+			
+			endcase;
+			
+			case 1:
+	//			if (TimeGreater(cinema_timer,12)) then
+					ResetTimer(cinema_timer);
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,2.0,0.0,0.0,false);
+					Cameraoffset(150.0,45.0,0.0,0.0,true);
+					Cameraoffset(65.0,45.0,75.0,14.0,true);
+					FadeFromBlack(2.0);
+					cinema_cut = cinema_cut + 1;
+		//		endif;
+			endcase;
+
+			case 2:
+				if (timegreater(cinema_timer,14)) then
+					cinema_cut = 0;
+					resettimer (cinema_timer);
+					killtimer(cinema_timer);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					//trans sit;	
+				endif;
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+endfsm.

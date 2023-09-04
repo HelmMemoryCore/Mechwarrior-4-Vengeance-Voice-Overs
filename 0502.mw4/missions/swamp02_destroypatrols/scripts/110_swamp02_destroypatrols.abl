@@ -1,0 +1,866 @@
+
+//*********************************************************************************
+
+fsm  Swamp02_DestroyPatrols : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//    DestroyCommArray=0
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+		eternal ObjectID playermech;
+		
+		static boolean 	Objective1Win;							//NorthWest Patrol
+		static boolean 	Objective2Win;							//SouthWest Patrol
+		static boolean 	Objective3Win;							//Eastern Patrol
+		static boolean 	Objective4Win;							//Primary Pop-Up: Communications Uplink DESTROYED
+		static boolean 	Objective5Win;							//Primary Pop-Up: DESTROY Duncan Burke
+			
+		eternal boolean Patrol1_AllDead;
+		eternal boolean Patrol2_AllDead;
+		eternal boolean Patrol3_AllDead;
+		eternal boolean Patrol4_AllDead;
+			
+		static boolean 	PatrolsDead;								//
+		static boolean 	Garage1Reveal;					 		//
+		static boolean 	Garage2Reveal;							//
+		  					
+		eternal boolean NavAreached;							// Player has reached Nav Alpha
+		eternal boolean NavBreached;							// Player has reached Nav Beta
+		eternal boolean NavDreached;							// Player has reached Nav Deltaa
+				
+		eternal boolean PopUp;										// PopUp Objective Revealed to player
+		eternal boolean BG;						 		 				// Big Garage has been Destroyed
+		eternal boolean BG2;											// Big Garage2 has been Destroyed
+ 		
+		eternal boolean ShroomDead;								//Shroom Patrol Destroyed?
+ 		eternal boolean SWestDead;								//South West Patrol Destroyed?
+ 		eternal boolean NWestDead;								//North West Destroyed?
+ 		
+		eternal boolean 	PeekaBoo;									//Teleport in to say hello
+		eternal boolean 	Time2Die;									//North West Destroyed?
+		eternal locpoint 	mystart;
+		
+		static integer	cinema_cut;
+		
+		eternal integer	teleportNav;
+		eternal integer	teleport2Nav;
+		
+		 /*
+		
+			hover_dirt_cost				  = 0;
+			hover_rock_cost				  = 0;
+			hover_steel_cost				= 0;
+			hover_blacktop_cost		  = 0;
+			hover_glass_cost				= 0;
+			hover_brick_cost				= 0;
+			hover_grass_cost				= 0;
+			hover_wood_cost				  = 0;
+			hover_tree_cost				  = 0;
+			hover_swamp_cost				= 0;
+			hover_concrete_cost		  = 0;
+			hover_rough_cost				= 0;
+			hover_snow_cost				  = 0;
+			hover_underbrush_cost	  = 0;
+			hover_shallowwater_cost = 0;
+			hover_midwater_cost		  = 0;
+			hover_oceanicwater_cost = 0;
+			hover_desert_cost			  = 0;
+			hover_flatswamp_cost		= 0;
+			hover_thickswamp_cost 	= 0;
+		 */
+		
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+      //INTRODUCING ALL THE PLAYERS
+			playermech = getplayervehicle(epl_player0);	
+//			GroupAddObject(GroupObjectId(1),playermech);
+		
+//  Groups		
+GroupAddObject(GroupObjectId(56),eve_swamp_condor_89);					//beta
+GroupAddObject(GroupObjectId(56),eve_swamp_condor_90);
+GroupAddObject(GroupObjectId(56),eve_swamp_condor_91);
+GroupAddObject(GroupObjectId(56),eve_swamp_condor_92);
+GroupAddObject(GroupObjectId(56),eve_swamp_condor_93);
+GroupAddObject(GroupObjectId(56),eve_swamp_condor_94);
+GroupAddObject(GroupObjectId(56),eve_swamp_harasser_96);		
+GroupAddObject(GroupObjectId(56),eve_swamp_harasser_97);
+
+GroupAddObject(GroupObjectId(57),eve_swamp_harasser_98);				//delta
+GroupAddObject(GroupObjectId(57),eve_swamp_harasser_99);
+GroupAddObject(GroupObjectId(57),eve_swamp_harasser_100);
+GroupAddObject(GroupObjectId(57),eve_swamp_condor_102);
+GroupAddObject(GroupObjectId(57),eve_swamp_condor_103);
+GroupAddObject(GroupObjectId(57),eve_swamp_condor_104);		
+
+GroupAddObject(GroupObjectId(58),eve_swamp_condor_62);					//alpha
+GroupAddObject(GroupObjectId(58),eve_swamp_condor_63);
+GroupAddObject(GroupObjectId(58),eve_swamp_condor_64);
+GroupAddObject(GroupObjectId(58),eve_swamp_condor_65);
+GroupAddObject(GroupObjectId(58),eve_swamp_harasser_67);
+GroupAddObject(GroupObjectId(58),eve_swamp_harasser_68);
+GroupAddObject(GroupObjectId(58),eve_swamp_harasser_69);		
+GroupAddObject(GroupObjectId(58),eve_swamp_harasser_70);
+GroupAddObject(GroupObjectId(58),eve_swamp_harasser_71);
+
+GroupAddObject(GroupObjectId(59),eve_condor);									//Gamma
+GroupAddObject(GroupObjectId(59),eve_condor_0000);
+GroupAddObject(GroupObjectId(59),eve_condor_0001);
+GroupAddObject(GroupObjectId(59),eve_condor_0002);
+GroupAddObject(GroupObjectId(59),eve_harasser);
+GroupAddObject(GroupObjectId(59),eve_harasser_0000);
+GroupAddObject(GroupObjectId(59),eve_harasser_0001);		
+  															
+SetGroupAI(groupobjectid(56),GROUPAI_MOODSQUAD);
+SetGroupAI(groupobjectid(57),GROUPAI_MOODSQUAD);
+SetGroupAI(groupobjectid(58),GROUPAI_MOODSQUAD);
+SetGroupAI(groupobjectid(59),GROUPAI_MOODSQUAD);
+
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_89);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_90);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_91);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_92);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_93);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_94);
+GroupAddObject(GroupObjectId(69),eve_swamp_harasser_96);		
+GroupAddObject(GroupObjectId(69),eve_swamp_harasser_97);
+
+GroupAddObject(GroupObjectId(69),eve_swamp_harasser_98);
+GroupAddObject(GroupObjectId(69),eve_swamp_harasser_99);
+GroupAddObject(GroupObjectId(69),eve_swamp_harasser_100);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_102);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_103);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_104);		
+
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_62);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_63);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_64);
+GroupAddObject(GroupObjectId(69),eve_swamp_condor_65);
+GroupAddObject(GroupObjectId(69),eve_swamp_harasser_67);
+GroupAddObject(GroupObjectId(69),eve_swamp_harasser_68);
+GroupAddObject(GroupObjectId(69),eve_swamp_harasser_69);		
+GroupAddObject(GroupObjectId(69),eve_swamp_harasser_70);
+GroupAddObject(GroupObjectId(69),eve_swamp_harasser_71);
+
+GroupAddObject(GroupObjectId(69),eve_condor);
+GroupAddObject(GroupObjectId(69),eve_condor_0000);
+GroupAddObject(GroupObjectId(69),eve_condor_0001);
+GroupAddObject(GroupObjectId(69),eve_condor_0002);
+GroupAddObject(GroupObjectId(69),eve_harasser);
+GroupAddObject(GroupObjectId(69),eve_harasser_0000);
+GroupAddObject(GroupObjectId(69),eve_harasser_0001);		
+
+GroupAddObject(GroupObjectId(69),eve_Duncan_Burke);
+		
+		PatrolsDead = False;
+		Garage1Reveal = False;
+		Garage2Reveal = False;
+		
+		ShroomDead = false;
+		SWestDead = false;
+		NWestDead = false;
+		
+		Patrol1_AllDead		= false;
+		Patrol2_AllDead		= false;
+		Patrol3_AllDead		= false;
+		Patrol4_AllDead		= false;
+		
+		PopUp = true;											// CHANGE THIS LATER PopUp Objective Revealed to player
+		BG = false;						 		 				// Big Garage has been Destroyed
+		BG2 = false;											// Big Garage2 has been Destroyed
+		
+		teleportnav = ena_BurkeNav;																	//To start the fight
+		teleport2nav = ena_Burke2Nav;																//To spook the player
+		
+		PeekaBoo		= False;									
+		Time2Die		= False;									
+			
+			cinema_cut = 0; 		
+
+	SetTarget(ede_creature_swamp_large_0001,ede_creature_swamp_large);
+	SetTarget(ede_creature_swamp_small,ede_creature_swamp_large);
+	SetTarget(ede_creature_swamp_small_0001,ede_creature_swamp_large);
+	SetTarget(ede_creature_swamp_small_0003,ede_creature_swamp_large);
+	SetTarget(ede_creature_swamp_small_0005,ede_creature_swamp_large);
+
+	SetTarget(ede_creature_swamp_large_0005,ede_creature_swamp_large_0004);
+	SetTarget(ede_creature_swamp_small_0010,ede_creature_swamp_large_0004);
+	SetTarget(ede_creature_swamp_small_0011,ede_creature_swamp_large_0004);
+	SetTarget(ede_creature_swamp_small_0012,ede_creature_swamp_large_0004);
+	SetTarget(ede_creature_swamp_small_0013,ede_creature_swamp_large_0004);
+
+	SetTarget(ede_creature_swamp_large_0009,ede_creature_swamp_large_0008);
+	SetTarget(ede_creature_swamp_small_0018,ede_creature_swamp_large_0008);
+	SetTarget(ede_creature_swamp_small_0019,ede_creature_swamp_large_0008);
+	SetTarget(ede_creature_swamp_small_0020,ede_creature_swamp_large_0008);
+	SetTarget(ede_creature_swamp_small_0021,ede_creature_swamp_large_0008);
+
+	SetTarget(ede_creature_swamp_large_0011,ede_creature_swamp_large_0010);
+	SetTarget(ede_creature_swamp_small_0022,ede_creature_swamp_large_0010);
+	SetTarget(ede_creature_swamp_small_0023,ede_creature_swamp_large_0010);
+	SetTarget(ede_creature_swamp_small_0024,ede_creature_swamp_large_0010);
+	SetTarget(ede_creature_swamp_small_0025,ede_creature_swamp_large_0010);
+
+	SetTarget(ede_creature_swamp_large_0013,ede_creature_swamp_large_0012);
+	SetTarget(ede_creature_swamp_small_0027,ede_creature_swamp_large_0012);
+		
+endfunction;
+
+function Num_Patrols_Dead : Integer;
+				
+		var
+			integer rv;
+			
+		code			
+				
+			rv = 0;
+				
+				If (GroupAlldead(groupobjectid(56))) then							 		//All Hovercraft Dead in Patrol1?
+						Patrol1_AllDead = True;
+				endif;
+				
+				If (GroupAlldead(groupobjectid(57))) then							 		//All Hovercraft Dead in Patrol2?
+					Patrol2_AllDead = True;
+				endif;
+				
+				If (GroupAlldead(groupobjectid(58))) then							 		//All Hovercraft Dead in Patrol3?
+					Patrol3_AllDead = True;
+				endif;
+				
+				If (GroupAlldead(groupobjectid(59))) then							 		//All Hovercraft Dead in Patrol4?
+					Patrol4_AllDead = True;
+				endif;
+				
+				If (Patrol1_AllDead == True) then
+					rv = rv +1;
+				endif;
+					
+				If (Patrol2_AllDead == True) then
+					rv = rv +1;
+				endif;
+					
+				If (Patrol3_AllDead == True) then
+					rv = rv +1;
+				endif;
+					
+				If (Patrol4_AllDead == True) then
+					rv = rv +1;
+				endif;
+				
+				return (rv);
+
+endfunction;
+
+		
+function SetNextNav;
+	code
+		
+		If (Objective1Win == false) then			
+			SetNavPoint(ena_Nav_Alpha);
+			return;
+		else
+			If (Objective2Win == false) then			
+				SetNavPoint(ena_Nav_Beta);
+				return;
+			else		
+				If (Objective3Win == false) then			
+					SetNavPoint(ena_Nav_Gamma);
+					return;
+				else
+					If (Objective4Win == false) then			
+						SetNavPoint(ena_Nav_Delta);
+						return;
+					endif;
+				endif;
+			endif;
+		endif;
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+			
+			SpecifyTalker(Talker_Brk,eve_Duncan_Burke);
+			
+			PlayVoiceOverOnce("VO\OP5\MI2\Intro",Talker_Ian);
+			PlayVoiceOverOnce("VO\OP5\MI2\Intro",Talker_Rat);
+			PlayVoiceOverOnce("VO\OP5\MI2\Intro2",Talker_Ian);
+			PlayVoiceOverOnce("VO\OP5\MI2\Intro2",Talker_Rat);
+			PlayVoiceOverOnce("VO\OP5\MI2\Intro2",Talker_Cas);
+			PlayVoiceOverOnce("VO\OP5\MI2\Intro2",Talker_Jen);
+			PlayVoiceOverOnce("VO\OP5\MI2\Intro2",Talker_Gon);
+			PlayVoiceOverOnce("VO\OP5\MI2\Intro2",Talker_Ter);
+			PlayVoiceOverOnce("VO\OP5\MI2\Intro3",Talker_Ian);
+			
+			
+		StartMusic("Music\Mystic",3.5,3.0,50);
+			 	
+			//setactivationdistance(6800);
+			
+			ResetTimer(25);								//Temp Mission Timer For Burke
+			StartTimer(25);								//Temp Mission Start For Burke
+			
+			ResetTimer(15);								//Temp Mission Timer For Patrols
+			StartTimer(15);								//Temp Mission Start For Patrols
+			
+			ResetTimer(10);								//Mission Timer
+			StartTimer(10);								//Mission Start
+  		
+			playerai(epl_player0,true);
+			ResetTimer(21);								//Cinema Timer
+			starttimer(gti_timer_21);
+	
+			SetSensorVisibility(GroupObjectID(69),false);
+			SetCompositingEnabled(False);
+			SetAudioFXEnabled(False);
+			CinemaStart;
+			
+			shutdown(eve_Duncan_Burke);
+			teleportToHell(eve_Duncan_Burke);
+			
+			SetNavPoint(ena_Nav_Alpha);
+			SetNavPoint(ena_Nav_Beta);
+			SetNavPoint(ena_Nav_Gamma);
+			SetNavPoint(ena_Nav_Delta);
+			SetNavPoint(ena_Nav_Alpha);
+			
+			trans opening;
+
+endstate;
+	
+state deadState;
+	
+	code
+	
+	trans lostdead;
+	
+endstate;
+						
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	var
+		LocPoint my_nav;
+	
+	code
+			
+	SetSensorVisibility(GroupObjectID(69),True);
+	
+	SetCompositingEnabled(True);	
+
+	SetAudioFXEnabled(true);
+	
+	If (IsMusicPlaying == false) then
+		StartMusic("Music\SwampAmbLoop",0.25,2.0,30)
+	endif;
+	
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		//playsoundonce(eso_Dead);							 Need a Failed Mission Sound
+		failobjectiveall(30);
+		trans lostdead;
+	endif;
+				
+
+	Switch (Num_Patrols_Dead)
+
+		case 1:
+			PlayVoiceOverOnce("VO\OP5\MI2\Patrol1",Talker_Ian);
+			PlayVoiceOverOnce("VO\OP5\MI2\Patrol1",Talker_Rat);
+		endcase;
+		
+		case 2:
+			PlayVoiceOverOnce("VO\OP5\MI2\Patrol2",Talker_Ian);
+			PlayVoiceOverOnce("VO\OP5\MI2\Patrol2",Talker_Rat);
+		endcase;
+				
+		case 3:
+			PlayVoiceOverOnce("VO\OP5\MI2\Patrol3",Talker_Ian);
+			PlayVoiceOverOnce("VO\OP5\MI2\Patrol3",Talker_Rat);
+			PeekaBoo = True;
+			PlayVoiceOverOnce("VO\OP5\MI2\RF",Talker_Ian);
+			PlayVoiceOverOnce("VO\OP5\MI2\RF",Talker_Rat);
+			PlayVoiceOverOnce("VO\OP5\MI2\RF2",Talker_Ian);
+		endcase;
+	
+		case 4:
+			PlayVoiceOverOnce("VO\OP5\MI2\Patrol4",Talker_Ian);
+			PlayVoiceOverOnce("VO\OP5\MI2\SoSoon",Talker_Brk);
+			PlayVoiceOverOnce("VO\OP5\MI2\SoSoon",Talker_Ian);
+			PlayVoiceOverOnce("VO\OP5\MI2\JoinUncle",Talker_Brk);			
+			PlayVoiceOverOnce("VO\OP5\MI2\JoinUncle",Talker_Rat);
+			PlayVoiceOverOnce("VO\OP5\MI2\GoWhere",Talker_Brk);
+			PlayVoiceOverOnce("VO\OP5\MI2\GoWhere",Talker_Rat);
+			PlayVoiceOverOnce("VO\OP5\MI2\TooFar",Talker_Brk);
+		endcase;
+	
+	endswitch;
+
+//*******************************************
+// Meeting Mission Objectives
+//*******************************************						
+		
+//Mission Objective Primary    Destroy NorthWest Patrol	 Alpha
+					If (Objective1Win == false) then			
+						If (groupAlldead(groupobjectid(58))) then		
+						Objective1Win = true;
+						successobjective(eob_objective1);
+						SetNextNav;
+						endif;
+					endif;
+				
+//Mission Objective Primary    Destroy SouthWest Patrol	 Beta
+					If (Objective2Win == false) then			
+						If (groupAlldead(groupobjectid(56))) then		
+						Objective2Win = true;
+						successobjective(eob_objective2);
+						SetNextNav;
+						endif;
+					endif;
+							
+//Mission Objective Primary    Destroy Eastern Patrol		 Gamma
+					If (Objective3Win == false) then			
+						If (groupAlldead(groupobjectid(59))) then		
+						Objective3Win = true;
+						successobjective(eob_objective3);
+						SetNextNav;
+						endif;																																
+					endif;
+
+//Mission Objective Primary    Destroy Eastern Patrol		 Delta
+					If (Objective4Win == false) then			
+						If (groupAlldead(groupobjectid(57))) then		
+						Objective4Win = true;
+						successobjective(eob_objective4);
+						SetNextNav;
+						endif;																																
+					endif;
+	
+//Play Special Sound for all Patrols Dead.
+If (PatrolsDead == false) then
+	 If ((Objective1Win == true) and (Objective2Win == true) and (Objective3Win == true) and (Objective4Win == true)) then
+	 PatrolsDead = True;
+	 endif;
+	 //NEED TO ADD AUDIO TO SAY GO DESTROY THE GARAGES BEFORE YOU LEAVE, IF THAT HASN'T BEE DONE
+endif;
+ 			
+
+		//End it when all objectives are completed
+			if (objective4win == true) then
+				if (objective3win == true) then
+					if (objective2win == true) then
+						if (objective1win == true) then	
+						Time2Die = true;
+						//GetLocation(teleportNav,my_nav);
+						//Teleport(eve_Duncan_Burke,my_nav);
+						//trans WaitState;
+						trans BurkeFilm;
+						endif;
+					endif;
+				endif;
+			endif;	
+
+endstate;
+
+//-----------------------------------------
+//Time to Fight Duncan Burke
+//-----------------------------------------
+
+state BurkeBrawl;
+	code
+	
+	SetSensorVisibility(GroupObjectID(69),True);
+	
+	SetCompositingEnabled(True);	
+
+	SetAudioFXEnabled(true);
+	
+	If (IsMusicPlaying == false) then
+		StartMusic("Music\SwampAmbLoop",0.25,2.0,30)
+	endif;
+	
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		//playsoundonce(eso_Dead);							 Need a Failed Mission Sound
+		failobjectiveall(30);
+		trans lostdead;
+	endif;
+				
+//Mission Objective 5	 Primary Pop-Up: DESTROY Duncan Burke
+		If (Objective5Win == false) then
+			If (IsDead(eve_Duncan_Burke) == true) then
+				Objective5Win = True;
+				SuccessObjective (eob_Objective5);
+			endif;
+		endif;			
+		
+		If (objective5win == true) then
+			//successobjectiveall(12);
+			starttimer(gti_timer_21);
+			ResetTimer(21);								//Cinema Timer
+			trans won;
+		endif;
+
+		
+endstate;
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state opening;
+
+	code
+
+	SetAudioFXEnabled(false);
+	
+	if (cinemaskip) then
+		KillVoiceOvers;
+		cinema_cut = 0;
+		KillTimer(gti_timer_21);
+		SetGlobalTrigger(0,true);
+		playerai(epl_player0,false);
+		SetAudioFXEnabled(true);
+		CinemaEnd;
+		trans sit;	
+	endif;
+
+ 	switch (cinema_cut)
+			
+			case 0:
+				
+//Mission Objective Primary    Learn the HUD
+				
+				SetActiveCamera (eca_CameraShip_0000);
+				
+				FadeToBlack(0.0);
+				
+				Targetfollowobject(playermech);
+				//camerafollowobject(playermech);
+				targetoffset(0.0,5.0,0.0,0.0,false);
+				//Cameraoffset(35.0,10.0,-60.0,0.0,true);
+				//Cameraoffset(125.0,35.0,60.0,14.0,true);
+
+				
+			SetCameraFootShake(playermech,100);
+				
+				FadeFromBlack(6.0);
+
+				cinema_cut = cinema_cut + 1;
+			
+			endcase;
+			
+			case 1:
+				if (TimeGreater(gti_Timer_21,9)) then
+					ResetTimer(gti_Timer_21);
+					SetActiveCamera (eca_CameraShip);
+					Targetfollowobject(eve_swamp_condor_65);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					cinema_cut = cinema_cut + 2;
+				endif;
+			endcase;
+						
+			case 2:
+				if (TimeGreater(gti_Timer_21,8)) then
+					cinema_cut = cinema_cut + 1;
+					ResetTimer(gti_Timer_21);
+					SetActiveCamera (eca_CameraShip);
+					SetGlobalTrigger(0,true);
+					FadeToBlack(0.0);
+					FadeFromBlack(3.0);
+				endif;
+	
+			endcase;
+
+			case 3:
+				if (timegreater(gti_Timer_21,9)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					FadeToBlack(2.0);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+	
+	
+endstate;
+
+state won;
+
+		code
+		
+		PlayVoiceOverOnce("VO\OP5\MI2\DeadBrk",Talker_Fo1);
+			
+		If (timegreater(gti_Timer_21,4)) then
+			trans won1;
+		endif;
+		
+endstate;
+
+state won1;
+
+		code
+		
+	SetCompositingEnabled(False);	
+		
+		EndMission(true,35);
+
+			playerai(epl_player0,true);
+						
+			StartMusic("Music\Victory2",3.5,3.0,50);
+			
+			// *** Mike T Added Correct Salvage Here ***
+			AddWeaponSalvage("ClanFlamer",1);
+			AddWeaponSalvage("ERMediumLaser",2);
+			AddWeaponSalvage("ERSmallLaser",1);
+			AddWeaponSalvage("SmallLaser",1);
+			AddWeaponSalvage("LBXAC10",1);
+			AddWeaponSalvage("ClanLRM5",1);
+			AddWeaponSalvage("ClanLRM10",1);
+			AddWeaponSalvage("LRM10",1);
+			AddWeaponSalvage("MachineGun",4);
+			AddWeaponSalvage("MRM10",1);
+			AddWeaponSalvage("ERLargePulseLaser",1);
+			AddWeaponSalvage("MediumPulseLaser",2);
+			AddWeaponSalvage("SRM2",2);
+			AddWeaponSalvage("SRM6",1);
+			AddWeaponSalvage("SSRM2",2);
+			AddWeaponSalvage("SSRM6",1);
+			AddWeaponSalvage("ClanUltraAC2",1);
+			AddWeaponSalvage("ClanUltraAC5",1);
+			AddWeaponSalvage("UltraAC5",1);
+
+			trans won2;
+
+endstate;
+
+state won2;
+
+		code
+		
+			if (cinemaskip) then
+				KillVoiceOvers;
+				KillTimer(gti_timer_21);
+				SetGlobalTrigger(0,true);
+				SetAudioFXEnabled(true);
+				FadeToBlack(1.0);
+				EndMission(true,1);
+				//CinemaEnd;								Without the cinema end...this is a nice transition to shell
+			endif;
+		
+	switch (cinema_cut)
+			
+			case 0:
+				CinemaStart;
+								
+				SetActiveCamera (eca_CameraShip);
+				
+				FadeToBlack(0.0);				
+
+				StartTimer(gti_Timer_21);
+				ResetTimer(gti_Timer_21);
+				cinema_cut = cinema_cut + 1;
+			
+			endcase;
+			
+			case 1:
+	//			if (TimeGreater(gti_Timer_21,12)) then
+					//ResetTimer(gti_Timer_21);
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,2.0,0.0,0.0,false);
+					Cameraoffset(150.0,45.0,0.0,0.0,true);
+					//Cameraoffset(65.0,45.0,75.0,15.0,true);
+					FadeFromBlack(2.0);
+					cinema_cut = cinema_cut + 1;
+		//		endif;
+			endcase;
+
+			case 2:
+				
+		if (timegreater(gti_Timer_21,4)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\DeadBrk",Talker_Ian);
+		endif;
+		if (timegreater(gti_Timer_21,8)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\DeadBrk",Talker_Rat);
+		endif;
+		if (timegreater(gti_Timer_21,11)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\Ok",Talker_Ian);
+		endif;
+		if (timegreater(gti_Timer_21,13)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\Ok",Talker_Rat);
+		endif;
+		if (timegreater(gti_Timer_21,15)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\HesDead",Talker_Ian);
+		endif;
+		if (timegreater(gti_Timer_21,22)) then
+			PlayVoiceOverOnce("VO\OP5\MI2\HesDead",Talker_Rat);
+		endif;
+				
+				if (timegreater(gti_Timer_21,31)) then
+					//cinema_cut = 0;
+					FadetoBlack(2.0);
+					//resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					EndMission(true,3);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					//playerai(epl_player0,false);
+					//cinemaend;
+					//trans sit;	
+				endif;
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lostdead;
+
+		code
+		
+	SetCompositingEnabled(False);	
+ 		KillVoiceOvers;	
+		StartMusic("Music\Defeat",3.5,3.0,50);
+		EndMission(False,20);
+		trans lostdead2;
+endstate;
+
+state lostdead2;
+	
+		code
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(80.0,75.0,-25.0,21.0,false);
+				PlayVoiceOverOnce("VO\Generic\IanDestroyed",Talker_Rat);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			//FadeToBlack(1.0);
+			endcase;
+			
+		endswitch;	
+endstate;
+
+
+state BurkeFilm;
+
+	//var
+		//LocPoint my_nav;
+	
+		code
+		
+	SetCompositingEnabled(False);	
+		
+		//GetLocation(teleportNav,my_nav);
+		//Teleport(eve_Duncan_Burke,my_nav);
+		
+		playerai(epl_player0,true);
+		StartMusic("Music\DFA",3.5,3.0,40);
+		trans BurkeFilm2;
+
+endstate;
+
+state BurkeFilm2;
+
+		code
+ 	
+	switch (cinema_cut)
+			
+			case 0:
+				CinemaStart;
+								
+				SetActiveCamera (eca_CameraShip);
+				
+				FadeToBlack(0.0);				
+
+				StartTimer(gti_Timer_21);
+				ResetTimer(gti_Timer_21);
+				cinema_cut = cinema_cut + 1;
+			
+			endcase;
+			
+			case 1:
+	//			if (TimeGreater(gti_Timer_21,12)) then
+					ResetTimer(7);								//Temp Mission Timer For Burke
+					StartTimer(7);								//Temp Mission Start For Burke
+					ResetTimer(gti_Timer_21);
+					Targetfollowobject(eve_Duncan_Burke);
+					camerafollowobject(eve_Duncan_Burke);
+					targetoffset(0.0,2.0,0.0,0.0,false);
+					Cameraoffset(150.0,45.0,0.0,0.0,true);
+					//Cameraoffset(65.0,45.0,75.0,15.0,true);
+					FadeFromBlack(2.0);
+					cinema_cut = cinema_cut + 1;
+		//		endif;
+			endcase;
+
+			case 2:
+				if (timegreater(gti_Timer_21,16)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans BurkeBrawl;	
+				endif;
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+endfsm.
+// ******************************************************************
+

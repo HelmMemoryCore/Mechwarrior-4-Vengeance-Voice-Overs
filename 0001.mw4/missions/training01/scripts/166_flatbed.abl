@@ -1,0 +1,49 @@
+
+fsm Flatbed : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+		static integer speed;
+
+function Init;
+	code
+
+endfunction;
+
+state StartState;
+
+	code
+		SetSensorVisibility(ME,FALSE);
+
+		trans DoPath;
+
+endstate;
+
+state DoPath;
+	code
+		if (GetGlobalTrigger(46) == true) then
+			OrderMoveTo(epa_Path_Flatbed,200,MOVE_NOCYCLE,true,false);
+			trans MovingForward;
+		endif;
+
+endstate;
+
+state MovingForward;
+	code
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.
+

@@ -1,0 +1,1219 @@
+//*********************************************************************************
+
+fsm Arctic03 : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+		eternal boolean	ForGo;	
+		eternal boolean	ForDead;
+		eternal integer playermech;
+		eternal boolean Alert;
+		eternal boolean BigAlert;
+		eternal boolean Blackout;
+		eternal boolean SwiftGo;
+		eternal boolean APCGo;
+		eternal boolean	cargochoppers;
+		static integer	cinema_cut;
+		static integer	ChopperAlert;
+		static integer	SwiftDistance;
+		static boolean AlertTime;
+		static boolean CommTime;
+		static integer	CommAlert;
+		static integer	timetoalert;
+		eternal boolean [50]sounds_played;
+		
+		static boolean	WAY0;
+		static boolean	WAY1;
+		static boolean	WAY2;
+		static boolean	WAY3;
+		static boolean	WAY4;
+		Static boolean	CommVO;
+		static boolean	TellJoke;
+		Eternal boolean	SwiftClose;
+		eternal boolean APCCin;
+		static boolean	tele;
+		eternal boolean	SecondCin;
+		Static Integer SalvageCam;
+		eternal boolean StartedTime;
+		Static boolean LastCheck;
+		Static boolean SensorCheck;
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+
+		 playermech = getplayervehicle(epl_player0);	
+ 	
+			// GroupAddObject(GroupObjectId(1),playermech);
+			
+      GroupAddObject(GroupObjectId(2),eve_chopper1);
+			GroupAddObject(GroupObjectId(2),eve_chopper2);
+			GroupAddObject(GroupObjectId(2),eve_chopper3);
+			GroupAddObject(GroupObjectId(2),eve_chopper4);
+			GroupAddObject(GroupObjectId(2),eve_chopper5);
+			GroupAddObject(GroupObjectId(2),eve_chopper6);
+			GroupAddObject(GroupObjectId(21),eve_chopper1);
+			GroupAddObject(GroupObjectId(21),eve_chopper2);
+			GroupAddObject(GroupObjectId(22),eve_chopper3);
+			GroupAddObject(GroupObjectId(22),eve_chopper4);
+			GroupAddObject(GroupObjectId(23),eve_chopper5);
+			GroupAddObject(GroupObjectId(23),eve_chopper6);
+			SetGroupAI(groupobjectid(2),GROUPAI_NONE);
+				
+			GroupAddObject(GroupObjectId(4),eve_garrison1);
+			GroupAddObject(GroupObjectId(4),eve_garrison2);
+			SetGroupAI(groupobjectid(4),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(5),eve_cavalry1);
+			GroupAddObject(GroupObjectId(5),eve_cavalry2);
+			SetGroupAI(groupobjectid(5),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(6),eve_scout1);
+			GroupAddObject(GroupObjectId(6),eve_scout2);
+			SetGroupAI(groupobjectid(6),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(7),eve_swift1);
+			GroupAddObject(GroupObjectId(7),eve_swift2);
+			SetGroupAI(groupobjectid(7),GROUPAI_RADIOSQUAD);
+
+			GroupAddObject(GroupObjectId(8),eve_cargo1);
+			GroupAddObject(GroupObjectId(8),eve_cargo2);
+			SetGroupAI(groupobjectid(8),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(9),eve_Hammer1);
+			GroupAddObject(GroupObjectId(9),eve_Hammer2);
+			GroupAddObject(GroupObjectId(9),eve_Hammer3);
+			GroupAddObject(GroupObjectId(9),eve_Hammer4);
+			SetGroupAI(groupobjectid(9),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(10),eve_NonCom11);
+			GroupAddObject(GroupObjectId(10),eve_NonCom12);
+			SetGroupAI(groupobjectid(10),GROUPAI_MOODSQUAD);
+
+			GroupAddObject(GroupObjectId(13),eve_APC3);
+			GroupAddObject(GroupObjectId(13),eve_APC4);
+			GroupAddObject(GroupObjectId(13),eve_APC1);
+			GroupAddObject(GroupObjectId(13),eve_APC2);
+			SetGroupAI(groupobjectid(13),GROUPAI_MOODSQUAD);
+
+
+// in one big group so if any are shot at the alarm can be raised			
+			GroupAddObject(GroupObjectId(99),etu_Turret2);
+			GroupAddObject(GroupObjectId(99),etu_Turret3);
+      GroupAddObject(GroupObjectId(99),etu_Turret11);
+      GroupAddObject(GroupObjectId(99),eve_garrison1);
+			GroupAddObject(GroupObjectId(99),eve_garrison2);
+			GroupAddObject(GroupObjectId(99),eve_chopper1);
+			GroupAddObject(GroupObjectId(99),eve_chopper2);
+			GroupAddObject(GroupObjectId(99),eve_chopper3);
+			GroupAddObject(GroupObjectId(99),eve_chopper4);
+			GroupAddObject(GroupObjectId(99),eve_chopper5);
+			GroupAddObject(GroupObjectId(99),eve_chopper6);
+			SetGroupAI(groupobjectid(99),GROUPAI_NONE);
+
+//Using this to tell when I should start the APCs			
+			GroupAddObject(GroupObjectId(98),eve_garrison1);
+			GroupAddObject(GroupObjectId(98),eve_garrison2);
+			GroupAddObject(GroupObjectId(98),eve_chopper1);
+			GroupAddObject(GroupObjectId(98),eve_chopper2);
+			GroupAddObject(GroupObjectId(98),eve_chopper3);
+			GroupAddObject(GroupObjectId(98),eve_chopper4);
+			GroupAddObject(GroupObjectId(98),eve_chopper5);
+			GroupAddObject(GroupObjectId(98),eve_chopper6);
+			SetGroupAI(groupobjectid(98),GROUPAI_NONE);
+
+
+			SwiftGo = false;
+			APCGo = false;
+			Alert = false;
+			BigAlert = false;
+			
+			//*************************************************************************
+			//**  Goes to True when Primary Comm is killed -- NO BIG ALERT POSSIBLE **
+			//***********************************************************************
+			Blackout = false;
+			
+			//WRAPPERS
+			CommTime = false;
+			AlertTime = false;
+			
+			//******************************************************
+			//**  When the choppers take off\Swiftwinds Shutdown **
+			//****************************************************
+			CargoChoppers = false;
+			
+			cinema_cut = 0;
+			
+			//****************************************************************
+			//** TIME FOR SCOUT CHOPPERS TO SOUND ALERT ONCE SEEING PLAYER **
+			//**************************************************************
+			chopperAlert = 30;
+			
+			//*********************************************************************************************
+			//** THESE ARE FOR THE FIRST OBJ -- LOWERING THESE WILL INCREASE THE CHANCE FOR HIT AND RUN **
+			//*******************************************************************************************
+			TimeToAlert = 16;
+			CommAlert = 28;
+			//*********************************************************************
+			//** DURING HIT AND RUN -- THIS IS THE NUMBER THAT CONTROLS SWIFTGO **
+			//*******************************************************************
+			SwiftDistance = 1200;
+		
+		//*************************************			
+		//**  WRAPPERS FOR NAV PROGRESSION  **
+		//************************************
+		Way0 = false;
+		Way1 = false;
+		Way2 = false;
+		Way3 = false;
+		Way4 = false;
+		
+		CommVO = false;
+		TellJoke = false;
+		SwiftClose = false;
+		
+		ForGo = false;
+		ForDead = false;
+		APCCin = false;
+		tele = false;
+		SecondCin = false;
+		SalvageCam = eve_Salvage1;
+		for i = 0 to 22 do
+			sounds_played[i] = FALSE;
+		endfor;
+		StartedTime = FALSE;
+		LastCheck = FALSE;				
+		SensorCheck = FALSE;
+		SetTarget(ede_people_arctic_0016,ebu_tent2_102);
+		SetTarget(ede_people_arctic_0018,ebu_tent1_100);
+		SetTarget(ede_people_arctic_0015,ebu_marsh_radar_station);
+		SetTarget(ede_people_arctic_0035,ebu_factory3);
+		SetTarget(ede_people_arctic_0052,ebu_arctic_vehicle_hangar_30);
+		SetTarget(ede_people_arctic_0038,ebu_mech_bay_17);
+		SetTarget(ede_people_arctic_0040,ebu_mech_bay_18);
+		SetTarget(ede_people_arctic_0042,ebu_arctic_barracks_0109);
+		SetTarget(ede_people_arctic_0048,ebu_mech_repair_bldg_153);
+		SetTarget(ede_people_arctic_0050,ebu_mech_repair_bldg_153);
+		SetTarget(ede_people_arctic_0072,ebu_mech_hanger_156);
+		SetTarget(ede_people_arctic_0074,ebu_mech_hanger_156);
+		SetTarget(ede_people_arctic_0089,ebu_gen_factory3_53);
+//		SetTarget(ede_people_arctic_0111,ebu_weapon_warehouse_0001);
+//		SetTarget(ede_people_arctic_0113,ebu_weapon_warehouse);
+		SetTarget(ede_people_arctic_0115,ebu_mech_repair_bldg_0155);
+		SetTarget(ede_people_arctic_0117,ebu_mech_repair_bldg);
+
+		SetTarget(ede_people_arctic_0044,eve_field_base_0001);
+		SetTarget(ede_people_arctic_0046,eve_field_base_0000);
+		SetTarget(ede_people_arctic_0020,eve_field_base);
+
+		SetTarget(ede_creature_arctic_large_0001,ede_creature_arctic_large);
+		SetTarget(ede_creature_arctic_small,ede_creature_arctic_large);
+		SetTarget(ede_creature_arctic_small_0001,ede_creature_arctic_large);
+		SetTarget(ede_creature_arctic_small_0003,ede_creature_arctic_large);
+
+		SetTarget(ede_creature_arctic_large_0005,ede_creature_arctic_large_0004);
+		SetTarget(ede_creature_arctic_small_0007,ede_creature_arctic_large_0004);
+		SetTarget(ede_creature_arctic_small_0008,ede_creature_arctic_large_0004);
+		SetTarget(ede_creature_arctic_small_0009,ede_creature_arctic_large_0004);
+		SetTarget(ede_creature_arctic_small_0011,ede_creature_arctic_large_0004);
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+			playerai(epl_player0,true);		
+			starttimer(gti_timer_1);
+			setactivationdistance(6500);
+			if (sounds_played[9] == FALSE) then
+				sounds_played[9] = TRUE;
+				PlayVoiceOverOnce("VO\OP2\MI3\Intro",Talker_Rat);
+				PlayVoiceOverOnce("VO\OP2\MI3\Intro",Talker_Ian);
+				PlayVoiceOverOnce("VO\OP2\MI3\Intro2",Talker_Ian);
+				PlayVoiceOverOnce("VO\OP2\MI3\Intro2",Talker_Fo3);
+        PlayLancemateSound("VO\OP2\MI3\Intro2",2);
+					//PlaySoundOnce(eso_rat_b);
+					//PlaySoundOnce(eso_for_a);
+					//PlaySoundOnce(eso_jen_a);
+					//PlaySoundOnce(eso_cas_a);
+			endif;
+			revealobjective(eob_DestroyComm);
+			revealobjective(eob_PrimaryCapture);
+			setnavpoint(ena_Nav_Alpha);
+			revealnavpoint(ena_Nav_Beta);
+			revealnavpoint(ena_Nav_Gamma);
+			revealnavpoint(ena_Nav_Delta);
+			revealnavpoint(ena_Nav_Epsilon);
+			StartMusic("Music\SlowBurn",3.0,3.5,70);
+			trans Opening;
+
+endstate;
+
+	
+
+	
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+
+	if IsMusicPlaying == false then
+		StartMusic("Music\ArcticAmbLoop",2.0,2.0,20);
+	endif;
+
+if SensorCheck == false then	
+	if GetSensorMode(playermech) <> SENSOR_PASSIVE then
+		HelpMessage(eob_HelpMessage,10);
+		SensorCheck = true;
+	endif;
+endif;
+
+
+
+	if GetSensorMode(playermech) == SENSOR_PASSIVE then
+		Helpmessage(-2,1);
+	endif;
+
+
+//******************************************************	
+//** SOMETHING TO CHANGE NAVPOINTS WHEN YOU GET NEAR **
+//****************************************************
+
+if way0 == false then
+	if iswithin(playermech,ena_Nav_Alpha,150) then
+		PlayVoiceOverOnce("VO\Generic\NavAlpha",Talker_BET);
+		SetNavPoint(ena_Nav_Beta);
+		Way0 = true;
+	endif;
+endif;
+
+if way1 == false then
+	if iswithin(playermech,ena_Nav_Beta,150) then
+		PlayVoiceOverOnce("VO\Generic\NavBeta",Talker_BET);
+		SetNavPoint(ena_Nav_Gamma);
+		Way1 = true;
+	endif;
+endif;
+
+if Way2 == false then
+	if iswithin(playermech,ena_Nav_Gamma,150) then
+		PlayVoiceOverOnce("VO\Generic\NavGamma",Talker_BET);
+		SetNavPoint(ena_Nav_Delta);
+		Way2 = true;
+	endif;
+endif;
+
+if Way3 == false then
+	if iswithin(playermech,ena_Nav_Delta,150) then
+		PlayVoiceOverOnce("VO\Generic\NavDelta",Talker_BET);
+		SetNavPoint(ena_Nav_Epsilon);
+		Way3 = true;
+	endif;
+endif;
+
+//if Way3 == true then
+//	if iswithin(playermech,ena_NavEpsilon,150) then
+//		SetNavPoint(ena_NavZeta);
+//		Way3 = false;
+//	endif;
+//endif;
+	
+	if isdead(eve_Salvage1) == true then
+		SalvageCam = eve_Salvage2;
+	endif;
+	
+	if SalvageCam == eve_Salvage2 then
+		if isdead(eve_Salvage2) == true then
+			SalvageCam = playermech;
+		endif;
+	endif;
+	
+									
+
+
+		if iswithin(playermech,GroupObjectID(6),850) then
+//********************************************************************************************
+//*********************************  DONT FORGET THE SOUND IN THE SCOUT.ABL  *****************
+ 		PlayVoiceOverOnce("VO\OP2\MI3\TwoScouts",Talker_IAN);
+//*********************************************************************************************			
+			PlayVoiceOverOnce("VO\OP2\MI3\StayPassive",Talker_RAT);
+	endif;
+	
+//	if iswithin(playermech,eve_cavalry1,850) then
+		if iswithin(playermech,GroupObjectID(5),850) then
+				if sounds_played[13] == false then
+			PlayLancemateSound("VO\OP2\MI3\PatrolHere",1);
+					//playsoundonce(eso_CAS_G);
+			sounds_played[13] = true;
+				endif;
+	endif;
+
+ 	If ((isShot(eve_Salvage1) == true) or (isShot(eve_Salvage1) == true)) then
+		PlayVoiceOverOnce("VO\OP2\MI3\SaveMechs",Talker_RAT);
+	endif;
+
+
+ if CommVO == false then
+	if iswithin(playermech,ebu_Comm_Station,800) then
+		
+    PlayVoiceOverOnce("VO\OP2\MI3\Array",Talker_Ian);
+		CommVo = true;
+	endif;
+endif;
+
+
+
+ if (sounds_played[10] == false) then
+	if timegreater(1,60) then
+		sounds_played[10] = true;
+			if PlayLancemateSound("VO\OP2\MI3\Joke",1) == true then
+				telljoke = true;
+				//PlayVoiceOverOnce("VO\OP2\MI3\Joke",Talker_Rat);
+				PlayVoiceOverOnce("VO\OP2\MI3\Joke2",Talker_Cas);
+      endif;
+  endif;
+endif;
+//---------------ALERTS
+	if alert == true then
+			if blackout == true then
+				if (sounds_played[6] == FALSE) then
+					sounds_played[6] = TRUE;
+					StartMusic("Music\Push",3.0,3.5,50);
+					PlayVoiceOverOnce("VO\OP2\MI3\Recall",Talker_Rat);
+					PlayVoiceOverOnce("VO\OP2\MI3\Recall",Talker_Ian);
+					PlayLancemateSound("VO\OP2\MI3\Recall",1);
+				endif;
+			endif;
+		if blackout == false then
+					BIGALERT = TRUE;
+					failobjective(eob_PrimaryCapture);
+					failobjective(eob_DestroyComm);
+					setnavpoint(ena_Nav_Beta);
+					revealnavpoint(ena_Nav_ZEta);
+//					revealnavpoint(ena_EscapePoint);
+					RevealObjective(eob_cargoescape);
+					RevealObjective(eob_DestroyBase);
+//					RevealObjective(eob_DestroyWare);
+//					RevealObjective(eob_DestroyFuel);
+						if (sounds_played[7] == FALSE) then
+							sounds_played[7] = TRUE;
+							StartMusic("Music\Push",3.0,3.5,50);
+							PlayVoiceOverOnce("VO\OP2\MI3\MessageOff",Talker_Rat);
+							PlayVoiceOverOnce("VO\OP2\MI3\MessageOff",Talker_Ian);
+							PlayVoiceOverOnce("VO\OP2\MI3\Choppers",Talker_Rat);
+							PlayVoiceOverOnce("VO\OP2\MI3\Choppers",Talker_Ian);
+							PlayVoiceOverOnce("VO\OP2\MI3\Choppers2",Talker_Rat);
+							PlayVoiceOverOnce("VO\OP2\MI3\Choppers2",Talker_Ian);
+							PlayVoiceOverOnce("VO\OP2\MI3\LeaveNothing",Talker_Rat);
+							PlayVoiceOverOnce("VO\OP2\MI3\LeaveNothing",Talker_Ian);
+						endif;
+				trans HITANDRUN;
+		endif;
+	endif;
+
+	if (isdead(ebu_comm_station) == true) then
+		blackout = true;
+	endif;
+
+	
+		if (isdead(ebu_SecondaryCommRelay) == TRUE) then
+			if Alert == false then
+			killtimer(11);
+			killtimer(12);
+//			killtimer(3);
+		endif;
+		endif;
+//----------Sound the general Alarm
+ if AlertTime == FALSE then
+	if isshot(GroupObjectID(99)) then	
+		starttimer(gti_timer_3);
+		AlertTime = TRUE;
+	endif;
+ endif;
+
+  if AlertTime == FALSE then
+		if iswithin(playermech,ebu_base1,1000) then
+			if playershooting(epl_player0,2) then	
+				starttimer(gti_timer_3);
+				AlertTime = TRUE;
+			endif;
+		endif;
+	endif;
+	
+	if CommTime == FALSE then
+	
+		if GetSensorMode(playermech) <> SENSOR_ACTIVE then
+			if iswithin(playermech,ebu_Comm_Station,249) then
+				starttimer(gti_timer_4);
+				CommTime = TRUE;
+			endif;
+		endif;
+		
+		if GetSensorMode(playermech) == SENSOR_ACTIVE then
+			if iswithin(playermech,ebu_Comm_Station,500) then
+				starttimer(gti_timer_4);
+				CommTime = TRUE;
+			endif;
+		endif;
+
+		
+		if iswithin(playermech,ebu_Comm_Station,1000) then
+			if playershooting(epl_player0,2) then	
+				starttimer(gti_timer_4);
+				CommTime = TRUE;
+			endif;
+		endif;
+
+	endif;
+
+	
+	
+	if isdead(ebu_Comm_Station) then
+		killtimer(4);
+	endif;
+	
+
+if alertTime == TRUE then
+if timegreater(3,TimetoAlert) then
+	ALERT = TRUE;
+endif;
+endif;
+
+if commtime == true then
+if timegreater(4,CommAlert) then
+	ALERT = TRUE;
+endif;
+endif;
+	
+//----Scout Chopper Alert-------------	
+	
+	if timegreater(gti_timer_11,ChopperAlert) then
+		alert = true;
+	endif;
+	
+	if (groupalldead(GroupObjectID(6)) == true) then
+		killtimer(11);
+	endif;
+//-----------------------------------
+																
+	if alert == false then
+		if groupalldead(GroupObjectID(2)) == TRUE then
+			if groupalldead(GroupObjectID(4)) == TRUE then
+				SuccessObjective(eob_PrimaryCapture);
+			endif;
+		endif;
+	endif;
+//Do I want the Scouts in these two?????
+	if alert == true then
+		if groupalldead(GroupObjectID(2)) == TRUE then
+			if groupalldead(GroupObjectID(4)) == TRUE then
+				if groupalldead(GroupObjectID(5)) == TRUE then
+					successobjective(eob_PrimaryCapture);
+				endif;
+			endif;
+		endif;
+	endif;
+	
+	if (isdead(ebu_comm_station) == true) then
+  SuccessObjective(eob_DestroyComm);
+		if (sounds_played[8] == FALSE) then
+			sounds_played[8] = TRUE;
+			PlayVoiceOverOnce("VO\OP2\MI3\ArrayDead",Talker_Rat);						 // Rat D
+			PlayVoiceOverOnce("VO\OP2\MI3\ArrayDead",Talker_Ian);							// Ian_C
+      PlayVoiceOverOnce("VO\OP2\MI3\ArrayDead2",Talker_Rat);						//Rat E
+			PlayVoiceOverOnce("VO\OP2\MI3\ArrayDead2",Talker_Ian);						// Ian D
+          If TellJoke == true then
+            PlayVoiceOverOnce("VO\OP2\MI3\ArrayDead3",Talker_Rat);
+						PlayVoiceOverOnce("VO\OP2\MI3\ArrayDead3",Talker_Cas);
+						PlayVoiceOverOnce("VO\OP2\MI3\ArrayDead4",Talker_Rat);
+						PlayVoiceOverOnce("VO\OP2\MI3\ArrayDead4",Talker_Cas);
+						PlayVoiceOverOnce("VO\OP2\MI3\ArradDead5",Talker_Rat);
+					endif;
+			SetNavPoint(ena_Nav_Beta);
+		endif;
+	endif;
+	
+	if GroupNumDead(GroupObjectID(98)) > 6 then
+		APCgo = True;
+	endif;
+
+//FOR ULTIMATE SUCCESS HAVE A SOUND AND POSSIBLE CARGO TRUCKS SHOW UP
+	if (CheckObjectiveCompletion(eob_PrimaryCapture) == OBJECTIVE_SUCCEEDED) then
+		if (CheckObjectiveCompletion(eob_DestroyComm) == OBJECTIVE_SUCCEEDED) then
+			SuccessObjectiveAll(25);
+			StartMusic("Music\Victory",3.0,3.5,70);
+			if (sounds_played[4] == FALSE) then
+						sounds_played[4] = TRUE;
+						
+						PlayVoiceOverOnce("VO\OP2\MI3\AllDead",Talker_Fo2);
+						PlayVoiceOverOnce("VO\OP2\MI3\AllDead",Talker_Ian);
+						PlayVoiceOverOnce("VO\OP2\MI3\AllDead",Talker_Rat);
+            PlayVoiceOverOnce("VO\OP2\MI3\ReturnBase",Talker_Rat);
+						PlayVoiceOverOnce("VO\OP2\MI3\ReturnBase",Talker_Ian);
+						PlayLancemateSound("VO\OP2\MI3\AllDead",2);
+						// Insert Good Salvage Here
+						
+						AddWeaponSalvage("Flamer",1);
+						AddWeaponSalvage("ClanFlamer",1);
+						AddWeaponSalvage("BombastLaser",1);
+						AddWeaponSalvage("ERLargeLaser",1);
+						AddWeaponSalvage("ERSmallLaser",1);
+						AddWeaponSalvage("MediumLaser",3);
+						AddWeaponSalvage("SmallLaser",4);
+						AddWeaponSalvage("LBXAC10",1);
+						AddWeaponSalvage("ClanLRM5",2);
+						AddWeaponSalvage("LRM5",3);
+						AddWeaponSalvage("LRM10",1);
+						AddWeaponSalvage("LRM15",1);
+						AddWeaponSalvage("LRM20",1);
+						AddWeaponSalvage("ClanMachineGun",3);
+						AddWeaponSalvage("MachineGun",2);
+						AddWeaponSalvage("NarcBeacon",1);
+						AddWeaponSalvage("ERSmallPulseLaser",1);
+						AddWeaponSalvage("SmallPulseLaser",1);
+						AddWeaponSalvage("SRM2",2);
+						AddWeaponSalvage("SRM4",2);
+						AddWeaponSalvage("SRM6",2);
+						AddWeaponSalvage("SSRM2",1);
+						AddWeaponSalvage("UltraAC2",2);
+						AddWeaponSalvage("UltraAC5",2);
+						AddWeaponSalvage("ClanUltraAC2",2);
+						
+						if isdead(eve_Salvage1) == false then
+							AddMechInstanceSalvage("Shadow Cat");
+						endif;
+						
+						if isdead(eve_Salvage2) == false then
+							AddMechInstanceSalvage("Catapult");
+						endif;
+						//trans wonprimary;						
+								resettimer(gti_timer_28);
+								starttimer(gti_timer_28);
+								trans waitforcinema;						
+			endif;
+		endif;
+	endif;
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		KillVoiceOvers;
+		PlayVoiceOverOnce("VO\Generic\IanDestroyed2",talker_RAT);
+		PlayVoiceOverOnce("VO\Generic\IanDestroyed2",talker_RAT);
+		StartMusic("Music\Defeat",3.0,3.5,70);
+		endmission(false,13);
+		Trans Lost;
+	endif;
+
+				
+endstate;
+
+//*************************************************************************************
+//***********************************		NEW STATE		**********************************
+//************************************************************************************
+
+state HITANDRUN;
+	code
+
+	if IsMusicPlaying == false then
+		StartMusic("Music\ArcticAmbLoop",2.0,2.0,25);
+	endif;
+
+
+if way1 == false then
+	if iswithin(playermech,ena_Nav_Beta,200) then
+		SetNavPoint(ena_Nav_Gamma);
+		PlayVoiceOverOnce("VO\Generic\NavBeta",Talker_BET);
+		Way1 = true;
+	endif;
+endif;
+
+if Way2 == false then
+	if iswithin(playermech,ena_Nav_Gamma,200) then
+		SetNavPoint(ena_Nav_Delta);
+		PlayVoiceOverOnce("VO\Generic\NavGamma",Talker_BET);
+		Way2 = true;
+	endif;
+endif;
+
+if Way3 == false then
+	if iswithin(playermech,ena_Nav_Delta,200) then
+		PlayVoiceOverOnce("VO\Generic\NavDelta",Talker_BET);
+		SetNavPoint(ena_Nav_Epsilon);
+		Way3 = true;
+	endif;
+endif;
+
+if Way4 == false then
+	if iswithin(playermech,ena_Nav_Epsilon,200) then
+		PlayVoiceOverOnce("VO\Generic\NavEpsilon",Talker_BET);
+		SetNavPoint(ena_Nav_Zeta);
+		Way3 = false;
+	endif;
+endif;
+
+if Way4 == false then
+	if iswithin(playermech,ena_Nav_Zeta,200) then
+		PlayVoiceOverOnce("VO\Generic\NavZeta",Talker_BET);
+    Way4 = true;
+	endif;
+endif;
+
+//MAYBE FLANK TURRETS NEED TO BE DESTROYED	
+	if iswithin(playermech,ebu_Base1,SwiftDistance) then
+		SwiftGo = TRUE;
+		PlayVoiceOverOnce("VO\OP2\MI3\OnBoard",Talker_FO3);
+		PlayVoiceOverOnce("VO\OP2\MI3\OnBoard",Talker_Rat);
+		PlayVoiceOverOnce("VO\OP2\MI3\OnBoard",Talker_Ian);
+	endif;
+
+	if SwiftClose == false then
+		if iswithin(eve_swift1,eve_cargo1,500) then
+			swiftclose = true;
+			PlayVoiceOverOnce("VO\OP2\MI3\AtBase",Talker_FO3);
+			PlayVoiceOverOnce("VO\OP2\MI3\AtBase",Talker_Ian);
+    endif;
+	endif;
+	
+if (isdead(ebu_fuel1) == true) then
+	if (isdead(ebu_fuel2) == true)  then
+		if (isdead(eve_Salvage1) == true) then
+			if (isdead(eve_Salvage2) == true) then
+		successobjective(eob_DestroyBase);
+			endif;
+		endif;
+	endif;
+endif;
+
+
+	if cargochoppers == true then
+		successobjective(eob_CargoEscape);
+		RevealObjective(eob_playerescape);
+		LastCheck = true;
+		if (sounds_played[3] == FALSE) then
+				sounds_played[3] = TRUE;
+				if isdead(eve_cargo1) == false then
+          PlayVoiceOverOnce("VO\OP2\MI3\Lift",Talker_BD1);
+        endif;
+				if isdead(eve_cargo2) == false then
+					PlayVoiceOverOnce("VO\OP2\MI3\Lift",Talker_BD2);
+        endif;
+				PlayVoiceOverOnce("VO\OP2\MI3\ChoppersOff",Talker_Ian);
+				PlayVoiceOverOnce("VO\OP2\MI3\ChoppersOff",Talker_Rat);
+				if PlayLancemateSound("VO\OP2\MI3\ChoppersOff",1) == true	then
+					PlayVoiceOverOnce("VO\OP2\MI3\ChoppersOff2,",Talker_Ian);
+				endif;
+       endif;
+			endif;
+				
+			if LastCheck == true then
+				if (findobject(playermech,fa_enemy,FT_MECH,fc_nearest,FF_SEEPLAYER,1000) == no_unit) then
+					successobjective(eob_PlayerEscape);
+					EndMission(True,18);
+					StartMusic("Music\Victory",3.0,3.5,70);
+						if (CheckObjectiveCompletion(eob_DestroyFuel) == OBJECTIVE_NEUTRAL) then
+						failobjective(eob_DestroyFuel);
+						endif;
+						if (CheckObjectiveCompletion(eob_DestroyWare) == OBJECTIVE_NEUTRAL) then
+						failobjective(eob_DestroyWare);
+						endif;
+						if (CheckObjectiveCompletion(eob_DestroyBase) == OBJECTIVE_NEUTRAL) then
+						failobjective(eob_DestroyBase);
+						endif;	
+				
+				//Insert OK salvage here
+
+
+						AddWeaponSalvage("Flamer",1);
+						AddWeaponSalvage("ClanFlamer",1);
+						AddWeaponSalvage("BombastLaser",1);
+						AddWeaponSalvage("ERLargeLaser",1);
+						AddWeaponSalvage("LBXAC10",1);
+						AddWeaponSalvage("ClanLRM5",1);
+            AddWeaponSalvage("LRM10",1);
+						AddWeaponSalvage("LRM15",1);
+						AddWeaponSalvage("LRM20",1);
+						AddWeaponSalvage("ClanMachineGun",1);
+						AddWeaponSalvage("MachineGun",1);
+						AddWeaponSalvage("NarcBeacon",1);
+						AddWeaponSalvage("ERSmallPulseLaser",1);
+						AddWeaponSalvage("SmallPulseLaser",1);
+						AddWeaponSalvage("SSRM2",1);
+						AddWeaponSalvage("UltraAC2",1);
+						AddWeaponSalvage("UltraAC5",1);
+						AddWeaponSalvage("ClanUltraAC2",1);
+				
+				TRANS WONSECONDARY
+
+			endif;
+		endif;
+//***********************************		
+//** THIS IS IF WE GET ESCAPE VOs **		
+//**********************************
+//		if (findobject(playermech,fa_enemy,FT_DEFAULT,fc_nearest,FF_SEEPLAYER,800) == no_unit) then
+//				SuccessObjectiveAll(12);
+
+
+	
+//	if iswithin(playermech,eve_Hammer1,850) then
+		if iswithin(playermech,GroupObjectID(9),850) then
+				if sounds_played[13] == false then
+					PlayLancemateSound("VO\OP2\MI3\BaddiesHere",1);
+					PlayVoiceOverOnce("VO\OP2\MI3\BaddiesHere",Talker_PI4);
+					PlayVoiceOverOnce("VO\OP2\MI3\BaddiesHere",Talker_Rat);
+					StartMusic("Music\Vista",3.0,3.5,50);
+					sounds_played[13] = true;
+				endif;
+ endif;
+																	
+
+	//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		KillVoiceOvers;
+		PlayVoiceOverOnce("VO\Generic\IanDestroyed2",talker_RAT);
+		PlayVoiceOverOnce("VO\Generic\IanDestroyed2",talker_RAT);
+		StartMusic("Music\Defeat",3.0,3.5,70);
+		endmission(false,13);
+		Trans Lost;
+	endif;
+	
+	
+if GroupAllDead(groupobjectid(8)) then
+	failobjective(eob_CargoEscape);
+	PlayVoiceOverOnce("VO\OP2\MI3\LostChoppers",Talker_RAT);
+	PlayVoiceOverOnce("VO\GENERIC\ABORT3",Talker_RAT);
+	PlayVoiceOverOnce("VO\GENERIC\ACK",Talker_IAN);
+	EndMission(false,12);
+	Trans lost;
+endif;
+
+
+//Play a sound file for retreat
+if cargochoppers == false then
+	if GroupAllDead(groupobjectid(7)) then
+		failobjective(eob_CargoEscape);
+		PlayVoiceOverOnce("VO\OP2\MI3\LostPilots",Talker_RAT);	
+		PlayVoiceOverOnce("VO\GENERIC\ABORT3",Talker_RAT);
+		PlayVoiceOverOnce("VO\GENERIC\ACK",Talker_IAN);
+		EndMission(false,12);
+		Trans lost;
+	endif;
+endif;
+
+endstate;
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,2)) then
+			playerai(epl_player0,true);
+			trans wonprimary;
+		endif;
+		
+		
+endstate;
+
+
+
+state opening;
+
+	code
+	
+		if (cinemaskip) then
+			cinema_cut = 0;
+//			TeleportToHell(ebu_CinComm);
+//			TeleportToHell(ebu_CinBuild1);
+//			TeleportToHell(etu_CinBuild2);
+//			TeleportToHell(eve_CinVeh1);
+//			TeleportToHell(eve_CinVeh2);
+//			TeleportToHell(eve_CinVeh3);
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+//			HelpMessage(eob_HelpMessage,10);
+			cinemaend;
+			ForDead = true;
+			StartTimer(gti_timer_22);
+			KillVoiceOvers;
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+			trans sit;	
+	endif;
+
+
+			
+switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera(eca_cameraship2);
+			Fadetoblack(0.0);
+
+			Targetfollowobject(playermech);
+			camerafollowobject(playermech);
+			//SetCameraFootShake(playermech,100);
+
+			targetoffset(0.0,4.0,0.0,0.0,false);
+			Cameraoffset(-140.0,49.0,4.0,0.0,false);
+
+
+			Cameraoffset(-90.0,35.0,12.0,9.0,false);
+
+			startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+      SetCameraFootShake(playermech,100);
+			FadeFromBlack(5.0);
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+
+//			case 1:
+//				
+//				if (timegreater(gti_Timer_21,9)) then
+//															
+//									targetfollowobject(ebu_CinComm);
+//									camerafollowobject(ebu_CinComm);
+//									targetoffset(0.0,4.0,0.0,0.0,false);
+//									Cameraoffset(0.0,35.0,350.0,0.0,false);
+//									Cameraoffset(0.0,35.0,35.0,9.0,false);
+//
+//					resetTimer (gti_Timer_21);
+//					cinema_cut = cinema_cut + 2;	
+//				endif;
+//				
+//			endcase;
+//
+//				case 2:
+//				if (TimeGreater(gti_Timer_21,2)) then
+//				setactivecamera(eca_zoomship);
+//				targetfollowobject(ebu_Base1);
+//					CameraFollowPath(epa_CamPath,500);
+//					cinema_cut = cinema_cut + 1;
+//					ResetTimer(gti_Timer_21);
+//					FadeToBlack(0.0);
+//					FadeFromBlack(3.0);
+//				endif; 		
+//			endcase;
+			
+			case 1:
+				
+				if (timegreater(gti_Timer_21,8)) then
+//					TeleportToHell(ebu_CinComm);
+//					TeleportToHell(ebu_CinBuild1);
+//					TeleportToHell(etu_CinBuild2);
+//					TeleportToHell(eve_CinVeh1);
+//					TeleportToHell(eve_CinVeh2);
+//					TeleportToHell(eve_CinVeh3);
+          setactivecamera(eca_cameraship2);
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(-130.0,49.0,35.0,0.0,true);
+					Cameraoffset(-90.0,35.0,60.0,17.0,true);
+					Fadefromblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;
+					
+				endif;
+				
+			endcase;
+			
+//		case :
+//				if (TimeGreater(gti_Timer_21,6)) then
+//					ForGo = True;
+//					cinema_cut = cinema_cut + 1;
+//					ResetTimer(gti_Timer_21);
+//					camerafollowobject(eve_for);
+//					targetoffset(0.0,8.0,0.0,0.0,false);
+//					Cameraoffset(-45.0,45.0,45.0,0.0,true);
+//					FadeToBlack(0.0);
+//					FadeFromBlack(3.0);					
+//				endif; 						
+//		endcase;	
+					
+					
+		case 2:
+				
+				if (timegreater(gti_Timer_21,8)) then
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(-130.0,49.0,-35.0,0.0,true);
+					Cameraoffset(-90.0,35.0,-60.0,17.0,true);
+					Fadefromblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;
+					
+				endif;
+				
+			endcase;
+	
+			case 3:
+				
+				if (timegreater(gti_Timer_21,12)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+//					HelpMessage(eob_HelpMessage,10);
+					cinemaend;
+					StartTimer(gti_timer_22);
+					ForDead = true;
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+	
+	
+endstate;
+
+state wonprimary;
+
+		code
+		
+		if (cinemaskip) then
+			cinema_cut = 0;
+			playerai(epl_player0,false);
+			KillVoiceOvers;
+			Endmission(true,1);
+			cinemaend;
+		endif;
+
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				playerai(epl_player0,true);
+				ClearMoveOrder(playermech);
+				setactivecamera (eca_cameraship2);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(60.0,80.0,-150.0,0.0,false);
+				Cameraoffset(-120.0,20.0,50.0,20.0,false);
+				startTimer (gti_Timer_21);
+				resettimer (gti_Timer_21);
+				FadeFromBlack(4.0);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			if tele == false then
+				if timegreater(gti_timer_21,1) then
+					 APCCIN = true;
+					 tele = true;
+				endif;
+			endif;
+			
+			if (timegreater(gti_Timer_21,3)) then
+				resettimer (gti_Timer_21);
+				Targetfollowobject(eve_APC1);
+				Camerafollowobject(eve_APC1);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(60.0,80.0,-150.0,0.0,false);
+				Cameraoffset(-120.0,20.0,50.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endif;
+			endcase;
+			
+		case 2:
+			if (timegreater(gti_Timer_21,5)) then
+						resettimer (gti_Timer_21);
+					
+//WRAP THIS IN AN ISDEAD!					
+          Targetfollowobject(SalvageCam);
+					Camerafollowobject(SalvageCam);
+          Targetoffset(0.0,4.0,0.0,0.0,false);
+					Cameraoffset(-190.0,00.0,0.0,0.0,false);
+					Cameraoffset(-90.0,20.0,50.0,6.0,false);
+					Cinema_cut=Cinema_cut+1;
+			endif;
+		endcase;
+		
+		case 3:
+			if (timegreater(gti_Timer_21,5)) then
+//					OrderMoveToObject(ena_NavAlpha,600);
+					resettimer (gti_Timer_21);
+					Targetfollowobject(playermech);
+					Camerafollowobject(playermech);
+					Targetoffset(0.0,4.0,0.0,0.0,false);
+					Cameraoffset(-190.0,00.0,0.0,0.0,false);
+					Cameraoffset(-90.0,20.0,50.0,6.0,false);
+					Cinema_cut=Cinema_cut+1;
+			endif;
+		endcase;
+			
+			case 4:
+				
+				if (timegreater(gti_Timer_21,10)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					playerai(epl_player0,false);
+					FadeToBlack(6.0);
+					cinemaend;
+          trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state wonsecondary;
+
+		code
+		
+		if (cinemaskip) then
+//			cinema_cut = 0;
+			playerai(epl_player0,false);
+			Endmission(true,1);
+			KillVoiceOvers;
+			cinemaend;
+		endif;
+
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				SecondCin = TRUE;
+				playerai(epl_player0,true);
+				SetTargetDesirability(playermech,-1);
+				ClearMoveOrder(playermech);
+				setactivecamera (eca_cameraship2);
+				Fadefromblack(0.0);
+				Targetfollowobject(eve_cargo1);
+				Camerafollowobject(eve_cargo1);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(60.0,80.0,-150.0,0.0,false);
+				Cameraoffset(-120.0,20.0,-50.0,20.0,false);
+				startTimer (gti_Timer_21);
+				resettimer (gti_Timer_21);
+				FadeFromBlack(6.0);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+
+			if (timegreater(gti_Timer_21,9)) then
+//					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(60.0,80.0,-150.0,0.0,false);
+				Cameraoffset(0.0,20.0,50.0,7.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endif;
+			endcase;
+						
+			case 2:
+				
+				if (timegreater(gti_Timer_21,9)) then
+//					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					playerai(epl_player0,false);
+					FadeToBlack(1.0);
+					cinemaend;
+          EndMission(true,1);	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+		
+		if (cinemaskip) then
+			cinema_cut = 0;
+			playerai(epl_player0,false);
+			KillVoiceOvers;
+			Endmission(false,1);
+			cinemaend;
+		endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship2);
+				Fadefromblack(0.0);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+
+
+endfsm.
+//******************************************************************
+

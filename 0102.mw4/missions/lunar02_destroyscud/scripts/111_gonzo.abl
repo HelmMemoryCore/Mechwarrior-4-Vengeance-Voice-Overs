@@ -1,0 +1,264 @@
+fsm Gonzo : integer;
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+	var
+		static integer			attackRange;		// At what range do I start attacking?
+		static integer			withdrawRange;		// At what range do I withdraw from combat?
+		static integer			groupNumber;		// What's my group -- i.e. I will use GroupObjectID(groupNumber) to identify my group
+		static integer			speed;				// The speed at which I move along the path
+		static integer			formationType;		// What kind of formation am I in?
+		static integer			formationDensity;	// How densely are we packed?
+		static integer			path;				// My path
+		static integer			moveType;			// How I move along the path
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			findTypes;			// What kind of enemies to look for
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+
+		static integer			mood;				// My default mood.
+
+		static integer			friendlyFireFrustrationLevel;
+
+		static integer			trigger_id;
+
+		static integer			frustration_timer;
+		static integer			kill_player_timer;
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 800;
+		withdrawRange	= attackRange * 3 / 2;
+		groupNumber		= 1;
+		path			= epa_Gonzo_Path;
+		moveType		= move_nocycle;
+		speed			= 600;
+		formationType	= 1;
+		formationDensity= formtype_sparse;
+
+		trigger_id		= 9;
+
+		frustration_timer = gti_timer_1;
+		kill_player_timer = gti_timer_2;
+
+		// driver settings
+		piloting		= 50;
+		gunnery			= 10;
+		minDelay		= 0.5;
+		maxDelay		= 1.0;
+		eliteLevel		= 80;
+		attackThrottle	= 60;
+		isShotRadius	= 160;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+
+		friendlyFireFrustrationLevel = 0;
+
+		StartTimer(frustration_timer);
+		SetTimer(frustration_timer,100);
+
+endfunction;
+
+function CheckIfPlayerShotMe : integer;
+	var
+		ObjectID who_shot;
+
+	code
+		if (Not TimeGreater(frustration_timer,8)) then
+			return (0);
+		endif;
+		
+		if (Not IsShot(ME)) then
+			return (0);
+		endif;
+
+		who_shot = WhoShot(me);
+
+		if (who_shot <> getplayervehicle(epl_player0)) then
+			return (0);
+		endif;
+
+		ResetTimer(frustration_timer);
+
+		if (friendlyFireFrustrationLevel == 0) then
+			PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_GON);
+			friendlyFireFrustrationLevel = 1;
+		else
+			if (friendlyFireFrustrationLevel == 1) then
+				PlayVoiceOverOnce("VO\Generic\CheckFire2",TALKER_GON);
+				friendlyFireFrustrationLevel = 2;
+			else
+				if (friendlyFireFrustrationLevel == 2) then
+					PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_GON);
+					friendlyFireFrustrationLevel = 3;
+				else
+					PlayVoiceOverOnce("VO\Generic\KillIan1",TALKER_RAT);
+					StartTimer(kill_player_timer);
+					ResetTimer(kill_player_timer);
+
+					SetGlobalTrigger(77,true);
+					trans KillPlayerState;
+				endif;
+			endif;
+		endif;
+
+		return (1);
+
+endfunction;
+
+function CheckIfWeWon;
+	code
+		if (GetGlobalTrigger(55) == true) then
+			trans VictoryState;
+		endif;
+endfunction;
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,false);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+
+		CheckIfWeWon;
+		CheckIfPlayerShotMe;
+
+		if (GetGlobalTrigger(trigger_id) == true) then
+			trans RigidPathState;
+		endif;
+
+		OrderMoveLookOut;
+endstate;
+
+state RigidPathState;
+	var
+
+	code
+		CheckIfWeWon;
+		CheckIfPlayerShotMe;
+
+		if (FindEnemy(attackRange,FT_DEFAULT + FT_UNARMED)) then
+			trans AttackState;
+		endif;
+
+		if (OrderMoveToRigid(path,speed,move_nocycle,true,false) == true) then
+			trans FollowPlayerState;
+		endif;
+endstate;
+
+state AttackState;
+	var
+		LocPoint point;
+
+	code
+		CheckIfWeWon;
+		CheckIfPlayerShotMe;
+
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans FollowPlayerState;
+		endif;
+
+		if (Not IsWithin(me,GetPlayerVehicle(epl_player0),400)) then
+			OrderStopAttacking;
+			trans Combat_GetBackThereState;
+		endif;
+
+		GetLocation(GetPlayerVehicle(epl_player0),point);
+		SetCombatLeash(ME,point,400);
+
+		OrderAttack(TRUE);
+endstate;
+
+state Combat_GetBackThereState;
+	code
+		CheckIfWeWon;
+		CheckIfPlayerShotMe;
+
+		if (IsWithin(me,GetPlayerVehicle(epl_player0),350)) then
+			if (FindEnemy(attackRange,FT_DEFAULT + FT_UNARMED)) then
+				trans AttackState;
+			else
+				trans FollowPlayerState;
+			endif;
+		endif;
+
+		OrderMoveToObject(GetPlayerVehicle(epl_player0),600);		
+endstate;
+
+state FollowPlayerState;
+	code
+		CheckIfWeWon;
+		CheckIfPlayerShotMe;
+
+		if (Not IsWithin(me,GetPlayerVehicle(epl_player0),400)) then
+			trans GetBackThereState;
+		endif;
+
+		OrderMoveFollow(GetPlayerVehicle(epl_player0),30,-30);
+
+		if (FindEnemy(attackRange,FT_DEFAULT + FT_UNARMED)) then
+			trans AttackState;
+		endif;
+endstate;
+
+state GetBackThereState;
+	code
+		CheckIfWeWon;
+		CheckIfPlayerShotMe;
+
+		if (IsWithin(me,GetPlayerVehicle(epl_player0),350)) then
+			trans FollowPlayerState;
+		endif;
+
+		OrderMoveToObject(GetPlayerVehicle(epl_player0),600);		
+endstate;
+
+state KillPlayerState;
+	code
+		SetSkillLevel(ME,100,60,100);
+
+		if (TimeGreater(kill_player_timer,4)) then
+			SetAutoTargeting(ME,FALSE);
+			SetTarget(ME,getplayervehicle(epl_player0));
+			OrderAttackTactic(TACTIC_CIRCLE_OF_DEATH,TRUE);
+		endif;
+endstate;
+
+state VictoryState;
+	code
+		OrderStopAttacking;
+		ClearMoveOrder(ME);
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

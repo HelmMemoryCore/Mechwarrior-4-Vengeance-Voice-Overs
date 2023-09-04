@@ -1,0 +1,209 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm TankPatrol : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_Patrol:
+//   Follows a path.  If anything comes near, it goes off and attacks it,
+//   and then comes back to the path when there's nothing left to attack.
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start shooting?
+		static integer			withdrawRange;		// At what range do I withdraw from combat entirely?
+
+		static integer			path;				// My path
+		static integer			moveType;			// How I move along the path
+		static boolean			canLeavePath;		// Can I leave the path if attacked? (TRUE by default)
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			findTypes;			// What kind of enemies to look for
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+		static integer			speed;				// The speed at which I move along the path
+
+		static integer			takeOffDistance;	// My take-off distance if I'm an airplane (ignored if not an airplane)
+		static integer			mytactic;
+											
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 500;
+		withdrawRange	= attackrange * 3 / 2;
+		path			= -1;
+		moveType		= move_circle;
+		canLeavePath	= true;
+		speed			= 600;
+		takeOffDistance	= 150;
+
+		// driver settings
+		piloting		= 50;
+		gunnery			= 30;
+		minDelay		= 1.5;
+		maxDelay		= 3.0;
+		eliteLevel		= 80;
+		attackThrottle	= 80;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+		mytactic = tactic_pick_best;
+				
+	switch (getmemoryinteger(me,9))
+
+	case 1:
+		//Outerpatrol
+		path = epa_outsidewallpatrol;
+		Mindelay = 1.0;
+		Maxdelay = 2.0;
+		attackthrottle = 60;
+		isshotradius = 90;
+		speed = 55;
+		movetype = move_seesaw;
+			
+	endcase;
+	
+	
+	endswitch;
+
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+
+		if (orderTakeOff(takeOffDistance) == true) then
+			trans FollowPathState;
+		endif;
+
+endstate;			
+
+//------------------------------------------------------------------
+//	FollowPathState: follow our path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state FollowPathState;
+	code
+		if (FindEnemy(attackRange,findTypes)) then
+			trans AttackState;
+		endif;
+
+		if (path <> -1) then
+			OrderMoveResumePatrol(path,speed,moveType,true,false);
+		else
+			OrderMoveLookOut;
+		endif;
+		
+		if (billyup) then
+			clearmoveorder(me);
+			orderstopattacking;
+			shutdown(me);
+			trans non;
+		endif;
+		
+endstate;
+
+//------------------------------------------------------------------
+//	AttackState: attack my current target, or return to path if done
+//------------------------------------------------------------------
+
+state AttackState;
+	code
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans FollowPathState;
+		endif;
+		
+		if (billyup) then
+			clearmoveorder(me);
+			orderstopattacking;
+			shutdown(me);
+			trans non;
+		endif;
+
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttacktactic(mytactic,canLeavePath);
+
+endstate;
+
+state non;
+	code
+		
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

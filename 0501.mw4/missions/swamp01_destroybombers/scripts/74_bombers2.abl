@@ -1,0 +1,191 @@
+
+//*********************************************************************************
+
+fsm Group_bomber_Op31a : integer;
+
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+  var
+		static ObjectID whoami;
+		static integer timeOff;
+
+		static PathID takeOffPath;
+		static Boolean timerTwoStarted;
+		static integer timer;
+		static integer group;
+		
+		// These are dummy values to let the thing compile.
+		// Remove them all.
+		
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//        This ends up ran 8 times, but not really a problem
+//------------------------------------------------------------------
+function init;
+	var
+
+	
+	code
+		whoami = getSelf;
+	  timerTwoStarted = FALSE;
+		group =	19;
+
+		switch (getmemoryinteger(me,2))
+
+	case 1:
+				timeOff = 10;
+				takeOffPath = epa_takeoffpath12;
+	endcase;
+						
+	case 2:
+ 				timeOff = 25;
+				takeOffPath = epa_takeoffpath3;
+	endcase;
+	
+	case 3:
+				timeOff = 40;
+				takeOffPath = epa_takeoffpath4;	
+	endcase;
+
+	case 4:
+ 				timeOff = 55;
+				takeOffPath = epa_takeoffpath12;
+	endcase;
+	
+	case 5:
+				timeOff = 70;
+				takeOffPath = epa_takeoffpath4;	
+	endcase;
+
+	case 6:
+ 				timeOff = 85;
+				takeOffPath = epa_takeoffpath3;
+	endcase;
+
+	case 7:
+ 				timeOff = 100;
+				takeOffPath = epa_takeoffpath12;
+	endcase;
+
+	case 8:
+ 				timeOff = 115;
+				takeOffPath = epa_takeoffpath4;
+	endcase;
+	
+	endswitch;
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,70,65,80);
+		setAlignment(me,ENEMY);
+		setsensorvisibility(me,false);
+		trans sit;
+
+endstate;
+
+state deadState;
+	code;
+		bomberDeadCount = bomberDeadCount + 1;
+			
+		orderDie;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+		if (baseAlarm) then
+				startTimer (gti_Timer_2);
+				trans waittotakeoff;
+		endif;
+endstate;
+
+state waittotakeoff;
+
+	code
+		
+		if (timegreater(gti_Timer_2,timeoff)) then
+				setsensorvisibility(me,true);
+				trans taxi;
+		endif;
+endstate;
+
+state taxi;
+	code
+		
+		if (orderMoveToFree(takeOffPath,40,1,true,true)) then
+			clearmoveorder(me);
+			trans takeoff;
+		endif;
+		
+endstate;
+
+
+state takeoff;
+	code
+	
+			if (orderTakeOff(300)) then
+				if (not oneup) then
+					playvoiceover("VO\OP5\MI1\upaway",talker_rat);
+					oneup = true;
+				endif;
+			
+				trans findplayer;
+				
+			endif;
+
+endstate;
+
+state findplayer;
+	code
+		settarget(me,playermech);
+		trans killplayer;
+	
+endstate;
+
+
+state killplayer;
+	code
+		orderAttackTactic(TACTIC_STRAFE,true);
+	
+endstate;
+
+endfsm.
+//******************************************************************
+

@@ -1,0 +1,137 @@
+
+fsm Arioch : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+
+function Init;
+	code
+
+endfunction;
+
+state StartState;
+
+	code
+//		SetFiringDelay			(ME,minDelay,maxDelay);
+//		SetIgnoreFriendlyFire	(ME,true);
+//		SetIsShotRadius			(ME,isShotRadius);
+//		SetEntropyMood			(ME,mood);
+//		SetCurMood				(ME,mood);
+//		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+//		SetAttackThrottle		(ME,attackThrottle);
+
+		SetSensorVisibility(ME,FALSE);
+
+		trans SitState;
+
+endstate;
+
+state SitState;
+	code
+		if (GetGlobalTrigger(6) == true) then
+			OrderMoveTo(epa_Path_Arioch1,50,MOVE_NOCYCLE,true,false);
+			trans WalkForward;
+		endif;
+endstate;
+
+state WalkForward;
+	code
+		OrderMoveTo(epa_Path_Arioch1,50,MOVE_NOCYCLE,true,false);
+
+		if (GetGlobalTrigger(8) == true) then
+			Fall(ME,0);
+			StartTimer(9);
+			trans FallForward;
+		endif;
+endstate;
+
+state FallForward;
+	code
+		if (TimeGreater(9,4.0)) then
+			StartTimer(9);
+			trans NowStartup;
+		endif;
+endstate;
+
+state NowStartup;
+	code
+		ClearMoveOrder(ME);
+		SetCrouchState(ME,TRUE);
+
+		if (TimeGreater(9,4.0)) then
+			StartTimer(9);
+			trans CrouchHere;
+		endif;
+endstate;
+
+state CrouchHere;
+	code
+		SetCrouchState(ME,FALSE);
+
+		if (timegreater(9,5.0)) then
+			trans WaitToGo;
+		endif;
+endstate;
+
+state WaitToGo;
+	code
+		if (GetGlobalTrigger(17) == true) then
+			trans Leave;
+		endif;
+endstate;
+
+state Leave;
+	code
+		if (OrderMoveTo(epa_Path_Arioch2,600,MOVE_NOCYCLE,true,false) == true) then
+			trans ShootBuilding;
+		endif;
+endstate;
+
+state ShootBuilding;
+	code
+		SetTarget(ME,ebu_mech_hanger_0000);
+
+		if (GetGlobalTrigger(41) == true) then
+			OrderAttackTactic(TACTIC_SHOOT_ONLY,false);
+			trans ShotBuilding;
+		endif;
+endstate;
+
+state ShotBuilding;
+	code
+		if (GetGlobalTrigger(42) == true) then
+			OrderStopAttacking;
+
+			StartTimer(9);
+			trans NowShutdown;
+		endif;
+endstate;
+
+state NowShutdown;
+	code
+		if (TimeGreater(9,8.0)) then
+			Fall(ME,1);
+			trans CantGetUp;
+		endif;
+endstate;
+
+state CantGetUp;
+	code
+		Shutdown(ME);
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.
+

@@ -1,0 +1,595 @@
+
+//*********************************************************************************
+
+fsm GENERIC : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+			
+		eternal integer playermech;
+		
+		
+		static integer	cinema_cut;
+		
+		eternal boolean	fighting;
+		eternal integer	convoyspeed;
+		static boolean	countdownstarted;
+		eternal boolean	escortsdead;
+		eternal integer	numcaptured;
+		eternal integer	numescaped;
+		
+		static boolean	Bargesmustlivedone;
+		static boolean	capturebargesdone;
+		static boolean	captureallbargesdone;
+		static boolean	twodeadplayed;
+		static boolean	onedeadplayed;
+		static boolean	twogone;
+		
+		//Navpoint Check Variables
+		static integer	checkrange;
+		static boolean	alphareached;
+
+		
+		
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+	
+			//Navpoint Check Declarations
+		checkrange = 150;
+		alphareached = false;
+
+
+		 playermech = getplayervehicle(epl_player0);	
+ 	
+			GroupAddObject(GroupObjectId(10),eve_barge1);
+			GroupAddObject(GroupObjectId(10),eve_barge2);
+			GroupAddObject(GroupObjectId(10),eve_barge3);
+			GroupAddObject(GroupObjectId(10),eve_barge4);
+			GroupAddObject(GroupObjectId(10),eve_barge5);
+			GroupAddObject(GroupObjectId(10),eve_barge6);
+			SetGroupAI(groupobjectid(10),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(15),etu_TurretGroup1A);
+			GroupAddObject(GroupObjectId(15),etu_TurretGroup1B);
+			GroupAddObject(GroupObjectId(15),etu_TurretGroup1D);
+			GroupAddObject(GroupObjectId(15),etu_TurretGroup1E);
+			GroupAddObject(GroupObjectId(15),etu_TurretGroup1G);
+			GroupAddObject(GroupObjectId(15),etu_TurretGroup1H);
+			SetGroupAI(groupobjectid(15),GROUPAI_RADIOSQUAD);
+			
+
+			GroupAddObject(GroupObjectId(16),etu_TurretGroup2B);
+			GroupAddObject(GroupObjectId(16),etu_TurretGroup2D);
+			GroupAddObject(GroupObjectId(16),etu_TurretGroup2E);
+			GroupAddObject(GroupObjectId(16),etu_TurretGroup2F);
+			SetGroupAI(groupobjectid(16),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(17),eve_defendMech1);
+			GroupAddObject(GroupObjectId(17),eve_defendMech2);
+			GroupAddObject(GroupObjectId(17),eve_defendMech3);
+			GroupAddObject(GroupObjectId(17),eve_defendMech4);
+			
+			GroupAddObject(GroupObjectId(18),eve_followtank1);
+			GroupAddObject(GroupObjectId(18),eve_followtank2);
+			GroupAddObject(GroupObjectId(18),eve_followtank3);
+			GroupAddObject(GroupObjectId(18),eve_followtank4);
+			GroupAddObject(GroupObjectId(18),eve_followtank5);
+			GroupAddObject(GroupObjectId(18),eve_followtank6);
+			GroupAddObject(GroupObjectId(18),eve_followtank7);
+			GroupAddObject(GroupObjectId(18),eve_followtank8);
+			GroupAddObject(GroupObjectId(18),eve_followtank9);
+			GroupAddObject(GroupObjectId(18),eve_followtank10);
+			SetGroupAI(groupobjectid(18),GROUPAI_RADIOSQUAD);
+			
+			GroupAddObject(GroupObjectId(19),eve_followtank1);
+			GroupAddObject(GroupObjectId(19),eve_followtank2);
+			GroupAddObject(GroupObjectId(19),eve_followtank3);
+			GroupAddObject(GroupObjectId(19),eve_followtank4);
+			GroupAddObject(GroupObjectId(19),eve_followtank5);
+			GroupAddObject(GroupObjectId(19),eve_followtank6);
+			GroupAddObject(GroupObjectId(19),eve_followtank7);
+			GroupAddObject(GroupObjectId(19),eve_followtank8);
+			GroupAddObject(GroupObjectId(19),eve_followtank9);
+			GroupAddObject(GroupObjectId(19),eve_followtank10);
+			GroupAddObject(GroupObjectId(19),eve_defendMech1);
+			GroupAddObject(GroupObjectId(19),eve_defendMech2);
+			GroupAddObject(GroupObjectId(19),eve_defendMech3);
+			GroupAddObject(GroupObjectId(19),eve_defendMech4);
+			
+		cinema_cut = 0; 	
+		fighting = false;
+		convoyspeed = 20;
+		countdownstarted = false;
+		escortsdead = false;	
+		numcaptured = 0;
+		numescaped=0;	
+		twodeadplayed = false;	
+		onedeadplayed = false;
+		twogone = false;
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+			//playsound(eso_start);
+			//setactivationdistance(6800);
+			//trans opening;
+			revealobjective(eob_destroyescorts);
+			revealobjective(eob_capturebarges);
+			revealobjective(eob_captureallbarges);
+			revealobjective(eob_bargesmustlive);
+			setnavpoint(ena_Nav_Alpha);
+			
+			playvoiceover("VO\OP4\MI3\intro",talker_ian);
+			playvoiceover("VO\OP4\MI3\intro",talker_rat);
+			playvoiceover("VO\OP4\MI3\intro",talker_sal);
+			playvoiceover("VO\OP4\MI3\intro2",talker_rat);
+			playvoiceover("VO\OP4\MI3\intro2",talker_ian);
+			playvoiceover("VO\OP4\MI3\intro3",talker_rat);
+			playvoiceover("VO\OP4\MI3\intro3",talker_ian);
+			playvoiceover("VO\OP4\MI3\intro4",talker_rat);
+			starttimer(gti_timer_0);
+			StartMusic("Music\daggers",3.5,3.0,50);
+			playerai(epl_player0,true);
+			trans opening;
+
+endstate;
+
+	
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code	
+	
+				//PlayVoiceOverOnce("VO\Generic\Startup1",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+
+
+//play this when one escort is killed
+if (not onedeadplayed) then
+	if ((groupnumdead(groupobjectid(19))) == 1) then
+		playlancematesound("VO\OP4\MI3\gotone",1);
+		onedeadplayed = true;
+	endif;
+endif;
+			
+//play this when two barges are killed
+if (not twodeadplayed) then
+	if ((groupnumdead(groupobjectid(10))) == 2) then
+		playlancematesound("VO\OP4\MI3\boom",1);
+		PlayVoiceOverOnce("VO\OP4\MI3\Losttwo",talker_ian);
+		twodeadplayed = true;
+	endif;
+endif;
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		endmission(false,15);
+		killvoiceovers;
+		PlayVoiceOver("VO\Generic\Iandestroyed",talker_rat);
+		StartMusic("Music\Defeat",3.5,3.0,70);
+		trans lost;
+	endif;
+
+//start the countdown for the choppers	
+	if (fighting) then
+		if (not countdownstarted) then
+			countdownstarted = true;
+			starttimer(gti_timer_10);
+		endif;
+	endif;
+	
+//check to see if the scrorts are dead	
+	if (not escortsdead) then
+		if (groupalldead(groupobjectid(19))) then
+			escortsdead = true;
+			PlayVoiceOverOnce("VO\OP4\MI3\alldead",talker_ian);
+			PlayVoiceOverOnce("VO\OP4\MI3\alldead",talker_rat);
+			PlayVoiceOverOnce("VO\OP4\MI3\alldead",talker_sal);
+			playvoiceover("VO\generic\roger2",talker_ian);
+			successobjective(eob_destroyescorts);
+		endif;
+	endif;
+	
+//failure check for capturin all the barges	
+	if (not captureallbargesdone) then
+		if (numescaped > 0) then
+			PlayVoiceOverOnce("VO\OP4\MI3\Lostone",talker_ian);
+			playlancematesound("VO\OP4\MI3\Lostone",1);
+			captureallbargesdone = true;
+			failobjective(eob_captureallbarges);
+		endif;
+	endif;
+
+//checking to see if two gone	
+	if (not twogone) then
+		if (numescaped > 1) then
+			PlayVoiceOverOnce("VO\OP4\MI3\Losttwo",talker_ian);
+			twogone = true;
+		endif;
+	endif;
+
+ //Failure check for the barges living through the fight
+	if (not bargesmustlivedone) then
+		if ((groupnumdead(groupobjectid(10))) > 2) then
+			failobjective(eob_bargesmustlive);
+			failobjective(eob_capturebarges);
+			PlayVoiceOverOnce("VO\OP4\MI3\lostthree",talker_ian);
+			PlayVoiceOverOnce("VO\OP4\MI3\lostthree",talker_rat);
+			PlayVoiceOverOnce("VO\OP4\MI3\lostthree",talker_sup);
+			EndMission(false,26);
+			bargesmustlivedone = true;
+			StartMusic("Music\Defeat",3.5,3.0,70);
+			trans lost;
+		endif;
+	endif;
+	
+//failure check for the primary objective of capturing four barges	
+	if (not Capturebargesdone) then
+		if (numescaped > 2) then
+			failobjective(eob_capturebarges);
+			capturebargesdone = true;
+			if (not bargesmustlivedone) then
+				PlayVoiceOverOnce("VO\OP4\MI3\lostthree",talker_ian);
+				PlayVoiceOverOnce("VO\OP4\MI3\lostthree",talker_rat);
+				PlayVoiceOverOnce("VO\OP4\MI3\lostthree",talker_sup);
+			endif;
+			EndMission(false,26);
+			StartMusic("Music\Defeat",3.5,3.0,70);
+			trans lost;
+		endif;
+	endif;
+
+
+	//*********************************************
+	//Success chacks for the capture objectives.  only checked once the escorts are dead
+	//*********************************************
+			
+	if (escortsdead) then
+
+		//**********************************************
+		//FINAL OBJECTIVECHECK  Includes setting the bargesmustlive objective to successful
+		//**********************************************
+			if (captureallbargesdone) then
+				if (capturebargesdone) then
+					if ((groupnumdead(groupobjectid(10))) < 3) then
+						successobjective(eob_bargesmustlive);						
+					endif;
+					playvoiceover("VO\OP4\MI3\win",talker_rat);
+					if ((checkobjectivecompletion(eob_captureallbarges)) == OBJECTIVE_FAILED) then
+						playvoiceover("VO\OP4\MI3\winmost",talker_ian);
+					endif;
+					endmission(true,24);
+					StartMusic("Music\Victory",3.5,3.0,70);
+					//DAVE, THE BASE SALVAGE FOR THE MISSION GOES HERE
+					
+					
+						AddWeaponSalvage("AC5",3);
+            AddWeaponSalvage("AC10",1);
+						AddWeaponSalvage("ClanFlamer",2);
+						AddWeaponSalvage("Flamer",2);
+            AddWeaponSalvage("LightGauss",1);
+						AddWeaponSalvage("BombastLaser",1);
+            AddWeaponSalvage("ERMediumLaser",2);
+						AddWeaponSalvage("LargeLaser",1);
+						AddWeaponSalvage("SmallLaser",4);
+						AddWeaponSalvage("ClanLBXAC10",2);
+            AddWeaponSalvage("LBXAC10",1);
+						AddWeaponSalvage("LBXAC20",1);
+						AddWeaponSalvage("ClanLRM5",2);
+            AddWeaponSalvage("ClanLRM10",2);
+						AddWeaponSalvage("ClanLRM20",1);
+            AddWeaponSalvage("LRM5",1);
+						AddWeaponSalvage("LRM10",2);
+						AddWeaponSalvage("ClanMachineGun",4);
+						AddWeaponSalvage("MRM30",2);
+						AddWeaponSalvage("ClanNarcBeacon",1);
+            AddWeaponSalvage("ERPPC",1);
+						AddWeaponSalvage("ERSmallPulseLaser",2);
+						AddWeaponSalvage("LargePulseLaser",2);
+            AddWeaponSalvage("SmallPulseLaser",2);
+						AddWeaponSalvage("SRM2",2);
+            AddWeaponSalvage("SRM4",2);
+						AddWeaponSalvage("SSRM4",2);
+						AddWeaponSalvage("ClanUltraAC5",1);
+						AddWeaponSalvage("UltraAC5",2);
+						AddMechInstanceSalvage("Loki");
+						
+
+					enableglobalinvulnerable;
+					settargetdesirability(playermech,-1);
+					resettimer(gti_timer_28);
+					starttimer(gti_timer_28);
+					trans waitforcinema;
+	
+				endif;
+			endif;
+
+
+	
+		if (not capturebargesdone) then
+		 	
+			if (numcaptured > 3) then
+				 successobjective(eob_capturebarges);
+				 capturebargesdone = true;
+			endif;
+							
+		endif;		
+
+		
+		//********************************************
+		//Capture All Barges Objctive
+		//********************************************
+		if (not captureallbargesdone) then
+		
+			//Success chance.  Also succeeds Barges must live objective
+			if (numcaptured > 5) then
+				captureallbargesdone = true;
+				successobjective(eob_captureallbarges);
+				//DAVE, PUT THE REAL GOOD STUFF HERE
+						AddWeaponSalvage("ClanLBXAC20",2);
+            AddWeaponSalvage("ERPPC",1);
+						AddWeaponSalvage("SSRM6",2);
+						AddWeaponSalvage("ClanUltraAC5",2);
+						AddWeaponSalvage("ERLargeLaser",2);
+				playlancematesound("VO\OP4\MI3\gotem",2);
+			endif;
+			
+		endif;
+						
+	endif;
+
+//AMBIENT MUSIC
+if (not ismusicplaying) then
+	StartMusic("Music\arcticambloop",0.0,3.0,40);
+endif;
+
+//*************************************
+//Navpoint Checks
+//*************************************
+
+if (not alphareached) then
+	if (isnavrevealed(ena_nav_alpha)) then
+		if (iswithin(playermech,ena_nav_alpha,checkrange)) then
+			playvoiceover("VO\generic\navalpha",talker_Bet);
+			alphareached = true;
+		endif;
+	endif;
+endif;
+				
+endstate;
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,4)) then
+			playerai(epl_player0,true);
+			trans won;
+		endif;
+		
+		
+endstate;
+
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			Fadefromblack(0.0);
+			killvoiceovers;
+			cinemaend;
+			trans sit;	
+	endif;
+
+switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera (eca_cameraship);
+			Fadetoblack(0.0);
+
+			Targetfollowobject(playermech);
+			Camerafollowobject(playermech);
+			SetCameraFootShake(playermech,100);
+
+			targetoffset(0.0,7.0,0.0,0.0,false);
+			Cameraoffset(-10.0,49.0,4.0,0.0,false);
+
+
+			Cameraoffset(-90.0,35.0,12.0,30.0,false);
+
+			startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+
+			case 1:
+				
+				if (timegreater(gti_Timer_21,1)) then
+					
+					Fadefromblack(3.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 3;	
+				endif;
+				
+			endcase;
+
+			case 2:
+				
+				if (timegreater(gti_Timer_21,8)) then
+					
+					Fadetoblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;			
+
+			case 3:
+				
+				if (timegreater(gti_Timer_21,2)) then
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(-100.0,49.0,35.0,0.0,true);
+					Cameraoffset(90.0,15.0,35.0,17.0,true);
+					Fadefromblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;
+							
+			case 4:
+				
+				if (timegreater(gti_Timer_21,27)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+	
+	
+endstate;
+
+state won;
+
+		code
+		
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(true,1);	
+			trans hang;
+	endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(-30.0,125.0,75.0,0.0,false);
+				Cameraoffset(60.0,20.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(false,1);
+			trans hang;
+	endif;
+ 	
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,29.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+
+state hang;
+		
+		code
+		
+endstate;
+
+
+endfsm.
+//******************************************************************
+

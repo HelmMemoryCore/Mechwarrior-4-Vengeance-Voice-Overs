@@ -1,0 +1,105 @@
+
+//*********************************************************************************
+
+fsm playeraifsm : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+  				// Path for movie
+		static integer			piloting;		 		// Piloting skill
+		static integer			gunnery;		 		// Gunnery skill/chance to hit
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things.  It indicates a general level of combat experience.
+		
+		Static LocPoint		ENDPOINT2;
+
+		static integer			attackThrottle;	// My attack throttle
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+		piloting						= 100;
+		gunnery							= 30;
+		eliteLevel					= 100;
+		attackThrottle 			= 35;
+		
+	ENDPOINT2[0] = 15;
+	ENDPOINT2[1] = 231;
+	ENDPOINT2[2] = 824;
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+		
+		trans go;
+	endstate;
+	
+	state go;
+		code
+		
+//		OrderFormationMove(GroupObjectID(1),epa_CinPath,75,MOVE_NOCYCLE,FORMATION_11WEDGE,FORMTYPE_DENSE,false);
+		//ordermoveResumePatrol(path,65,move_nocycle,true,true);
+ 		OrderMoveTo(epa_CinPath,75,MOVE_NOCYCLE,false,false);
+			
+		if RallyPoint == true
+			then trans Victory;
+		endif;
+endstate;	
+
+
+state Victory;
+	code
+	
+ OrderMovetolocpoint(ENDPOINT2,600,false,false);
+
+
+
+		
+	endstate;
+	
+  state deadState;
+		code
+  endstate;
+	
+	
+
+
+endfsm.
+//******************************************************************
+

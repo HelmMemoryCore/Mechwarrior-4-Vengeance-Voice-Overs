@@ -1,0 +1,205 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm Turret : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_Turret:
+//   This shoots anything that comes near, but never moves.
+//   It can be used for turrets.
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start shooting?
+		static integer			withdrawRange;		// At what range do I stop attacking?
+
+		static ObjectID			turretTower;		// My control tower: if destroyed, I stop firing
+													
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			findTypes;			// What kind of enemies to look for
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+
+		static integer			takeOffDistance;	// My take-off distance if I'm an airplane (ignored if not an airplane)
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 500;
+		withdrawRange	= attackRange * 3 / 2;
+
+		turretTower		= NO_UNIT;
+
+		takeOffDistance	= 150;
+
+		// driver settings
+		piloting		= 75;
+		gunnery			= 70;
+		minDelay		= 0.1;
+		maxDelay		= 0.4;
+		eliteLevel		= 85;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+		
+	switch (getmemoryinteger(me,9))
+
+	case 1:
+		//AlphaTurrets
+		turretTower		= eve_AlphaControl;	
+	endcase;	
+
+	case 2:
+		//ChopperTurrets
+		turretTower		= eve_ChopperControl;	
+	endcase;
+
+	case 3:
+		//EpsilonTurrets
+		turretTower		= eve_EpsilonControl;		
+	endcase;
+	
+	endswitch;
+
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isshotradius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,elitelevel);
+				
+		setsensorvisibility(me,false);
+		trans WaitState;
+
+
+endstate;			
+
+//------------------------------------------------------------------
+//	WaitState: wait for someone to come near
+//------------------------------------------------------------------
+
+state WaitState;
+	code
+		if (FindEnemy(attackRange,findTypes)) then
+			setsensorvisibility(me,true);
+			trans AttackState;
+		endif;
+
+		if (turretTower <> NO_UNIT) then
+			if (IsDead(turretTower) == true) then
+				trans TowerGoneState;
+			endif;
+		endif;
+
+		OrderMoveLookOut;
+endstate;
+
+//------------------------------------------------------------------
+//	AttackState: let's see what's around, and destroy it
+//------------------------------------------------------------------
+
+state AttackState;
+	code
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			setsensorvisibility(me,false);
+			trans WaitState;
+		endif;
+
+		if (turretTower <> NO_UNIT) then
+			if (IsDead(turretTower) == true) then
+				trans TowerGoneState;
+			endif;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttackTactic(TACTIC_SHOOT_ONLY,true);
+
+endstate;
+
+//------------------------------------------------------------------
+//	TowerGoneState: my control tower is destroyed; I can do nothing
+//------------------------------------------------------------------
+
+state TowerGoneState;
+	code
+		SetTarget(ME,NO_UNIT);
+		OrderStopAttacking;
+		SetTargetDesirability(ME,-1);
+		setsensorvisibility(me,false);
+		clearmoveorder(me);
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

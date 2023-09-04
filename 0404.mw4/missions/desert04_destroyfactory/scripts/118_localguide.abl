@@ -1,0 +1,199 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Patrol must be changed to some other unique identifier
+fsm LocalGuide : integer;
+
+//This unit patrols a specific path and attacks anything that comes near it.
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static locpoint	danfinal;
+	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+GetLocation(ena_DanFinalPoint,danfinal);
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setignorefriendlyfire(me,true);
+		setalignment(me,friendly);
+		settargetdesirability(me,-1);
+				
+		trans wait1;
+endstate;			
+
+state deadState;
+  code
+		
+						
+		orderDie;
+endstate;
+
+	state wait1;
+		code
+
+		if (linkedup) then
+			trans go1;
+		endif;
+		
+		if (iswithin(me,playerMech,200)) then
+			linkedup = true;
+			// Davelueh inserted new audio here
+      PlayVoiceOver("VO\OP4\MI4\LinkUp",Talker_FO1);
+			PlayVoiceOver("VO\OP4\MI4\LinkUp",Talker_Ian);
+			PlayVoiceOver("VO\OP4\MI4\Linkup2",Talker_FO1);
+			PlayVoiceOver("VO\OP4\MI4\Linkup2",Talker_Ian);
+			PlayVoiceOver("VO\OP4\MI4\LinkUp3",Talker_FO1);
+			PlayVoiceOver("VO\OP4\MI4\LinkUp3",Talker_Ian);
+
+			//playsoundonce(ESO_SHPD);
+      //playsoundonce(ESO_IANG);
+			//playsoundonce(ESO_SHPE);
+			//playsoundonce(ESO_IANH);
+				
+				
+				trans go1;
+
+		endif;
+		
+			
+	endstate;
+	
+	state go1;
+
+		code
+
+	if (isdead(ebu_munitions_plant_1)) then
+		clearmoveorder(me);
+		trans go2;
+	endif;
+	
+	if (ordermoveto(epa_localguidepath1,70,move_nocycle,true,true)) then
+		//davelueh inserted new audio here
+		PlayVoiceOver("VO\OP4\MI4\1st",Talker_FO1);
+    //playsoundonce(ESO_SHPF);
+		setnavpoint(ena_Nav_Alpha);
+		trans wait2;
+	endif;
+	
+			
+	endstate;
+	
+	state wait2;
+		code
+		
+		if (factoryonedown) then
+			trans go2;
+		endif;
+			
+	endstate;
+	
+	state go2;
+		code
+
+	if (isdead(ebu_munitions_plant_2)) then
+		clearmoveorder(me);
+		trans go3;
+	endif;
+		
+	if (ordermoveto(epa_localguidepath2,70,move_nocycle,true,true)) then
+		// Davelueh Inserted new audio file here.
+		PlayVoiceOver("VO\OP4\MI4\2nd",Talker_FO1);
+		//playsoundonce(ESO_SHPH);
+		setnavpoint(ena_Nav_Beta);
+		trans wait3;
+	endif;
+			
+	endstate;
+	
+	state wait3;
+		code
+
+		if (factorytwodown) then
+			trans go3;
+		endif;
+	
+	endstate;
+
+	state go3;
+		code
+		
+	if (isdead(ebu_munitions_plant_3)) then
+		clearmoveorder(me);
+		trans go1;
+	endif;
+		
+	if (ordermoveto(epa_localguidepath3,70,move_nocycle,true,true)) then
+		PlayVoiceOver("VO\OP4\MI4\3rd",Talker_FO1);
+		PlayLancemateSound("VO\OP4\MI4\3rd",1);
+		//playsoundonce(ESO_SHPJ);
+		setnavpoint(ena_Nav_Gamma);
+		trans wait4;
+	endif;
+			
+	endstate;
+	
+		state wait4;
+		code
+
+		if (factorythreedown) then
+			trans bugout;
+		endif;
+	
+	endstate;
+	
+	state bugout;
+		code
+		
+		if (ordermovetolocpoint(DanFinal,600,true,true)) then
+			shutdown(me);
+			trans hold;
+		endif;
+			
+	endstate;
+	
+	state hold;
+		code
+			
+	endstate;
+
+endfsm.
+//******************************************************************
+

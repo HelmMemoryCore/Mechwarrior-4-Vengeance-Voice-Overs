@@ -1,0 +1,97 @@
+
+//*********************************************************************************
+
+fsm Neutrals : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+//		static LocPoint Regroup;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		
+		trans wander;
+		
+	endstate;
+	
+	state Wander;
+	
+	code
+		
+ 	switch (GetMemoryInteger(me,9))
+		case 0:
+		
+		 if blackout == false then
+	OrderFormationMove(GroupObjectID(10),epa_waitingpath,15,MOVE_NOCYCLE,FORMATION_LINE,FORMTYPE_NORMAL,FALSE)
+			endif;
+			
+				
+		 if blackout == true then
+			if (OrderFormationMove(GroupObjectID(10),epa_NonComPath1,600,MOVE_NOCYCLE,FORMATION_LINE,FORMTYPE_DENSE,FALSE)==TRUE)
+			  then shutdown(me);
+			 endif;
+			endif;
+			
+		endcase;
+		
+		case 2:
+			 OrderMoveFlee(playermech,35);
+		endcase;
+		case 4:
+			OrderMovetoRigid(epa_RandomPath,600,MOVE_CIRCLE,FALSE,FALSE);
+		endcase;
+		case 6:
+			//OrderMoveFlee(playermech,35);
+		endcase;
+	
+	endswitch;
+			
+	endstate;
+
+  state deadState;
+		code
+			orderDie;
+  endstate;
+
+endfsm.
+//******************************************************************
+
+

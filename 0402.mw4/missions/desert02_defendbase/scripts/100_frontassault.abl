@@ -1,0 +1,362 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Patrol must be changed to some other unique identifier
+fsm FrontAssault : integer;
+
+//This unit patrols a specific path and attacks anything that comes near it.
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; // When do I start shooting?
+																
+	static integer			piloting; 	// piloting skill
+	static integer			gunnery; // hit chance,
+	static real					mindelay;		//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;		//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;			 // What speed so I move at?
+	static integer 			elitelevel; // % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																	// and other things that would normally be determined by combat experience
+
+ 	static integer			isshotradius;	//how far away from me will I detect an enemy shot.
+	static integer			movetype;		//how will it move down the path?
+
+	static integer 			attacksound; // plays when it first attacks
+	static integer 			deathsound; // plays when it dies
+	
+	static integer			mood;	//What is my normal mood?
+	
+	static integer			PathOne;		 //what path am I following?
+	static integer			PathTwo;
+	
+	static Boolean 			derail;	// if FALSE, it won't leave the path, even when things
+  // are shooting it. It will shoot back. Defaults to true
+	
+	static integer			Mystate;
+	
+	static objectid			buildingthree;
+	static objectid			buildingfour;
+	
+	static boolean			booking;
+	static locpoint			endpoint;
+	static boolean			lastcheck;
+	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+
+	code
+	
+																					// defaults are below
+	//These are the variables that are normally changed by the designer
+  //in order to change behavior
+	
+	
+	PathOne = epa_StagetoPass;
+	PathTwo = epa_PasstoBase;
+	Mystate = 0;
+	buildingthree = ebu_objectivebuilding1;
+	buildingfour =	ebu_objectivebuilding2;
+	booking = false;
+	lastcheck = false;
+	
+	endpoint[0] = -997;
+	endpoint[1] = 43;
+	endpoint[2] = -1086;
+	
+		
+			attackrange = 500;											// 500
+			piloting = 50;														//50
+			gunnery = 30;												//30
+			mindelay = 1.5;													//1.5
+			maxdelay = 3.0;													//3.0
+			elitelevel = 90;												//30
+			speed = 60;														//600 (max speed)	
+			isshotradius = 80;												//80 	
+			attacksound = -1;                   //-1 (no sound)
+			deathsound = -1;                    //-1 (no sound)
+			movetype = move_NoCycle;									//move_circle
+			derail = False;					 //true
+			mood = Agressive_start;								//neutral_start
+	
+
+	
+	//Use this to set different values for different units using the same brain	
+	switch (GetMemoryInteger(me,9))
+		
+
+		case 1:	 //Case for Tanks
+		
+			attackrange = 500;											// 500
+			piloting = 62;														//50
+			gunnery = 60;												//30
+			mindelay = 0.1;													//1.5
+			maxdelay = 0.2;													//3.0
+			elitelevel = 74;												//30
+			//attacksound = eso_de02Attack1;
+			
+		endcase;
+		
+
+		case 2:	//Case for LRM Carriers
+		
+			attackrange = 500;											// 500
+			piloting = 62;														//50
+			gunnery = 60;												//30
+			mindelay = 0.1;													//1.5
+			maxdelay = 0.2;													//3.0
+			elitelevel = 74;												//30
+
+		endcase;
+		
+
+		case 3:	//Case for Mechs
+		
+			attackrange = 500;											// 500
+			piloting = 62;														//50
+			gunnery = 80;												//30
+			mindelay = 0.1;													//1.5
+			maxdelay = 0.2;													//3.0
+			elitelevel = 74;												//30
+			//attacksound = eso_de02Attack1;
+			
+		endcase;
+		
+	endswitch;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+	
+		code
+			
+			SetFiringDelay(me,mindelay,maxdelay);
+			setignorefriendlyfire(me,true);
+			setisshotradius(me,isshotradius);
+			setentropymood(me,mood);
+			setcurmood(me,mood);
+			setskilllevel(me,piloting,gunnery,elitelevel);
+			//setsearchlight(me,on);
+			//startexecute(me);
+			//setalignment(me,enemy);
+					
+			trans wait;
+			
+	endstate;			
+
+	state deadState;
+		code
+			if (deathsound <> -1) then	
+				PlaySoundOnce(deathsound);
+			endif;		
+							
+			orderDie;
+	endstate;
+	
+	//wait around for orders
+	state wait;
+		code
+		
+		
+		if ((linkupobjectivedone) or (iswithin(me,playermech,800)) or (timegreater(gti_timer_0,800))) then
+			mystate = 1;
+			trans topass;
+		endif;
+	
+		ordermovelookout;
+		
+		if (setmytarget(attackrange)) then
+			trans attack;
+	 	endif;
+
+	
+	endstate;
+
+	//get to the pass
+	state topass;
+
+		code
+
+		mystate = 1;
+
+		if (passobjectivedone) then
+			mystate = 3;
+			trans gettobase;
+			booking = true;
+		endif;
+		
+		if (not groupalldead(groupobjectid(43))) then
+			if (iswithin(me,(groupobjectid(43)),800)) then
+				settarget(me,(groupobjectid(43)));
+				derail = true;
+				trans attack;
+			endif;
+		endif;
+		
+		if (setmytarget(attackrange)) then
+			trans attack;
+	 	endif;
+		
+		//orderformationmove((groupobjectid(40)),pathone,75,move_nocycle,2,FORMTYPE_SPARSE,true);
+		ordermoveto(pathone,50,move_nocycle,true,true);
+			
+ 				
+	endstate;
+	
+	
+	//bugout to the base
+	state gettobase;
+		code
+		
+		mystate = 3;
+		
+		derail = false;
+		
+		if (ordermoveto(pathtwo,500,move_nocycle,true,true)) then
+			mystate = 4;
+			derail = true;
+			trans buildingassault2;
+		endif;
+		
+		if (setmytarget(attackrange)) then
+			trans attack;
+	 	endif;
+
+	endstate;
+	
+	
+	//destroy the buildings at the base
+	state buildingassault2;
+		code
+		
+		mystate = 4;
+		
+		if (setmytarget(attackrange)) then
+			trans attack;
+	 	endif;
+
+		if (isdead(buildingthree)) then
+			settarget(me,buildingfour);
+			clearmoveorder(me);
+			trans attack;
+		else
+			settarget(me,buildingthree);
+			clearmoveorder(me);
+			trans attack;
+		endif;
+		
+		ordermovelookout;
+
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state Attack;
+	
+		code
+
+				
+			if (LeaveAttackState(attackrange*3/2)) then
+				orderstopattacking;
+				
+				switch mystate
+				
+				case 0:
+					trans Wait;
+				endcase;
+				
+				case 1:
+					ordermoveresumepatrol(pathone,50,move_nocycle,true,true);
+					trans topass;
+				endcase;
+				
+				case 3:
+					ordermoveresumepatrol(pathtwo,500,move_nocycle,true,true);
+					trans gettobase;
+				endcase;
+				
+				case 4:
+					trans buildingassault2;
+				endcase;
+				
+				endswitch;
+				
+			endif;
+			
+			if (mystate == 1) then
+				if (iswithin(me,(groupobjectid(43)),800)) then
+					settarget(me,(groupobjectid(43)));
+					derail = true;
+				endif;
+			endif;
+		
+			if (not booking) then		
+				if (passobjectivedone) then
+					mystate = 3;
+					booking = true;
+					orderstopattacking;
+					trans gettobase;
+				endif;
+			endif;
+			
+			if (mystate == 3) then
+				if (iswithinlocpoint(me,endpoint,125)) then
+					hitemfront = true;
+				endif;
+			endif;
+			
+			if (not	lastcheck) then
+				if (hitemfront) then
+					derail = true;
+					orderstopattacking;
+					lastcheck = true;
+					trans buildingassault2;
+				endif;
+			endif;
+				
+					
+			//the ever popular attack order
+			orderAttack (derail);
+			
+			//maybe swap targets when I am shot.
+			if ((isShot (me)) and (rand(0,75) <= 1)) then
+				setTarget(me,whoShot(me));
+			endif;
+
+	endstate;
+
+   endfsm.
+//******************************************************************
+

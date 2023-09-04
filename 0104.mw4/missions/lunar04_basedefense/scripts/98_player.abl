@@ -1,0 +1,146 @@
+
+//*********************************************************************************
+
+fsm playeraifsm : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+		static integer			piloting;		 		// Piloting skill
+		static integer			gunnery;		 		// Gunnery skill/chance to hit
+		static real				  minDelay;		 		// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				  maxDelay;		 		// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things.  It indicates a general level of combat experience.
+		static integer			movetype;				//how will it move down the path?
+		static integer			attackThrottle;	// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			path;						 //what path am I following?
+		static integer 			speed;				 	// What speed so I move at?
+		static locpoint			LocFR;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+		piloting						= 90;
+		gunnery							= 65;
+		minDelay						= 0.5;
+		maxDelay						= 1.5;
+		eliteLevel					= 95;
+		attackThrottle 			= 80;
+		isShotRadius				= 120;
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+	If not isdead(playermech) then	
+		EnableGlobalInvulnerable;
+		SetFiringDelay					(ME,minDelay,maxDelay);
+		SetIsShotRadius		 		 	(ME,isShotRadius);
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+
+			getlocation(ena_NavFR,LocFR);
+		
+		trans SitState;
+	else
+		KillVoiceOvers;
+		endmission(false,15);
+		StartMusic("Music\Defeat",0.5,0.25,50);
+		KillVoiceOvers;
+		trans Loser;
+	endif;
+	
+	endstate;
+	
+  state Loser;
+		code
+			PlayVoiceOverOnce("VO\OP1\MI4\Surrender",Talker_Rat);
+	endstate;
+	
+  state SitState;
+		code
+		
+			If (TeleStart == True) then							 						//Board Dropship time
+				trans OnBoardState;
+			endif;
+
+	endstate;
+
+state OnBoardState;
+	code
+	
+		path 				= epa_PathFR;
+		moveType		= move_nocycle;
+		speed				= 40;
+		
+		teleport(me,LocFR);
+		
+		trans OnBoardState2;
+
+endstate;
+
+state OnBoardState2;
+	code
+
+		if (path <> -1) then
+			if (OrderMoveToRigid(path,speed,movetype,true,false) == true) then
+				SetGlobalTrigger(20,true);
+				trans BoardState;
+			endif;
+		else
+			SetGlobalTrigger(20,true);
+			trans BoardState;
+		endif;
+		
+endstate;
+	
+state BoardState;
+	code
+	//shutdown(me);
+	teleporttohell(me);
+endstate;
+	
+	state deadState;
+		code
+  endstate;
+
+
+endfsm.
+//******************************************************************
+

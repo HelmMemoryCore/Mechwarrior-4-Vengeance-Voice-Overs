@@ -1,0 +1,292 @@
+
+//------------------------------------------------------------------
+fsm SirPeter : integer;
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start attacking?
+		static integer			withdrawRange;		// At what range do I withdraw from combat?
+		static integer			groupNumber;		// What's my group -- i.e. I will use GroupObjectID(groupNumber) to identify my group
+		static integer			speed;				// The speed at which I move along the path
+		static integer			formationType;		// What kind of formation am I in?
+		static integer			formationDensity;	// How densely are we packed?
+		static integer			path;				// My path
+		static integer			moveType;			// How I move along the path
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+		static integer			findTypes;			// What kind of enemies to look for
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+
+		static integer			mood;				// My default mood.
+
+		static integer			friendlyFireFrustrationLevel;
+		static integer			frustration_timer;
+		static integer			attack_player_timer;
+
+		static boolean			InitialMove;
+		
+		Static LocPoint		ENDPOINT;
+		
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		
+	ENDPOINT[0] = 17;
+	ENDPOINT[1] = 231;
+	ENDPOINT[2] = 820;
+
+		attackRange		= 800;
+		withdrawRange	= attackRange * 3 / 2;
+		groupNumber		= 1;
+		path			= -1;
+		moveType		= move_nocycle;
+		speed			= 80;
+		formationType	= 1;
+		formationDensity= formtype_sparse;
+
+
+		// driver settings
+		piloting		= 90;
+		gunnery			= 90;
+		minDelay		= 0.0;
+		maxDelay		= 0.5;
+		eliteLevel		= 90;
+		attackThrottle	= 100;
+		isShotRadius	= 160;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+
+		friendlyFireFrustrationLevel	= 0;
+		frustration_timer				= gti_Timer_2;
+		attack_player_timer				= gti_Timer_3;
+
+		InitialMove = True;
+
+		StartTimer(frustration_timer);
+		SetTimer(frustration_timer,100);
+
+endfunction;
+
+function CheckIfPlayerShotMe : integer;
+	var
+		ObjectID who_shot;
+
+	code
+		if (Not TimeGreater(frustration_timer,8)) then
+			return (0);
+		endif;
+		
+		if (Not IsShot(ME)) then
+			return (0);
+		endif;
+
+		who_shot = WhoShot(me);
+
+		if (who_shot <> getplayervehicle(epl_player0)) then
+			return (0);
+		endif;
+
+		ResetTimer(frustration_timer);
+
+		if (friendlyFireFrustrationLevel == 0) then
+			PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_PET);
+			friendlyFireFrustrationLevel = 1;
+		else
+			if (friendlyFireFrustrationLevel == 1) then
+				PlayVoiceOverOnce("VO\Generic\CheckFire2",TALKER_PET);
+				friendlyFireFrustrationLevel = 2;
+			else
+				if (friendlyFireFrustrationLevel == 2) then
+					PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_PET);
+					friendlyFireFrustrationLevel = 3;
+				else
+					PlayVoiceOverOnce("VO\Generic\KillIan1",TALKER_RAT);
+					StartTimer(attack_player_timer);
+					ResetTimer(attack_player_timer);
+
+					SetGlobalTrigger(77,true);
+					trans KillPlayerState;
+				endif;
+			endif;
+		endif;
+
+		return (1);
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,false);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+		trans Wait;
+
+endstate;
+
+//------------------------------------------------------------------
+//	FollowPathState: follow our path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state wait;
+	code
+	
+OrderMoveTo(epa_CinPath2,75,MOVE_NOCYCLE,false,false);	
+		
+if PeterGo == True then
+		trans GoToNextNavState;
+endif;
+	
+	
+endstate;
+
+state GoToNextNavState;
+	var
+
+	code
+		CheckIfPlayerShotMe;
+		
+		if (InitialMove == true) then
+			ordermoveto(epa_todrop1,70,move_nocycle,true,true);
+		endif;
+
+// ERROR -- drop1done not defined!!!		
+//		if (drop1done == true) then
+//		 InitialMove == false;
+//		ordermoveto(epa_todrop2,600,move_nocycle,true,true);
+//		endif;
+		
+// ERROR -- drop2done not defined!!!		
+//		if (drop2done == true) then
+//			drop1done = false;
+//			ordermoveto(epa_todrop3,600,move_nocycle,true,true);
+//		endif;
+
+		if (FindEnemy(attackRange,findTypes)) then
+			trans AttackState;
+		endif;
+
+	if Rallypoint == true then
+		trans Victory;
+	endif;
+
+		
+
+endstate;
+
+
+//------------------------------------------------------------------
+//	AttackState: attack my target
+//------------------------------------------------------------------
+
+state AttackState;
+	code
+		CheckIfPlayerShotMe;
+
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans GoToNextNavState;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttackTactic(TACTIC_PICK_BEST,TRUE);
+
+	if Rallypoint == true then
+		trans Victory;
+	endif;
+
+		
+				
+endstate;
+
+
+state Victory;
+	code
+	
+ OrderMovetolocpoint(ENDPOINT,600,false,false);
+
+endstate;
+
+
+//------------------------------------------------------------------
+//	KillPlayerState: attack the player
+//------------------------------------------------------------------
+
+state KillPlayerState;
+	code
+		if (TimeGreater(attack_player_timer,4)) then
+			SetFiringDelay			(ME,0.0,0.0);
+			SetSkillLevel			(ME,100,500,100);
+
+			SetAutoTargeting(ME,FALSE);
+			SetTarget(ME,getplayervehicle(epl_player0));
+			OrderAttackTactic(TACTIC_CIRCLE_OF_DEATH,TRUE);
+		endif;
+
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+	
+	
+		PlayVoiceOverOnce("VO\OP1\MI3\Ejecting",Talker_PET);	
+		PlayVoiceOverOnce("VO\OP1\MI3\PeterEject",Talker_RAT);
+    PlayVoiceOverOnce("VO\OP1\MI3\RogerControl",Talker_IAN);
+		
+		orderDie;
+
+endstate;
+
+
+endfsm.

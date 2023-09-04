@@ -1,0 +1,898 @@
+
+//*********************************************************************************
+
+fsm desert07_liberatecamp : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+			
+		eternal integer playermech;
+		
+		
+		static integer	cinema_cut;
+		
+		eternal boolean	basetaken;
+		eternal boolean	LinkedUp;
+		eternal boolean	baseunderattack;
+		static boolean	baseattackedsoundplayed;
+		static boolean	kulinwarningplayed;
+		static boolean	waitingplayed;
+		
+		static Boolean	defendersdead;
+		
+		static boolean	towers1down;
+		static boolean	towers2down;
+		static boolean	towers3down;
+		static boolean	towers4down;
+		static boolean	towersalldown;
+		
+		static boolean	kulindead;
+		static boolean	denonedown;
+		static boolean	denthreedown;
+		static boolean	inrange;
+		static integer	numgroupsdead;
+		static integer	onetime;
+		static integer	twotime;
+		static integer	threetime;
+		static integer	fourtime;
+		static boolean	randoneplayed;	
+		static boolean	randtwoplayed;
+		static boolean	randthreeplayed;
+		static boolean	randfourplayed;
+		static integer	wimpy;
+		
+		//Navpoint Check Variables
+		static integer	checkrange;
+		static boolean	alphareached;
+		static boolean	deltareached;
+
+		
+ //------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+
+function init;
+	var
+		integer i;
+
+	code
+	
+			//Navpoint Check Declarations
+		checkrange = 150;
+		alphareached = false;
+		deltareached = false;
+
+		 //Add the player and his lancemates
+		 playermech = getplayervehicle(epl_player0);	
+ 	
+//			GroupAddObject(GroupObjectId(1),playermech);
+//			setalignment(eve_lancemate1,friendly);
+//			setalignment(eve_lancemate2,friendly);
+//			SetSkillLevel(eve_lancemate1,50,90,75);
+//			setsquadtargetingradius(eve_lancemate1,600);
+//			SetSkillLevel(eve_lancemate2,50,90,75);
+//			setsquadtargetingradius(eve_lancemate2,600);
+//			GroupAddObject(GroupObjectId(1),eve_lancemate1);
+//			GroupAddObject(GroupObjectId(1),eve_lancemate2);
+//			SetGroupAI(groupobjectid(1),GROUPAI_LANCEMATE);
+			
+			//Add any Allies
+			GroupAddObject(GroupObjectId(20),eve_allies1);
+			GroupAddObject(GroupObjectId(20),eve_allies2);
+			SetGroupAI(groupobjectid(20),GROUPAI_MOODSQUAD);
+
+			GroupAddObject(GroupObjectId(21),playermech);
+			GroupAddObject(GroupObjectId(21),GetLancemate(1));
+			GroupAddObject(GroupObjectId(21),GetLancemate(2));
+			GroupAddObject(GroupObjectId(21),eve_allies1);
+			GroupAddObject(GroupObjectId(21),eve_allies2);
+
+
+			//Add opponents
+			GroupAddObject(GroupObjectId(3),eve_chopperpatrol1);
+			GroupAddObject(GroupObjectId(3),eve_chopperpatrol2);
+			GroupAddObject(GroupObjectId(3),eve_chopperpatrol3);
+			GroupAddObject(GroupObjectId(3),eve_chopperbasepicket);
+			GroupAddObject(GroupObjectId(3),eve_chopperbasepicket2);
+			SetGroupAI(groupobjectid(3),GROUPAI_MOODSQUAD);
+			
+			GroupAddObject(GroupObjectId(4),eve_assaultpatrol1);
+			GroupAddObject(GroupObjectId(4),eve_assaultpatrol2);
+			GroupAddObject(GroupObjectId(4),eve_assaultpatrol4);
+			SetGroupAI(groupobjectid(4),GROUPAI_MOODSQUAD);
+			
+			//The Bosses at the end
+			GroupAddObject(GroupObjectId(2),eve_James_Kulin);
+			GroupAddObject(GroupObjectId(2),eve_KulinLancemate1);
+			GroupAddObject(GroupObjectId(2),eve_KulinLancemate2);
+			GroupAddObject(GroupObjectId(2),eve_KulinLancemate3);
+			SetGroupAI(groupobjectid(2),GROUPAI_MOODSQUAD);
+			
+			//baseopponents
+			GroupAddObject(GroupObjectId(5),eve_frontguard2);
+			GroupAddObject(GroupObjectId(5),eve_frontbasepatrol);
+			SetGroupAI(groupobjectid(5),GROUPAI_RADIOSQUAD);
+			
+			
+			GroupAddObject(GroupObjectId(6),eve_barracks1guard1);
+			GroupAddObject(GroupObjectId(6),eve_barracks1guard2);
+			SetGroupAI(groupobjectid(6),GROUPAI_RADIOSQUAD);
+			
+
+			GroupAddObject(GroupObjectId(10),eve_westguard1);
+			GroupAddObject(GroupObjectId(10),eve_westguard2);
+			//GroupAddObject(GroupObjectId(10),eve_westguard3);
+			GroupAddObject(GroupObjectId(10),eve_westguard4);
+			//GroupAddObject(GroupObjectId(10),eve_westguard5);
+			SetGroupAI(groupobjectid(10),GROUPAI_RADIOSQUAD);
+						
+			//The four tower groups
+			GroupAddObject(GroupObjectId(15),etu_barracks1atower);
+			GroupAddObject(GroupObjectId(15),etu_barracks1btower);
+			GroupAddObject(GroupObjectId(16),etu_barracks2atower);
+			GroupAddObject(GroupObjectId(16),etu_barracks2btower);
+			GroupAddObject(GroupObjectId(17),etu_barracks3atower);
+			GroupAddObject(GroupObjectId(17),etu_barracks3btower);
+			GroupAddObject(GroupObjectId(18),etu_barracks4atower);
+			GroupAddObject(GroupObjectId(18),etu_barracks4btower);
+			
+			//the big base group
+
+			GroupAddObject(GroupObjectId(19),eve_frontguard1);
+			GroupAddObject(GroupObjectId(19),eve_frontguard2);
+			GroupAddObject(GroupObjectId(19),eve_frontbasepatrol);
+			GroupAddObject(GroupObjectId(19),eve_barracks4guard4);			
+			GroupAddObject(GroupObjectId(19),eve_assaultpatrol1);
+			GroupAddObject(GroupObjectId(19),eve_assaultpatrol2);
+			GroupAddObject(GroupObjectId(19),eve_assaultpatrol4);
+			GroupAddObject(GroupObjectId(19),eve_Mechbay1);
+			GroupAddObject(GroupObjectId(19),eve_BasePathPatrol);
+			GroupAddObject(GroupObjectId(19),eve_Shutdown1);
+			GroupAddObject(GroupObjectId(19),eve_Shutdown2);
+
+
+
+									
+			 //set other variables
+			LinkedUp = false;
+			baseunderattack = false;
+			basetaken = false;
+			towers1down = false;
+			towers2down = false;
+			towers3down = false;
+			towers4down = false;
+			defendersdead = false;
+			kulindead = false;
+			towersalldown = false;
+			baseattackedsoundplayed = false;
+			kulinwarningplayed = false;
+			denonedown = false;
+			denthreedown = false;
+			inrange = false;
+			numgroupsdead = 0;
+
+			onetime = rand(40,80);
+			twotime = rand (120,180);
+			threetime = rand(45,80);
+			fourtime = rand(360,450);
+
+			randoneplayed = false;	
+			randtwoplayed = false;
+			randthreeplayed = false;
+			randfourplayed = false;
+			wimpy = GetDifficulty;
+	
+ 		
+		cinema_cut = 0; 						
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code	
+			//playsound(eso_start);
+			//trans opening;
+			
+			setradarnav(ena_nav_alpha,1);
+			setradarnav(ena_nav_delta,4);
+			
+			setnavpoint(ena_Nav_Delta);
+			revealnavPoint(ena_Nav_Alpha);
+			//setactivationdistance(6800);
+			revealobjective(eob_linkupwithallies);
+			revealobjective(eob_DestroyAllBaseDefenders);
+			revealobjective(eob_destroytowers1);
+			revealobjective(eob_destroytowers2);
+			revealobjective(eob_destroytowers3);
+			revealobjective(eob_destroytowers4);
+			starttimer(gti_timer_0);
+			playvoiceover("VO\OP4\MI7\intro",talker_rat);
+			playvoiceover("VO\OP4\MI7\intro",talker_ian);
+			playvoiceover("VO\OP4\MI7\intro2",talker_rat);
+			playvoiceover("VO\OP4\MI7\intro2",talker_ian);
+			playvoiceover("VO\OP4\MI7\intro2",talker_den);
+			playvoiceover("VO\OP4\MI7\intro3",talker_ian);
+			playlancematesound("VO\OP4\MI7\intro3",2);
+			settargetdesirability(etu_barracks1atower,1);
+			settargetdesirability(etu_barracks1btower,1);
+			settargetdesirability(etu_barracks2atower,1);
+			settargetdesirability(etu_barracks2btower,1);
+			settargetdesirability(etu_barracks3atower,1);
+			settargetdesirability(etu_barracks3btower,1);
+			settargetdesirability(etu_barracks4atower,1);
+			settargetdesirability(etu_barracks4btower,1);
+			StartMusic("Music\Daggers",3.5,3.0,70);
+			settargetdesirability(eve_james_kulin,1);
+			playerai(epl_player0,true);
+			trans opening;
+
+endstate;
+
+	
+state deadState;
+	code
+endstate;
+	
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+
+	code
+	
+				//PlayVoiceOverOnce("VO\Generic\Startup1",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+				PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+
+	
+			
+//Reveal the objectives
+
+//Fail the mission when the player dies
+	if (isdead(playermech)) then
+		endmission(false,12);
+		killvoiceovers;
+		PlayVoiceOver("VO\Generic\Iandestroyed",talker_rat);
+		StartMusic("Music\SteinerDefeat",3.5,3.0,70);
+		trans lost;
+	endif;
+
+
+//Objective 1, link up with the allies	
+	if (not linkedup) then
+		if (iswithin(playermech,(groupobjectid(20)),500)) then
+			linkedup = true;
+			SetGroupAI(groupobjectid(3),GROUPAI_RADIOSQUAD);
+			successobjective(eob_linkupwithallies);
+			StartMusic("Music\indecision",3.5,3.0,70);
+		endif;
+		
+		if (groupalldead(groupobjectid(20))) then
+			linkedup = true;
+			failobjective(eob_linkupwithallies);
+		endif;
+		
+	endif;
+	
+//Objective 2, destroy the base defenders
+if (not defendersdead) then
+	if (groupalldead(groupobjectid(19))) then
+		defendersdead = true;
+		successobjective(eob_destroyallbasedefenders);
+	endif;
+endif;
+
+//----------------------------------------------------
+//Objectives 3 through 6, taking out the tower groups
+//----------------------------------------------------
+
+if (not towersalldown) then
+
+	if (not towers1down) then
+		if (groupalldead(groupobjectid(15))) then	
+			towers1down = true;
+			numgroupsdead = numgroupsdead + 1;
+			
+			switch (numgroupsdead)
+		
+				case 1:
+		
+					playvoiceover("VO\OP4\MI7\1clear",talker_fox);
+					playvoiceover("VO\OP4\MI7\1clear",talker_rcg);
+					playvoiceover("VO\OP4\MI7\1clear2",talker_rcg);
+					starttimer(gti_timer_10);
+				
+				endcase;
+				
+				case 2:
+
+					playvoiceover("VO\OP4\MI7\2clear",talker_fox);
+				
+				endcase;
+				
+				case 3:
+
+					playvoiceover("VO\OP4\MI7\3clear",talker_rcg);
+						
+				endcase;
+
+				case 4:
+
+					playvoiceover("VO\OP4\MI7\4clear",talker_fox);
+					playvoiceover("VO\OP4\MI7\4clear",talker_rcg);
+					playvoiceover("VO\OP4\MI7\4clear2",talker_rcg);
+  					
+				endcase;		
+				
+			endswitch;
+			
+			successobjective(eob_destroytowers1);
+		endif;
+	endif;
+	
+	if (not towers2down) then
+		if (groupalldead(groupobjectid(16))) then	
+			towers2down = true;
+			
+			numgroupsdead = numgroupsdead + 1;
+			switch (numgroupsdead)
+		
+				case 1:
+		
+					playvoiceover("VO\OP4\MI7\1clear",talker_fox);
+					playvoiceover("VO\OP4\MI7\1clear",talker_rcg);
+					playvoiceover("VO\OP4\MI7\1clear2",talker_rcg);
+					starttimer(gti_timer_10);
+				
+				endcase;
+				
+				case 2:
+
+					playvoiceover("VO\OP4\MI7\2clear",talker_fox);
+				
+				endcase;
+				
+				case 3:
+
+					playvoiceover("VO\OP4\MI7\3clear",talker_rcg);
+						
+				endcase;
+
+				case 4:
+
+					playvoiceover("VO\OP4\MI7\4clear",talker_fox);
+					playvoiceover("VO\OP4\MI7\4clear",talker_rcg);
+					playvoiceover("VO\OP4\MI7\4clear2",talker_rcg);
+  					
+				endcase;		
+				
+			endswitch;			
+			
+			successobjective(eob_destroytowers2);
+		endif;
+	endif;
+	
+	if (not towers3down) then
+		if (groupalldead(groupobjectid(17))) then	
+			towers3down = true;
+			
+			numgroupsdead = numgroupsdead + 1;
+			switch (numgroupsdead)
+		
+				case 1:
+		
+					playvoiceover("VO\OP4\MI7\1clear",talker_fox);
+					playvoiceover("VO\OP4\MI7\1clear",talker_rcg);
+					playvoiceover("VO\OP4\MI7\1clear2",talker_rcg);
+					starttimer(gti_timer_10);
+				
+				endcase;
+				
+				case 2:
+
+					playvoiceover("VO\OP4\MI7\2clear",talker_fox);
+				
+				endcase;
+				
+				case 3:
+
+					playvoiceover("VO\OP4\MI7\3clear",talker_rcg);
+						
+				endcase;
+
+				case 4:
+
+					playvoiceover("VO\OP4\MI7\4clear",talker_fox);
+					playvoiceover("VO\OP4\MI7\4clear",talker_rcg);
+					playvoiceover("VO\OP4\MI7\4clear2",talker_rcg);
+  					
+				endcase;		
+				
+			endswitch;			
+			
+			successobjective(eob_destroytowers3);
+		endif;
+	endif;
+	
+	if (not towers4down) then
+		if (groupalldead(groupobjectid(18))) then	
+			towers4down = true;
+			
+			numgroupsdead = numgroupsdead + 1;
+			switch (numgroupsdead)
+		
+				case 1:
+		
+					playvoiceover("VO\OP4\MI7\1clear",talker_fox);
+					playvoiceover("VO\OP4\MI7\1clear",talker_rcg);
+					playvoiceover("VO\OP4\MI7\1clear2",talker_rcg);
+					starttimer(gti_timer_10);
+				
+				endcase;
+				
+				case 2:
+
+					playvoiceover("VO\OP4\MI7\2clear",talker_fox);
+				
+				endcase;
+				
+				case 3:
+
+					playvoiceover("VO\OP4\MI7\3clear",talker_rcg);
+						
+				endcase;
+
+				case 4:
+
+					playvoiceover("VO\OP4\MI7\4clear",talker_fox);
+					playvoiceover("VO\OP4\MI7\4clear",talker_rcg);
+					playvoiceover("VO\OP4\MI7\4clear2",talker_rcg);
+  					
+				endcase;		
+				
+			endswitch;			
+			
+			successobjective(eob_destroytowers4);
+		endif;
+	endif;
+	
+	if (towers1down) then
+		if (towers2down) then
+			if (towers3down) then
+				if (towers4down) then
+					towersalldown = true;
+				endif;
+			endif;
+		endif;
+	endif;			
+	
+endif;
+
+//----------------------------
+//Objective 7, James Kulin and his team
+//----------------------------
+
+If (not basetaken) then
+	if (towersalldown) then
+		if (defendersdead) then
+			basetaken = true;
+			playvoiceover("VO\OP4\MI7\neutralized",talker_ian);
+			playvoiceover("VO\OP4\MI7\neutralized",talker_cjk);
+			playvoiceover("VO\OP4\MI7\sodoit",talker_ian);
+			playvoiceover("VO\OP4\MI7\sodoit",talker_cjk);
+			StartMusic("Music\ominous",3.5,3.0,60);
+			revealobjective(eob_kulin);
+		endif;
+	endif;
+endif;
+
+if (basetaken) then
+
+	if (not inrange) then
+		if iswithin((groupobjectid(1)),eve_james_kulin,1050) then
+			playlancematesound("VO\OP4\MI7\inrange",2);
+			StartMusic("Music\Armedloop",3.5,3.0,50);
+			inrange = true;
+		endif;
+	endif;
+
+	if (not kulindead) then
+		if (groupalldead(groupobjectid(2))) then	
+			kulindead = true;
+			playlancematesound("VO\OP4\MI7\SOB",1);
+			successobjective(eob_kulin);
+		endif;
+	endif;
+
+endif;
+
+//------------------------------
+//end the mission happily
+//-------------------------------
+if (kulindead) then
+	if (not linkedup) then
+		failobjective(eob_linkupwithallies);
+	endif;
+		endmission(true,30);
+		playvoiceover("VO\OP4\MI7\win",talker_ian);
+		playvoiceover("VO\OP4\MI7\win",talker_rat);
+		playvoiceover("VO\OP4\MI7\win2",talker_ian);
+		//*** Davelueh Added Salvage Here ***
+		//*** Then it got Changed***
+		AddWeaponSalvage("AC5",1);
+		AddWeaponSalvage("AC10",1);
+		AddWeaponSalvage("Flamer",1);
+		AddWeaponSalvage("Gauss",1);
+		AddWeaponSalvage("ClanGauss",1);
+		AddWeaponSalvage("LargeLaser",1);
+		AddWeaponSalvage("MediumLaser",2);
+		AddWeaponSalvage("ClanLBXAC10",1);
+		AddWeaponSalvage("ClanLBXAC10",1);
+		AddWeaponSalvage("LBXAC20",1);
+		AddWeaponSalvage("LongTom",1);
+		AddWeaponSalvage("ClanLRM5",1);
+		AddWeaponSalvage("ClanLRM15",1);
+		AddWeaponSalvage("LRM10",1);
+		AddWeaponSalvage("MRM10",1);
+		AddWeaponSalvage("MRM20",4);
+		AddWeaponSalvage("ERLargePulseLaser",1);
+		AddWeaponSalvage("ERMediumPulseLaser",1);
+		AddWeaponSalvage("LargePulseLaser",2);
+		AddWeaponSalvage("SmallPulseLaser",1);
+		AddWeaponSalvage("SRM4",2);
+		AddWeaponSalvage("SRM6",2);
+		AddWeaponSalvage("SSRM2",2);
+		AddWeaponSalvage("ClanUltraAC2",2);
+		AddWeaponSalvage("UltraAC5",1);
+		AddWeaponSalvage("Flare",1);
+		AddMechInstanceSalvage("Vulture");
+		
+			If (wimpy == MEDIUM_DIFFICULTY) then
+				AddMechInstanceSalvage("Thor");
+			endif;
+		
+		StartMusic("Music\Victory",3.5,3.0,70);
+		enableglobalinvulnerable;
+		settargetdesirability(playermech,-1);
+		resettimer(gti_timer_28);
+		starttimer(gti_timer_28);
+		trans waitforcinema;
+
+endif;
+
+//----------------------
+//Additional Sounds
+//---------------------
+
+if (not baseattackedsoundplayed) then
+	if (baseunderattack) then
+		playvoiceover("VO\OP4\MI7\takingfire",talker_fox);
+		baseattackedsoundplayed = true;
+		starttimer(gti_timer_1);
+	endif;
+endif;
+
+if (not kulinwarningplayed) then
+	if (baseunderattack) then
+		if ((gettimer(gti_timer_1)) > 60) then
+			kulinwarningplayed = true;
+			playvoiceover("VO\OP4\MI7\linkupdelayed",talker_fox);
+			playvoiceover("VO\OP4\MI7\linkupdelayed",talker_rcg);
+			playvoiceover("VO\OP4\MI7\linkupdelayed",talker_rat);
+			playvoiceover("VO\OP4\MI7\linkupdelayed",talker_ian);
+			playvoiceover("VO\OP4\MI7\itskulin",talker_rat);
+			if (playlancematesound("VO\OP4\MI7\itskulin",1)) then
+				playvoiceover("VO\OP4\MI7\together",talker_ian);
+				playlancematesound("VO\OP4\MI7\together",1);
+			endif;
+			resettimer(gti_timer_1);
+			killtimer(gti_timer_1);
+		endif;
+	endif;
+endif;
+
+if (not waitingplayed) then
+	if (not linkedup) then
+		if ((gettimer(gti_timer_0)) > 180) then
+			waitingplayed = true;
+			playvoiceover("VO\OP4\MI7\fullhouse",talker_fox);
+			playvoiceover("VO\OP4\MI7\fullhouse",talker_rcg);
+			playvoiceover("VO\OP4\MI7\fullhouse",talker_den);
+			playvoiceover("VO\OP4\MI7\fullhouse",talker_ian);
+		endif;
+	endif;
+endif;
+
+if (not denonedown) then
+	if (groupnumdead((groupobjectid(20))) == 1) then
+		playvoiceover("VO\OP4\MI7\mechdown",talker_den);
+		playvoiceover("VO\OP4\MI7\mechdown",talker_rcg);
+		denonedown = true;
+	endif;
+endif;
+
+if (not denthreedown) then
+	if (groupnumdead((groupobjectid(20))) == 3) then
+		playvoiceover("VO\OP4\MI7\2mechdown",talker_den);
+		playvoiceover("VO\OP4\MI7\2mechdown",talker_rcg);
+		denthreedown = true;
+	endif;
+endif;
+			
+if (not randoneplayed) then
+	if (timegreater(gti_timer_0,onetime)) then
+		playvoiceover("VO\OP4\MI7\Random1",talker_rcg);
+		randoneplayed = true;
+	endif;
+endif;
+
+if (not randtwoplayed) then
+	if (timegreater(gti_timer_0,twotime)) then
+		playvoiceover("VO\OP4\MI7\Random2",talker_rcg);
+		randtwoplayed = true;
+	endif;
+endif;
+
+if (not randthreeplayed) then
+	if (timegreater(gti_timer_10,threetime)) then
+		playvoiceover("VO\OP4\MI7\Random3",talker_fox);
+		randthreeplayed = true;
+	endif;
+endif;
+
+if (not randfourplayed) then
+	if (timegreater(gti_timer_0,fourtime)) then
+		playvoiceover("VO\OP4\MI7\Random4",talker_fox);
+		randfourplayed = true;
+	endif;
+endif;
+		
+//AMBIENT MUSIC
+if (not ismusicplaying) then
+	StartMusic("Music\Arcticambloop",0.0,3.0,40);
+endif;
+
+//*************************************
+//Navpoint Checks
+//*************************************
+
+if (not alphareached) then
+	if (isnavrevealed(ena_nav_alpha)) then
+		if (iswithin(playermech,ena_nav_alpha,checkrange)) then
+			playvoiceover("VO\generic\navalpha",talker_Bet);
+			alphareached = true;
+		endif;
+	endif;
+endif;
+
+if (not deltareached) then
+	if (isnavrevealed(ena_nav_delta)) then
+		if (iswithin(playermech,ena_nav_delta,checkrange)) then
+			playvoiceover("VO\generic\navdelta",talker_Bet);
+			deltareached = true;
+		endif;
+	endif;
+endif;
+
+				
+endstate;
+
+//-----------------------------------------
+//HERE THERE BE CINEMAS
+//-----------------------------------------
+
+state waitforcinema;
+		
+		code
+		
+		if (timegreater(gti_timer_28,4)) then
+			playerai(epl_player0,true);
+			trans won;
+		endif;
+		
+		
+endstate;
+
+state opening;
+
+	code
+	
+	if (cinemaskip) then
+			cinema_cut = 0;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			playerai(epl_player0,false);
+			Fadefromblack(0.0);
+			killvoiceovers;
+			cinemaend;
+			trans sit;	
+	endif;
+
+switch (cinema_cut)
+			
+			case 0:
+
+			cinemastart;
+			setactivecamera (eca_cameraship);
+			Fadetoblack(0.0);
+
+			Camerafollowobject(playermech);
+			Targetfollowobject(playermech);
+			SetCameraFootShake(playermech,100);
+
+			targetoffset(0.0,7.0,0.0,0.0,false);
+			Cameraoffset(-90.0,35.0,12.0,0.0,false);
+			Cameraoffset(90.0,4.0,64.0,30.0,false);
+
+
+			
+
+			startTimer (gti_Timer_21);
+			resettimer (gti_Timer_21);
+
+			cinema_cut = cinema_cut + 1;
+
+			endcase;
+
+			case 1:
+				
+				if (timegreater(gti_Timer_21,1)) then
+					
+					Fadefromblack(3.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 3;	
+				endif;
+				
+			endcase;
+
+			case 2:
+				
+				if (timegreater(gti_Timer_21,8)) then
+					
+					Fadetoblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;			
+
+			case 3:
+				
+				if (timegreater(gti_Timer_21,2)) then
+					Targetfollowobject(playermech);
+					camerafollowobject(playermech);
+					targetoffset(0.0,8.0,0.0,0.0,false);
+					Cameraoffset(-100.0,49.0,35.0,0.0,true);
+					Cameraoffset(90.0,15.0,35.0,17.0,true);
+					Fadefromblack(2.0);
+					resetTimer (gti_Timer_21);
+					cinema_cut = cinema_cut + 1;	
+				endif;
+				
+			endcase;
+							
+			case 4:
+				
+				if (timegreater(gti_Timer_21,27)) then
+					cinema_cut = 0;
+					resettimer (gti_Timer_21);
+					killtimer(gti_timer_21);
+					//Cameraoffset(0.0,0.0,0.0,0.0,false);
+					playerai(epl_player0,false);
+					cinemaend;
+					trans sit;	
+				endif;
+				
+			endcase;
+			
+		endswitch;
+
+	
+	
+endstate;
+
+state won;
+
+		code
+		
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(true,1);	
+			trans hang;
+	endif;
+		
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(-30.0,125.0,75.0,0.0,false);
+				Cameraoffset(60.0,20.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state lost;
+
+		code
+
+	if (cinemaskip) then
+			cinema_cut = 20;
+			resettimer (gti_Timer_21);
+			killtimer(gti_timer_21);
+			endmission(false,1);
+			trans hang;
+	endif;
+ 	
+		switch cinema_cut
+		
+			case 0:	
+				CinemaStart;
+				setactivecamera (eca_cameraship);
+				//Fadetoblack(7.0);
+				Targetfollowobject(playermech);
+				Camerafollowobject(playermech);
+				Targetoffset(0.0,4.0,0.0,0.0,false);
+				Cameraoffset(0.0,20.0,75.0,0.0,false);
+				Cameraoffset(60.0,125.0,25.0,20.0,false);
+				Cinema_cut=Cinema_cut+1;
+			endcase;
+			
+			case 1:
+			endcase;
+			
+		endswitch;	
+endstate;
+
+state hang;
+		
+		code
+		
+endstate;
+
+endfsm.
+//******************************************************************
+

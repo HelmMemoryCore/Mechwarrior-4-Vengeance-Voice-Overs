@@ -1,0 +1,225 @@
+
+//*********************************************************************************
+
+fsm APCs : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+																				
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static locpoint	point1;
+	static locpoint	point2;
+	static locpoint	point3;
+	static locpoint	point4;
+	static locpoint	point11;
+	static locpoint	point12;
+	static locpoint	point13;
+	static locpoint	point14;
+	static integer	gunnery;
+	static integer	attackrange;
+	static real			mindelay;
+	static real			maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;	
+	static integer	mood;
+	static integer	speed;
+	static integer	mypath;
+
+
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+
+			Point1[0] = -1034;
+			Point1[1] = 87;
+			Point1[2] = 924;
+
+			Point2[0] = -1044;
+			Point2[1] = 87;
+			Point2[2] = 924;
+			
+			Point3[0] = -1054;
+			Point3[1] = 87;
+			Point3[2] = 924;
+			
+			Point4[0] = -1064;
+			Point4[1] = 87;
+			Point4[2] = 924;
+
+			Point11[0] = 167;
+			Point11[1] = 134;
+			Point11[2] = 1069;
+
+			Point12[0] = 150;
+			Point12[1] = 134;
+			Point12[2] = 1069;
+			
+			Point13[0] = 167;
+			Point13[1] = 134;
+			Point13[2] = 1055;
+			
+			Point14[0] = 150;
+			Point14[1] = 134;
+			Point14[2] = 1055;
+			
+				attackrange = 300;				
+				piloting = 100;							
+				gunnery = 170;						
+				mindelay = 0.0;							
+				maxdelay = 1.0;									
+				elitelevel = 100;
+				mood = BRUTAL_END;
+				speed = 600;
+	switch (GetMemoryInteger(me,9))
+		case 0:	
+			mypath = epa_APC1Path;
+		endcase;
+		case 1:	
+			mypath = epa_APC2Path;
+		endcase;
+		case 2:	
+			mypath = epa_APC3Path;
+		endcase;
+		case 3:	
+			mypath = epa_APC4Path;
+		endcase;
+	endswitch
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		
+		setskilllevel(me,100,60,60);
+		setfiringdelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+
+		
+		trans WAIT;
+		
+	endstate;
+
+	state	WAIT;
+		code
+		
+		if APCGo == TRUE	then
+			teleport(eve_APC1,point1);
+			teleport(eve_APC2,point2);
+			teleport(eve_APC3,point3);
+			teleport(eve_APC4,point4);
+			trans go;
+		endif;
+		
+		OrderMoveLookout;
+		
+		if APCCIN == TRUE then
+			teleport(eve_APC1,point11);
+			teleport(eve_APC2,point12);
+			teleport(eve_APC3,point13);
+			teleport(eve_APC4,point14);
+			trans cin;
+		endif;
+
+		
+	endstate;
+
+	
+	state GO;
+	
+	code	
+	
+		OrderFormationMove(GroupObjectID(13),epa_APCpath,speed,MOVE_NOCYCLE,FORMATION_LINE,FORMTYPE_NORMAL,FALSE);
+	
+		if (FindEnemy(attackRange,FT_DEFAULT)) then
+			trans Attack;
+		endif;
+	
+		if APCCIN == TRUE then
+			teleport(eve_APC1,point11);
+			teleport(eve_APC2,point12);
+			teleport(eve_APC3,point13);
+			teleport(eve_APC4,point14);
+			trans cin;
+		endif;
+	
+	
+	endstate;
+
+  state Attack;
+	code
+		if (LeaveAttackState(800)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans GO;
+		endif;
+
+		OrderAttack(false);
+																																
+		if APCCIN == TRUE then
+			teleport(eve_APC1,point11);
+			teleport(eve_APC2,point12);
+			teleport(eve_APC3,point13);
+			teleport(eve_APC4,point14);
+			trans cin;
+		endif;
+
+		if ((isShot (me)) and (rand(0,3) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+
+	endstate;
+
+	
+	state deadState;
+		code
+			orderDie;
+  endstate;
+
+	state cin;
+		code
+		
+		if OrderMoveTo(mypath,600,move_nocycle,false,false) == true then
+			OrderMoveLookout;
+		endif;
+		
+	endstate;
+	
+endfsm.
+//******************************************************************
+
+
+
+

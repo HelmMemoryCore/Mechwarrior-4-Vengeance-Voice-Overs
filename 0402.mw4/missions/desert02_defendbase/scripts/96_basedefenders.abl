@@ -1,0 +1,203 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Sentry must be changed to some other unique identifier
+fsm BaseDefenders : integer;
+		
+
+
+// 		Behavior: Sits stationary and looks around. When an enemy comes within
+//   alertrange it moves towards the unit
+//	When the unit comes within attackrange it attacks
+//	Whenit kills the unit it can either go back to it's start point or not,
+//	depending on different settings in the brain.
+
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; // When do I start shooting?
+																
+	static integer			piloting; 	// piloting skill
+	static integer			gunnery; // hit chance,
+	static real					mindelay;		//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;		//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;			 // What speed so I move at?
+	static integer 			elitelevel; // % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																	// and other things that would normally be determined by combat experience
+
+  static integer			isshotradius;	//how far away from me will I detect an enemy shot.
+	
+	static integer			mood;	//What is my normal mood?
+			
+	static Boolean 			attacksoundplayed;	//Am I attacking?
+	
+	//if set to -1 the below sounds effectively do not exist
+	static integer 			attacksound; // plays when the unit first attacks
+	static integer 			deathsound; // plays when the unit dies
+	
+	static locpoint			mystart; //Where was the unit when the mission started
+	static boolean			movingtostart;	//Is the unit moving to the start point
+	static boolean			movetostart;	//should the unit move back to it's start point when it's done fighting?
+
+	static integer			friendlyFireFrustrationLevel;
+	static integer			frustration_timer;
+	static integer			attack_player_timer;
+	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+
+																			// defaults are below
+	//These are the variables that are normally changed by the designer
+	//in order to change behavior
+	attackrange = 500;									//500
+	piloting = 60;												//50
+	gunnery = 55;											//30
+	mindelay = 0.5;											//1.5
+	maxdelay = 1.0;											//3.0
+	elitelevel = 70;										//30
+	speed = 60;												//600 (max speed)
+	isshotradius = 80;										//80	
+	attacksound = -1;                   //-1 (no sound)
+	deathsound = -1;                    //-1 (no sound)	
+	movetostart = false;								//False
+	mood = neutral_start;								//neutral_start
+
+	//These variables should not be changed by the designer without good reason
+	attacksoundplayed = FALSE;									//false
+	getlocation(me,mystart);		 				//DO NOT CHANGE THIS LINE!!!
+	movingtostart = false;							//false
+	
+	friendlyFireFrustrationLevel	= 0;
+	frustration_timer				= gti_Timer_25;
+	attack_player_timer				= gti_Timer_26;
+	
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+
+	
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		if (deathsound <> -1) then	
+			PlaySoundOnce(deathsound);
+		endif;
+		
+		orderDie;
+endstate;
+
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+		
+			OrderMoveTo(epa_frontguardpath,70,move_circle,true,true);
+		
+			if (setmytarget(attackrange)) then
+				attackrange = 650;
+				RevealObjective(eob_PO_DefendBase);
+				trans attack;
+	 		endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	 	var
+		
+		code
+		
+		//Get out of the attack state if I should	
+		if (LeaveAttackState(attackrange*3/2)) then
+			orderstopattacking;				
+			trans sit;
+		endif;
+		
+			//Attack
+			OrderAttack(true);
+			
+		//play the attack sound if one exists
+		if (attacksoundplayed == FALSE) then	
+			attacksoundplayed = true;
+			playvoiceoveronce("VO\OP4\MI2\onbase",talker_brv);
+		endif;
+		
+		//maybe swap targets when I am shot.
+		if ((isShot (me)) and (rand(0,75) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+
+	endstate;
+
+//------------------------------------------------------------------
+//	KillPlayerState: too much friendly fire -- get pissed and attack the player
+//------------------------------------------------------------------
+
+state KillPlayerState;
+	code
+		if (TimeGreater(attack_player_timer,6)) then
+			SetFiringDelay			(ME,0.0,0.0);
+			SetSkillLevel			(ME,100,500,100);
+
+			SetAutoTargeting(ME,FALSE);
+			SetTarget(ME,getplayervehicle(epl_player0));
+			OrderAttackTactic(TACTIC_CIRCLE_OF_DEATH,TRUE);
+		endif;
+endstate;
+	
+endfsm.
+//******************************************************************
+

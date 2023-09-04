@@ -1,0 +1,236 @@
+
+fsm SCUDs : integer;
+
+
+//------------------------------------------------------------------
+
+// from Generic_PatrolRespond
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange1;		// The range at which I start attacking if in the original patrol
+		static integer			withdrawRange1;		// The range at which I withdraw from combat entirely
+		static integer			path1;				// My original path
+		static integer			moveType1;			// How I move along the path
+		static integer			speed1;				// The speed at which I move along the path
+
+		static integer			triggerID;			// The trigger that will move me from my original patrol state to my new patrol state
+
+		static integer			attackRange2;		// The range at which I start attacking after the trigger has fired
+		static integer			withdrawRange2;		// The range at which I withdraw from combat entirely
+		static integer			path2;				// My path after the trigger fires
+		static integer			moveType2;			// How I move along the second path
+		static integer			speed2;				// The speed at which I move along the second path
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+		static integer			findTypes;			// What kind of enemies to look for
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		static integer 			surrenderSound;		// The sound I play when I surrender
+		
+		static integer			mood;				// My default mood.
+
+		static integer			tactic;				// My tactic
+
+		static integer			myGroup;			// What group I'm in for formation purposes
+		static integer			teleportNav;		// A nav point I teleport to
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange1	= 500;
+		withdrawRange1	= attackRange1 * 3 / 2;
+		path1			= -1;
+		moveType1		= move_nocycle;
+		speed1			= 16;
+
+		triggerID		= 3;
+
+		path2			= -1;
+		moveType2		= move_nocycle;
+
+		// driver settings
+		piloting		= 50;
+		gunnery			= 5;
+		minDelay		= 3.0;
+		maxDelay		= 5.5;
+		eliteLevel		= 10;
+		attackThrottle	= 80;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		surrenderSound	= -1; // no sound
+		mood			= NEUTRAL_START;
+
+		findTypes		= FT_BUILDING;
+		isShotRadius	= 0;
+		tactic			= TACTIC_STAND_GROUND;
+		attackRange2	= 800;
+		withdrawRange2	= attackRange2 * 3 / 2;
+		speed2			= 36;
+
+		switch (getmemoryinteger(me,0))
+
+		case 1:								// NORTH SCUD
+			path1			= epa_CutSceneSCUDWestPath;
+			path2			= epa_NorthSCUDPath;
+			myGroup			= 101;
+			teleportNav		= ena_NavSCUD1;
+			triggerID		= 1;
+		endcase;
+
+		case 2:								// SOUTH SCUD
+			path1			= epa_CutSceneSCUDEastPath;
+			path2			= epa_SouthSCUDPath;
+			myGroup			= 102;
+			teleportNav		= ena_NavSCUD2;
+		endcase;
+
+		endswitch;
+
+		GroupAddObject(GroupObjectId(myGroup),ME);
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+				
+		trans FollowPath1State;
+
+endstate;			
+
+//------------------------------------------------------------------
+//	FollowPath1State: follow the original path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state FollowPath1State;
+	var
+		LocPoint my_nav;
+	code
+		if (GetGlobalTrigger(triggerID)) then
+			GetLocation(teleportNav,my_nav);
+			ClearMoveOrder(ME);
+			Teleport(ME,my_nav);
+			trans WaitToMoveState;
+		endif;
+
+		if (path1 <> -1) then
+			OrderMoveToRigid(path1,speed1,moveType1,TRUE,FALSE);
+		else
+			OrderMoveLookOut;
+		endif;
+endstate;
+
+state WaitToMoveState;
+	code
+		OrderMoveLookOut;
+
+		SetIsShotRadius	(ME,120);
+
+		if (FindEnemy(attackRange2,FT_DEFAULT)) then
+			SetIsShotRadius	(ME,isShotRadius);
+			trans FollowPath2State;
+		endif;
+endstate;
+
+//------------------------------------------------------------------
+//	FollowPath2State: follow the second path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state FollowPath2State;
+	code
+		if (FindEnemy(attackRange2,findTypes)) then
+			trans Attack2State;
+		endif;
+
+		if (path2 <> -1) then
+			OrderMoveTo(path2,speed2,moveType2,TRUE,FALSE);
+		else
+			OrderMoveLookOut;
+		endif;
+endstate;
+
+//------------------------------------------------------------------
+//	Attack2State: attack my current target, or return to second path if done
+//------------------------------------------------------------------
+
+state Attack2State;
+	code
+		if (LeaveAttackState(withdrawRange2)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans FollowPath2State;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttackTactic(TACTIC_STAND_GROUND,true);
+
+endstate;
+
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

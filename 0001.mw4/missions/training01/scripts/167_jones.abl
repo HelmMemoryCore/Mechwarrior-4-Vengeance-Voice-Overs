@@ -1,0 +1,391 @@
+
+fsm Jones : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+		static integer	distance_from_cone;
+
+function Init;
+	code
+
+endfunction;
+
+function StareAtPlayer;
+	code
+		SetTarget(ME,GetPlayerVehicle(epl_player0));
+		OrderAttackTactic(TACTIC_STARE,false);
+endfunction;
+
+function StopStaring;
+	code
+		OrderStopAttacking;
+endfunction;
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,0.0,0.0);
+		SetIsShotRadius			(ME,100);
+		SetEntropyMood			(ME,7);
+		SetCurMood				(ME,7);
+		SetSkillLevel			(ME,100,400,100);
+		SetAttackThrottle		(ME,100);
+
+		SetSensorVisibility(ME,FALSE);
+
+		distance_from_cone		= 55;
+
+//	trans MoveToArea2;
+
+		Shutdown(ME);
+
+		trans SitState;
+
+endstate;
+
+state SitState;
+	code
+		if (GetGlobalTrigger(2) == true) then
+			Startup(me);
+			trans JonesWaitToWalk1;
+		endif;
+endstate;
+
+state JonesWaitToWalk1;
+	code
+		if (GetGlobalTrigger(4) == true) then
+			trans JonesWalk1;
+		endif;
+endstate;
+
+state JonesWalk1;
+	code
+		if (OrderMoveTo(epa_Path_Jones1,60,MOVE_NOCYCLE,true,false) == true) then
+			StareAtPlayer;
+
+			trans WaitToDemo;
+		endif;
+endstate;
+
+state WaitToDemo;
+	code
+		if (GetGlobalTrigger(16) == true) then
+			OrderStopAttacking;
+			trans DemonstrateCOD;
+		endif;
+endstate;
+
+state DemonstrateCOD;
+	code
+		OrderMoveTo(epa_Path_Jones2,60,MOVE_NOCYCLE,true,false);
+
+		trans WaitToStartLooking;
+endstate;
+
+state WaitToStartLooking;
+	code
+		if (IsWithin(ME,ebu_west_tower,distance_from_cone) == true) then
+			SetTarget(ME,ebu_west_tower);
+			SetFiringDelay(ME,1000.0,1000.0);
+			OrderAttackTactic(TACTIC_SHOOT_ONLY,false);
+
+			trans WaitToStopLooking;
+		endif;
+endstate;
+
+state WaitToStopLooking;
+	code
+		if (IsWithin(ME,ebu_west_tower,distance_from_cone + 5) == false) then
+			SetGlobalTrigger(14,true);
+			OrderStopAttacking;
+
+			trans WaitForNext;
+		endif;
+endstate;
+
+state WaitForNext;
+	code
+		if (GetGlobalTrigger(18) == true) then
+			OrderMoveTo(epa_Path_Jones3,90,MOVE_NOCYCLE,true,false);
+
+			SetTarget(ME,ebu_Fuel_tank);
+			OrderAttackTactic(TACTIC_STARE,false);
+
+			trans MovingToGamma;
+		endif;
+endstate;
+
+state MovingToGamma;
+	var
+		integer speed;
+	code
+		if (GetGlobalTrigger(45) == true) then
+			OrderStopAttacking;
+			ClearMoveOrder(ME);
+
+			SetTarget(ME,ebu_Fuel_tank);
+			OrderAttackTactic(TACTIC_STARE,false);
+
+			trans WaitInArea2;
+		endif;
+
+//		if (OrderMoveTo(epa_Path_Jones3,speed,MOVE_NOCYCLE,true,false) == true) then
+//			trans MoveToArea2;
+//		endif;
+endstate;
+
+state MoveToArea2;
+	code
+/*
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (OrderMoveTo(epa_Path_Area2j1,60,MOVE_NOCYCLE,true,false) == true) then
+			StareAtPlayer;
+
+			trans WaitInArea2;
+		endif;
+*/
+endstate;
+
+state WaitInArea2;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (GetGlobalTrigger(20) == true) then
+			StopStaring;
+			trans MoveToArea3;
+		endif;
+endstate;
+
+state MoveToArea3;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (OrderMoveTo(epa_Path_Area2j2,100,MOVE_NOCYCLE,true,false) == true) then
+			StareAtPlayer;
+
+			trans WaitInArea3;
+		endif;
+endstate;
+
+state WaitInArea3;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (GetGlobalTrigger(21) == true) then
+			StopStaring;
+			trans MoveToArea4;
+		endif;
+endstate;
+
+state MoveToArea4;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (OrderMoveTo(epa_Path_Area2j3,80,MOVE_NOCYCLE,true,false) == true) then
+			StareAtPlayer;
+
+			trans WaitInArea4;
+		endif;
+endstate;
+
+state WaitInArea4;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (GetGlobalTrigger(22) == true) then
+			StopStaring;
+			trans MoveToArea5;
+		endif;
+endstate;
+
+state MoveToArea5;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (OrderMoveTo(epa_Path_Area2j4,80,MOVE_NOCYCLE,true,false) == true) then
+			StareAtPlayer;
+
+			trans WaitInArea5;
+		endif;
+endstate;
+
+state WaitInArea5;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (GetGlobalTrigger(23) == true) then
+			StopStaring;
+			trans LeaveAndShutdown;
+		endif;
+endstate;
+
+state LeaveAndShutdown;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (IsWithin(ME,ena_Nav_JonesFinalTeleportStart,50) == true) then
+			trans StartTorsoCenter;
+		endif;
+
+		if (OrderMoveTo(epa_Path_Area2jFinal,40,MOVE_NOCYCLE,true,false) == true) then
+			trans StartTorsoCenter;
+		endif;
+endstate;
+
+state StartTorsoCenter;
+	var
+		LocPoint p;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		GetLocation(ena_Nav_JonesFinalTeleportEnd,p);
+		p[0] = p[0] - 12;
+		Teleport(ME,p);
+		SetRotation(ME,270);
+
+		StartTimer(29);
+
+		SetTarget(ME,ebu_Fuel_tank);
+		OrderAttackTactic(TACTIC_STARE,false);
+
+		trans StareFor5s;
+endstate;
+
+state StareFor5s;
+	var
+		LocPoint p;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		GetLocation(ena_Nav_JonesFinalTeleportEnd,p);
+		p[0] = p[0] - 12;
+		Teleport(ME,p);
+		SetRotation(ME,270);
+
+		if (TimeGreater(29,9.0)) then
+			ShutDown(ME);
+			trans WaitToStartUp;
+		endif;
+endstate;
+
+state WaitToStartUp;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (GetGlobalTrigger(50) == true) then
+			trans Speech;
+		endif;
+
+		if (GetGlobalTrigger(35) == true) then
+			Startup(ME);
+
+			SetSensorVisibility(ME,TRUE);
+
+			SetFiringDelay(ME,0.0,0.0);
+			SetTarget(me,eve_osiris);
+			OrderAttack(true);
+
+			trans Attacking;
+		endif;
+endstate;
+
+state Attacking;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		if (GetGlobalTrigger(50) == true) then
+			trans Speech;
+		endif;
+endstate;
+
+state Speech;
+	code
+		if (GetGlobalTrigger(99) == true) then
+			trans WaitToKillPlayerState;
+		endif;
+
+		Startup(ME);
+		OrderStopAttacking;
+		ClearMoveOrder(ME);
+
+		OrderMoveLookOut;
+
+		trans StandThere;
+endstate;
+
+state StandThere;
+	code
+endstate;
+
+state WaitToKillPlayerState;
+	code
+		Startup(ME);
+		OrderStopAttacking;
+		ClearMoveOrder(ME);
+
+		StartTimer(28);
+
+		trans KillPlayerState;
+endstate;
+
+state KillPlayerState;
+	code
+		if (TimeGreater(28,7.0)) then
+			Fall(getplayervehicle(epl_player0),rand(0,3));
+
+			SetSensorVisibility(ME,TRUE);
+			SetAutoTargeting(ME,FALSE);
+			SetFiringDelay(ME,0.0,0.0);
+			SetTarget(ME,getplayervehicle(epl_player0));
+			OrderAttackTactic(TACTIC_RUSH,TRUE);
+
+			trans AssKicker;
+		endif;
+endstate;
+
+state AssKicker;
+	code
+		Fall(getplayervehicle(epl_player0),rand(0,3));
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.

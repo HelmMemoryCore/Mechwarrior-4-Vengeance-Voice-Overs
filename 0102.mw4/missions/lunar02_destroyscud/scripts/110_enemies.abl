@@ -1,0 +1,254 @@
+
+fsm Enemies : integer;
+
+
+//------------------------------------------------------------------
+
+// from Generic_PatrolRespond
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			triggerID;			// The trigger that will move me from my original patrol state to my new patrol state
+		static integer			surrenderTriggerID;	// The trigger fired that makes me surrender
+
+		static integer			attackRange2;		// The range at which I start attacking after the trigger has fired
+		static integer			withdrawRange2;		// The range at which I withdraw from combat entirely
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		static integer 			surrenderSound;		// The sound I play when I surrender
+		
+		static integer			mood;				// My default mood.
+
+		static integer			tactic;				// My tactic
+
+		static integer			myGroup;			// What group I'm in for formation purposes
+		static integer			teleportNav;		// A nav point I teleport to
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		triggerID		= 3;
+		surrenderTriggerID	= 2;
+
+		attackRange2	= 600;
+		withdrawRange2	= attackRange2 * 3 / 2;
+
+		tactic			= TACTIC_CIRCLE_OF_DEATH;
+
+		// driver settings
+		piloting		= 20;
+		gunnery			= 5;
+		minDelay		= 3.5;
+		maxDelay		= 6.5;
+		eliteLevel		= 0;
+		attackThrottle	= 50;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		surrenderSound	= -1; // no sound
+		mood			= NEUTRAL_START;
+
+		isShotRadius	= 160;
+
+		switch (getmemoryinteger(me,0))
+
+		case 1:								// Enemy Mech 1
+			myGroup			= 101;
+			triggerID		= 1;
+			teleportNav		= ena_NavEnemyMech1;
+			piloting		= 10;
+			gunnery			= 0;
+			minDelay		= 4.0;
+			maxDelay		= 6.0;
+			attackRange2	= 650;
+			withdrawRange2	= attackRange2 * 3 / 2;
+			tactic			= TACTIC_FRONT;
+		endcase;
+
+		case 2:								// Enemy Mech 2
+			myGroup			= 102;
+			teleportNav		= ena_NavEnemyMech2;
+
+			attackRange2	= 900;
+			withdrawRange2	= attackRange2 * 3 / 2;
+			tactic			= TACTIC_FRONT;
+		endcase;
+
+		case 3:								// WEST TANK 1
+			myGroup			= 103;
+			teleportNav		= ena_NavEnemyTank1;
+			GroupAddObject(GroupObjectID(99),ME);
+			attackThrottle	= 100;
+			tactic			= TACTIC_SNIPE;
+		endcase;
+
+		case 4:								// WEST TANK 2
+			myGroup			= 103;
+			teleportNav		= ena_NavEnemyTank2;
+			GroupAddObject(GroupObjectID(99),ME);
+			attackThrottle	= 100;
+			tactic			= TACTIC_SNIPE;
+		endcase;
+
+		endswitch;
+
+		GroupAddObject(GroupObjectId(myGroup),ME);
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+				
+		trans InitialState;
+endstate;			
+
+//------------------------------------------------------------------
+//	InitialState: stand around, teleport when required
+//------------------------------------------------------------------
+
+state InitialState;
+	var
+		LocPoint my_nav;
+	code
+		if (GetGlobalTrigger(triggerID)) then
+			GetLocation(teleportNav,my_nav);
+			Teleport(ME,my_nav);
+			trans WaitState;
+		endif;
+
+		OrderMoveLookOut;
+endstate;
+
+//------------------------------------------------------------------
+//	WaitState: wait for player to approach
+//------------------------------------------------------------------
+
+state WaitState;
+	code
+		if (GetGlobalTrigger(surrenderTriggerID)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans SurrenderState;
+		endif;
+
+		if (FindEnemy(attackRange2,FT_DEFAULT)) then
+			trans AttackState;
+		endif;
+
+		OrderMoveLookOut;
+endstate;
+
+//------------------------------------------------------------------
+//	AttackState: attack my current target
+//------------------------------------------------------------------
+
+state AttackState;
+	code
+		if (GetGlobalTrigger(surrenderTriggerID)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans SurrenderState;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttackTactic(tactic,true);
+
+		switch (getmemoryinteger(me,0))
+			case 3:								// WEST TANK 1
+				if (GroupNumDead(GroupObjectID(99)) == 1) then
+					tactic = TACTIC_RETREAT;
+				endif;
+			endcase;
+
+			case 4:								// WEST TANK 2
+				if (GroupNumDead(GroupObjectID(99)) == 1) then
+					tactic = TACTIC_RETREAT;
+				endif;
+			endcase;
+
+		endswitch;
+endstate;
+
+//------------------------------------------------------------------
+//	SurrenderState: surrender to the player
+//------------------------------------------------------------------
+
+state SurrenderState;
+	code
+		if (surrenderSound <> -1) then	
+			PlaySoundOnce(surrenderSound);
+		endif;		
+
+		SetAlignment(ME,GetAlignment(getplayervehicle(epl_player0)));
+		SetTarget(ME,getplayervehicle(epl_player0));
+		OrderAttackTactic(TACTIC_SURRENDER,TRUE);
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

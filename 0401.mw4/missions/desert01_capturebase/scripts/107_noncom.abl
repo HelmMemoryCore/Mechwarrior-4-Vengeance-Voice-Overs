@@ -1,0 +1,96 @@
+
+//*********************************************************************************
+
+fsm Neutrals : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		
+		trans wander;
+		
+	endstate;
+	
+	state Wander;
+	
+	code
+		
+ 	switch (GetMemoryInteger(me,9))
+
+		case 1:
+			OrderMoveTo(epa_squarepath,50,move_nocycle,false,false);
+		endcase;
+		case 2:
+			OrderMoveTo(epa_pointlessPath,50,move_nocycle,false,false);
+		endcase;
+		case 3:
+			if iswithin(me,Playermech,500)then
+				OrderMoveTo(epa_runpath,600,move_nocycle,false,false);
+			endif;
+		endcase;
+		case 4:
+			if iswithin(me,Playermech,500)then
+				OrderMoveFlee(Playermech,600);
+			endif;
+		endcase;
+		case 5:
+			OrderMovetoRigid(epa_RandomPath,600,MOVE_CIRCLE,FALSE,FALSE);
+		endcase;
+		case 6:
+			OrderMoveFlee(playermech,35);
+		endcase;
+	
+	
+	endswitch;
+			
+	endstate;
+
+  state deadState;
+		code
+			orderDie;
+  endstate;
+
+
+endfsm.
+//******************************************************************
+
+

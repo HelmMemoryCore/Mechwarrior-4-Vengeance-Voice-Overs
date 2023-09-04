@@ -1,0 +1,344 @@
+
+fsm Shakers : integer;
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+	var
+		static integer			triggerID;			// The trigger that will move me from my original patrol state to my new patrol state
+		static integer			surrenderTriggerID;	// The trigger fired that makes me surrender
+
+		static integer			attackRange2;		// The range at which I start attacking after the trigger has fired
+		static integer			withdrawRange2;		// The range at which I withdraw from combat entirely
+
+		static integer			piloting;			// Piloting skill
+		static integer			gonzo_piloting;		// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static integer			gonzo_gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static real				gonzo_minDelay;		// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				gonzo_maxDelay;		// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		static integer 			surrenderSound;		// The sound I play when I surrender
+		
+		static integer			mood;				// My default mood.
+
+		static integer			tactic;				// My tactic
+
+		static integer			myGroup;			// What group I'm in for formation purposes
+		static integer			teleportNav;		// A nav point I teleport to
+
+		static integer			start_trigger;
+		static integer			start_path;
+		static integer			start_speed;
+
+		static integer			path2;
+		static integer			speed2;
+		static integer			trigger2;
+
+		static ObjectID			my_nav;
+
+function Init;
+	code
+		// script-specific variables
+		triggerID		= 3;
+		surrenderTriggerID	= 2;
+
+		attackRange2	= 700;
+		withdrawRange2	= attackRange2 * 3 / 2;
+
+		tactic			= TACTIC_PICK_BEST;
+
+		// driver settings
+		piloting		= 80;
+		gonzo_piloting	= 100;
+		gunnery			= 45;
+		gonzo_gunnery	= 95;
+		minDelay		= 0.5;
+		maxDelay		= 3.0;
+		gonzo_minDelay	= 0.0;
+		gonzo_maxDelay	= 0.0;
+		eliteLevel		= 65;
+		attackThrottle	= 30;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		surrenderSound	= -1; // no sound
+		mood			= NEUTRAL_END;
+
+		isShotRadius	= 160;
+
+		start_path		= -1;
+		start_trigger	= -1;
+		start_speed		= 0;
+
+		path2			= -1;
+		speed2			= -1;
+		trigger2		= -1;
+
+		my_nav			= -1;
+
+		switch (getmemoryinteger(me,9))
+
+		// NORTH UNITS
+			case 10:	// osiris
+				attackRange2	= 500;
+				path2 = epa_North_Path;
+				speed2 = 60;
+				tactic = TACTIC_CIRCLE_OF_DEATH;
+
+				my_nav = ena_Nav_Beta;
+			endcase;
+
+			case 14:	// srm
+				attackRange2	= 500;
+				path2 = epa_North_Path;
+				speed2 = 60;
+
+				minDelay		= 0.0;
+				maxDelay		= 0.0;
+
+				gunnery = 55;
+
+				my_nav = ena_Nav_Beta;
+			endcase;
+
+			case 15:	// srm 0000
+				attackRange2	= 500;
+				path2 = epa_North_Path;
+				speed2 = 60;
+
+				minDelay		= 0.0;
+				maxDelay		= 0.0;
+
+				gunnery = 55;
+
+				my_nav = ena_Nav_Beta;
+			endcase;
+
+		// SOUTH UNITS
+			case 11:	// osiris 0000
+				start_path = epa_Path_11;
+				start_trigger = 7;
+				start_speed = 20;
+
+				trigger2 = 15;
+				path2 = epa_Osiris_Path;
+				speed2 = 600;
+
+				tactic = TACTIC_CIRCLE_OF_DEATH;
+
+				my_nav = ena_Nav_Alpha;
+			endcase;
+
+			case 18:	// vedette
+				start_path = epa_Path_18;
+				start_trigger = 7;
+				start_speed = 40;
+
+				trigger2 = 16;
+				path2 = epa_Osiris_Path;
+				speed2 = 20;
+
+				minDelay		= 0.0;
+				maxDelay		= 0.0;
+
+				tactic			= TACTIC_REAR;
+
+				gunnery = 85;
+
+				my_nav = ena_Nav_Alpha;
+			endcase;
+
+			case 19:	// vedette 0000
+				start_path = epa_Path_19;
+				start_trigger = 7;
+				start_speed = 32;
+
+				trigger2 = 16;
+				path2 = epa_Osiris_Path;
+				speed2 = 20;
+
+				minDelay		= 0.0;
+				maxDelay		= 0.0;
+
+				tactic			= TACTIC_REAR;
+
+				gunnery = 85;
+
+				my_nav = ena_Nav_Alpha;
+			endcase;
+
+			case 20:	// vedette 0001
+				start_path = epa_Path_20;
+				start_trigger = 7;
+				start_speed = 32;
+
+				trigger2 = 16;
+				path2 = epa_Osiris_Path;
+				speed2 = 20;
+
+				minDelay		= 0.0;
+				maxDelay		= 0.0;
+
+				tactic			= TACTIC_REAR;
+
+				gunnery = 85;
+
+				my_nav = ena_Nav_Alpha;
+			endcase;
+
+		endswitch;
+
+endfunction;
+
+function SetGunneryBasedOnTarget;
+	var
+		ObjectID target;
+
+	code
+		target = GetTarget(ME);
+
+		if (target <> NO_UNIT) then
+			if (target == eve_Gonzalez) then
+				SetFiringDelay(ME,gonzo_minDelay,gonzo_maxDelay);
+				SetSkillLevel(ME,gonzo_piloting,gonzo_gunnery,eliteLevel);
+			else
+				SetFiringDelay(ME,minDelay,maxDelay);
+				SetSkillLevel(ME,piloting,gunnery,eliteLevel);
+			endif;
+		endif;
+		
+endfunction;
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+
+		if (getmemoryinteger(me,9) == 10) then
+			Shutdown(ME);
+			trans Osiris2WaitToStartUp;
+		endif;
+
+		if (start_trigger <> -1) then
+			trans WaitForTriggerState;
+		endif;
+
+		trans LookForTroubleState;
+endstate;			
+
+state Osiris2WaitToStartUp;
+	var
+		integer searchrange;
+	code
+		if (GroupNumDead(GroupObjectID(23)) > 0) then
+			searchrange = 800;
+		else
+			searchrange = 100;
+		endif;
+
+		if (FindEnemy(searchrange,FT_DEFAULT) == true) then
+			Startup(ME);
+			PlayVoiceOverOnce("VO\OP1\MI2\E",TALKER_GON);
+      trans AttackState;
+		endif;
+endstate;
+
+state WaitForTriggerState;
+	var
+
+	code
+		if (GetGlobalTrigger(start_trigger) == true) then
+			trans RigidMoveState;
+		endif;
+
+		OrderMoveLookOut;
+endstate;
+
+state RigidMoveState;
+	code
+		if (GetGlobalTrigger(66) == true) then
+			trans LookForTroubleState;
+		endif;
+
+		if (start_path <> -1) then
+			if (OrderMoveTo(start_path,start_speed,move_nocycle,true,false) == true) then
+				trans LookForTroubleState;
+			endif;
+		else
+			trans LookForTroubleState;
+		endif;
+endstate;
+
+state LookForTroubleState;
+	code
+		if (FindEnemy(attackRange2,FT_DEFAULT)) then
+			trans AttackState;
+		endif;
+
+		if (trigger2 <> -1) then
+			if (GetGlobalTrigger(trigger2) == true) then
+				OrderMoveTo(path2,speed2,move_seesaw,true,false);
+			endif;
+		else
+			if (path2 <> -1) then
+				OrderMoveTo(path2,speed2,move_seesaw,true,false);
+			else
+				OrderMoveLookOut;
+			endif;
+		endif;
+endstate;
+
+state AttackState;
+	code
+
+	If GetTarget(me) <> NO_UNIT then
+		if (Not IsWithin(me,GetTarget(ME),550)) then
+			OrderStopAttacking;
+			ClearMoveOrder(me);
+			OrderMoveToObject(GetTarget(ME),600);
+			trans ReturnToTargetState;
+		endif;
+	else
+		trans LookForTroubleState;
+	endif;
+
+		SetGunneryBasedOnTarget;
+
+		OrderAttackTactic(tactic,true);
+endstate;
+
+state ReturnToTargetState;
+	code
+		if (IsWithin(me,GetTarget(ME),350)) then
+			OrderAttackTactic(tactic,true);
+			trans AttackState;
+		endif;
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

@@ -1,0 +1,193 @@
+
+
+//*********************************************************************************
+
+fsm ConvoyMech : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+  var
+	
+	static integer	gunnery;
+	static integer	attackrange1;
+	static integer  attackrange2;
+	static real	mindelay;
+	static real	maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+	
+	static integer	mytruck;
+	static integer 	zoffset;
+	static integer  xoffset;
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+	 				
+	 	
+ 	switch (GetMemoryInteger(me,9))
+
+	case 1:
+		
+		attackrange1 = 300;
+		attackrange2 = 200;						
+		piloting = 65;							
+		gunnery = 75;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 30;						
+		mytruck = eve_truck3;							
+		xoffset	=	40;
+		zoffset	=	0;
+		
+	endcase;
+		
+	case 2:
+		
+		attackrange1 = 300;
+		attackrange2 = 200;						
+		piloting = 65;							
+		gunnery = 75;						
+		mindelay = 0.5;							
+		maxdelay = 1.0;									
+		elitelevel = 30;						
+		mytruck = eve_truck3;							
+		xoffset	=	-40;
+		zoffset	=	0;
+		
+	endcase;
+		
+//	case 3:
+//		
+//		attackrange1 = 300;
+//		attackrange2 = 200;						
+//		piloting = 25;							
+//		gunnery = 20;						
+//		mindelay = 1.5;							
+//		maxdelay = 3.0;									
+//		elitelevel = 30;						
+//		mytruck = eve_truck1;							
+//		xoffset	=	0;
+//		zoffset	=	-40;
+//		
+//	endcase;
+		
+		
+	endswitch;
+ 	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		setfiringdelay(me,mindelay,maxdelay);
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+
+
+state sit;
+ 		var
+			ObjectID foe;
+			
+		code
+		
+		if (isDead(mytruck) == FALSE) then
+					OrderMoveFollow(mytruck,xoffset,zoffset);
+				else OrderMoveTo (epa_ConvoyPath,convoy_speed,MOVE_NOCYCLE,TRUE,FALSE);
+		endif;
+				
+		
+		
+		foe = FindObject(ME,FA_ENEMY,FT_DEFAULT,FC_BEST_TARGET,FF_WHO_SHOT + FF_SEEPLAYER,0);
+		if (foe <> no_unit) then
+			if (((isWithin (foe,(me),attackrange1)) and (convoy_alerted == TRUE)) or
+			(isWithin (foe,(me),attackrange2))) then
+				setTarget (me,foe);
+				trans attack;
+			endif;
+		endif;
+		
+		if (isShot (GroupObjectId(20))) then
+  		if (getAlignment(WhoShot(GroupObjectId(20))) <> ENEMY) then
+				setTarget(me,WhoShot(GroupObjectId(20)));
+				trans attack;
+			endif;
+		endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+  var
+    ObjectID foe;
+
+
+		code
+		
+    player_has_been_seen = TRUE;
+		orderAttack (FALSE);
+		
+		if (getTarget (me) < 1) then
+			trans sit;
+		endif;
+ 		
+		if (isDead (getTarget (me))) then
+			trans sit;
+		endif;
+			
+
+		if ((isShot (me)) and (rand(0,3) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+						
+	endstate;
+	
+
+						
+endfsm.
+//******************************************************************

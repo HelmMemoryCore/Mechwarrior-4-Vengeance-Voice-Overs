@@ -1,0 +1,190 @@
+
+
+//*********************************************************************************
+
+fsm Scout : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer	gunnery;
+	static integer	attackrange;
+	static real	mindelay;
+	static real	maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+	static integer speed;
+	static boolean	Foundthem;
+	static integer	SensorRange;
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+
+		attackrange = 500;				
+		piloting = 70;							
+		gunnery = 40;						
+		mindelay = 1.0;							
+		maxdelay = 2.0;									
+		elitelevel = 60;
+		speed = 70;
+	
+		foundthem = false;
+		
+		SensorRange = 375;
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+			setskilllevel(me,piloting,gunnery,elitelevel);
+			setfiringdelay(me,mindelay,maxdelay);
+			trans wait;
+	endstate;
+
+  state deadState;
+		code
+			orderDie;
+  endstate;
+	
+	state wait;
+		code
+		
+		if blackout == true then
+			startup(me);
+			if ordertakeoff(30) == TRUE then
+				trans transit;
+			endif;
+		endif;
+		
+		if timegreater(1,120) then
+			startup(me);
+			if ordertakeoff(30) == TRUE then
+				trans transit;
+			endif;
+		endif;
+
+			
+		
+	endstate;
+	
+	
+	
+	state Transit;
+		code
+
+
+//orderformationmove(GroupObjectID(6),epa_scoutpath,speed,MOVE_NOCYCLE,FORMATION_11WEDGE,FORMTYPE_NORMAL,FALSE);
+	OrderMoveTo(epa_scoutpath,speed,MOVE_NOCYCLE,FALSE,FALSE);
+	
+//	then trans loiter;
+//endif;
+
+
+if foundthem == false then
+	if iswithin(me,playermech,SENSORRANGE) then
+			foundthem = TRUE;
+		endif;
+	endif;
+
+if foundthem == false then
+	if (PlayerShooting(epl_player0,5) == TRUE) then
+		if (IsWithin(me,playermech,750)) then
+				foundthem = TRUE;
+		endif;
+	endif;
+endif;
+
+if GetSensorMode(playermech) <> SENSOR_ACTIVE then
+	SensorRange = 150;
+endif;
+
+
+if foundthem == true then
+//****************************************************************
+//**  THERE WILL BE A SOUND HERE -- I DIDNT HAVE A PLACEHOLDER **
+//**************************************************************
+PlayVoiceOverOnce("VO\OP2\MI3\TheyMadeUs",Talker_IAN);	
+		starttimer(11);
+	trans EVASIVE;
+endif;
+	
+endstate;
+
+state EVASIVE;
+	code
+
+//if (orderformationmove(GroupObjectID(6),epa_evasivepath,600,MOVE_NOCYCLE,FORMATION_11WEDGE,FORMTYPE_NORMAL,FALSE)	== TRUE)
+//	then trans Loiter;
+	ordermoveresumepatrol(epa_evasivepath,600,MOVE_NOCYCLE,FALSE,FALSE);
+	//		trans Loiter;
+	//endif;
+	
+endstate;
+	
+state Loiter;
+	code
+ selfdestruct(me);	
+//		if (setmytarget(attackrange)) then
+//			trans attack;
+//	 	endif;
+endstate;
+	
+//state attack;
+//		code
+//			
+//		if (LeaveAttackState(attackrange*3/2)) then
+//			trans Loiter;
+//		endif;
+//		
+//		//the ever popular attack order
+ //   orderAttack (TRUE);
+		
+		//play the attack sound if one exists
+//		if ((attacksound <> -1) and (attacksoundplayed == FALSE)) then	
+//			attacksoundplayed = true;
+//			PlaySoundOnce(attacksound);
+//		endif;	
+		
+		//maybe swap targets when I am shot.
+//		if ((isShot (me)) and (rand(0,75) <= 1)) then
+ // 		setTarget(me,whoShot(me));
+	//	endif;
+//endstate;
+		
+endfsm.
+//******************************************************************
+
+
+

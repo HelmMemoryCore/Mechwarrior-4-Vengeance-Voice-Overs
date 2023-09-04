@@ -1,0 +1,225 @@
+
+//------------------------------------------------------------------
+fsm Dropship2 : integer;
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+  var		
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		static boolean	count;
+		static boolean	Dumbass;
+		static integer	FuelNeeded;
+		static boolean	DontTest;
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+
+
+function Init;
+	code
+		FuelNeeded = 440;
+		piloting		= 50;
+		gunnery			= 40;
+		minDelay		= 1.0;
+		maxDelay		= 1.5;
+		eliteLevel		= 60;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		Dumbass = false;
+		Count = false;
+		DontTest = false;
+endfunction;
+
+function PumpedFuel : Integer;
+				
+		var
+			integer fuel_pumped;
+			
+		code			
+				
+			fuel_pumped = 9;
+				
+					
+				If (isdead(eve_Objective_APU_Beta_1) == False) then							 		//APU1 not Destroyed
+					fuel_pumped = fuel_pumped + 7;
+				endif;
+					
+				If (isdead(eve_Objective_APU_Beta_2) == False) then							 		//APU2 not Destroyed
+					fuel_pumped = fuel_pumped + 7;
+				endif;
+				
+				If (isdead(eve_Objective_APU_Beta_3) == False) then							 		//APU3 not Destroyed
+					fuel_pumped = fuel_pumped + 7;
+				endif;
+				
+				return (fuel_pumped);
+
+endfunction; 		
+
+ state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,false);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+				trans LandingPad;
+
+endstate;
+
+
+state LandingPad;
+	code
+
+  if FuelNeeded <=	60 then
+	  if (FindEnemy(600,FT_Default)) then
+			if isdead(eve_forward1) == false then
+		 PlayVoiceOverOnce("VO\OP1\MI3\Ship1On",Talker_FO1);
+			endif;
+			trans AttackState;
+		endif;
+	endif;
+
+//*********************************************************
+// Dave just put this in for patch until they fly for real
+//*********************************************************
+//
+						
+//  if FuelNeeded <=	80 then
+//			if isdead(eve_forward1) == false then
+// 			PlayVoiceOverOnce("VO\OP1\MI3\Ship1On",Talker_FO1);
+//      endif;
+//	endif;
+						
+
+	
+	
+		if (TimeGreater(gti_Timer_24,30)) then
+			FuelNeeded = FuelNeeded - PumpedFuel;
+			ResetTimer(gti_Timer_24);
+		endif;
+		
+		if Dumbass == false then 		
+		if FuelNeeded <= 0 then															
+				starttimer(gti_timer_25);
+				dumbass = true;
+				if isdead(eve_forward2) == false then
+        PlayVoiceOverOnce("VO\OP1\MI3\Ship1On",Talker_FO2);
+				endif;	
+		endif;
+		endif;
+		
+		if timegreater(25,10) then
+			trans liftoff;
+		endif;	
+
+
+endstate;
+
+state AttackState;
+	code
+		
+		if (LeaveAttackState(1000)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans LandingPad;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+		
+		
+		if (TimeGreater(gti_Timer_24,30)) then
+			FuelNeeded = FuelNeeded - PumpedFuel;
+			ResetTimer(gti_Timer_24);
+		endif;
+				
+		if Dumbass == false then 		
+		if FuelNeeded <= 0 then															
+				starttimer(gti_timer_25);
+				dumbass = true;
+				if isdead(eve_forward2) == false then
+        PlayVoiceOverOnce("VO\OP1\MI3\Ship1On",Talker_FO2);
+				endif;	
+		endif;
+		endif;
+		
+		if timegreater(25,10) then
+			trans liftoff;
+		endif;	
+		OrderAttack(false);		
+endstate;
+
+state liftoff;
+	code
+	
+	if OrderTakeOff(600) == true then
+    if count == false then
+			count = true;
+			StartTimer(gti_timer_11);
+		endif;
+	endif;
+
+	OrderAttack(false);	
+	
+	if timegreater(11,20) then
+		if DontTest == false then
+			TeleportToHell(me);
+			DropNumber = DropNumber + 1;
+			KillTimer(11);
+			DontTest = true;
+		endif;
+	endif;
+	
+	
+	
+endstate;
+
+
+
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+		DropDead = DropDead + 1;
+		if AMILAST == false then
+			dropleft = ena_GammaNav;
+			SetNavPoint(ena_Nav_Gamma);
+			AMILAST = true;
+		endif;
+		orderDie;
+
+endstate;
+
+
+endfsm.
+	
+	
+

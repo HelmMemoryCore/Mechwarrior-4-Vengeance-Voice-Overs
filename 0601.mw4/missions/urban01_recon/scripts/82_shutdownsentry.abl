@@ -1,0 +1,318 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm ShutdownSentry : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_Sentry:
+//   Stands still.  Moves to attack anything that comes near.
+//
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start shooting?
+		static integer			withdrawRange;		// At what range do I withdraw from combat completely?
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+		static integer			findTypes;			// What kind of enemies to look for
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+
+		static integer			takeOffDistance;	// My take-off distance if I'm an airplane (ignored if not an airplane)
+		static integer			mytimer;
+		static integer			wakeuptime;
+		static integer			tactic;
+		
+		static boolean			byebye;
+		static integer			wimpy;
+
+		
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 600;
+		withdrawRange	= attackRange * 3 / 2;
+		takeOffDistance	= 150;
+
+		// driver settings
+		piloting		= 75;
+		gunnery			= 90;
+		minDelay		= 0.1;
+		maxDelay		= 0.4;
+		eliteLevel		= 85;
+		attackThrottle	= 60;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+		mytimer = gti_timer_10;
+		wakeuptime = 20;
+		tactic = tactic_pick_best;
+		
+		byebye = false;
+		wimpy = getdifficulty;
+
+		
+	switch (getmemoryinteger(me,9))
+
+	case 1:
+		mytimer = gti_timer_11;
+		wakeuptime = 20;	
+	endcase;	
+
+	case 2:
+		mytimer = gti_timer_12;
+		wakeuptime = 35;	
+	endcase;
+	
+	case 3:
+		mytimer = gti_timer_13;
+		wakeuptime = 5;
+		attackThrottle	= 50;
+		gunnery			= 70;
+	endcase;
+	
+	case 4:
+		mytimer = gti_timer_13;
+		wakeuptime = 24;	
+		attackThrottle	= 50;
+	endcase;
+	
+	case 5:
+		mytimer = gti_timer_13;
+		wakeuptime = 15;	
+		attackThrottle	= 50;
+	endcase;
+	
+	case 6:
+		mytimer = gti_timer_13;
+		wakeuptime = 35;	
+		attackThrottle	= 50;
+	endcase;
+	
+	case 7:
+		mytimer = gti_timer_13;
+		wakeuptime = 54;	
+		attackThrottle	= 50;
+	endcase;
+	
+	case 8:
+		mytimer = gti_timer_13;
+		wakeuptime = 45;	
+		attackThrottle	= 50;
+	endcase;
+	
+	case 9:
+		mytimer = gti_timer_13;
+		wakeuptime = 52;	
+		attackThrottle	= 100;
+		byebye = true;
+	endcase;
+	
+	case 10:
+		mytimer = gti_timer_14;
+		wakeuptime = 2;	
+		attackThrottle	= 100;
+		attackrange = 600;
+	endcase;
+
+	case 11:
+		mytimer = gti_timer_15;
+		wakeuptime = 5;	
+		attackThrottle	= 100;
+		attackrange = 600;
+		tactic = tactic_fast_circle;
+	endcase;
+
+	case 12:
+		mytimer = gti_timer_15;
+		wakeuptime = 9;	
+		gunnery			= 70;
+		attackThrottle	= 100;
+		attackrange = 600;
+		tactic = tactic_fast_circle;
+	endcase;
+	
+	case 13:
+		mytimer = gti_timer_15;
+		wakeuptime = 14;	
+		gunnery			= 70;
+		attackThrottle	= 100;
+		attackrange = 600;
+		tactic = tactic_fast_circle;
+	endcase;
+	
+	case 14:
+		mytimer = gti_timer_15;
+		wakeuptime = 20;	
+		gunnery			= 70;
+		attackThrottle	= 100;
+		attackrange = 200;
+		tactic = tactic_fast_circle;
+	endcase;
+	
+	endswitch;
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+		
+		if (byebye) then
+			If (wimpy == EASY_DIFFICULTY) then
+				shutdown(me);
+				teleporttohell(me);
+				selfdestruct(me);
+				trans limbo;
+			endif;
+		endif;
+				
+	
+			shutdown(me);
+			trans powereddown;
+
+
+endstate;
+
+state limbo;
+	code
+	
+endstate;
+
+state powereddown;
+	code
+	
+		if (FindEnemy((attackRange/4),findTypes)) then
+			starttimer(mytimer);
+			attackrange = 600;
+			
+				switch (getmemoryinteger(me,9))
+
+				case 1:
+          slowpowerupstarted = true;	
+				endcase;	
+			
+				case 2:
+					slowpowerupstarted = true;	
+				endcase;
+					
+				endswitch;
+
+			trans poweringup;
+		endif;		
+		
+endstate;
+
+state poweringup;
+	code
+	
+		if(timegreater(mytimer,wakeuptime)) then
+			startup(me);
+				if (orderTakeOff(takeOffDistance) == true) then
+					trans waitstate;
+				endif;
+		endif;		
+		
+endstate;
+
+//------------------------------------------------------------------
+//	WaitState: wait for something to shoot
+//------------------------------------------------------------------
+
+state WaitState;
+	code
+		
+		if (FindEnemy(attackRange,findTypes)) then
+			trans AttackState;
+		endif;
+		
+		ordermovetoobject(playermech,600);
+				
+endstate;
+
+//------------------------------------------------------------------
+//	AttackState: look for something to shoot
+//------------------------------------------------------------------
+
+state AttackState;
+	code
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans WaitState;
+		endif;
+
+		OrderAttacktactic(tactic,true);
+
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

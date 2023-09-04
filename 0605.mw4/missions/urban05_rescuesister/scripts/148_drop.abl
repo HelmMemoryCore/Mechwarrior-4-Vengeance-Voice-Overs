@@ -1,0 +1,107 @@
+
+//------------------------------------------------------------------
+fsm Dropship1 : integer;
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+  var		
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+
+
+function Init;
+	code
+		piloting		= 50;
+		gunnery			= 60;
+		minDelay		= 2.0;
+		maxDelay		= 4.5;
+		eliteLevel		= 60;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+
+endfunction;
+
+		
+
+ state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,false);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+//		OrderDoorOpen;		
+				trans LandingPad;
+
+endstate;
+
+
+state LandingPad;
+	code
+
+
+		if (TimeGreater(gti_Timer_1,1)) then
+				OrderTakeOff(600);											
+				trans liftoff;
+		endif;
+
+
+endstate;
+
+
+state liftoff;
+	code
+		
+		if OrderMoveTo(epa_DropGo,600,Move_NoCycle,false,false) == true then
+			TeleportToHell(me);
+		endif;
+
+endstate;
+
+
+
+
+state DeadState;
+	code
+		
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+		
+		orderDie;
+
+endstate;
+
+
+endfsm.
+	
+	
+

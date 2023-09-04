@@ -1,0 +1,968 @@
+//*********************************************************************************
+
+fsm Lunar02_DestroySCUD : integer;		
+
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+      var
+			
+		eternal integer playermech;
+				
+		static integer	cinema_cut;
+		static integer	victory_cut;
+
+		static integer	player_group;
+		static integer	south_group;
+		static integer	nw_group;
+		static integer	north_group;
+		static integer  key_units_group;
+		static integer  base_buildings_group;
+		static integer  all_enemies_group;
+
+		static integer  cinema_timer;
+		static integer  mission_timer;
+		static integer  gonzo_death_timer;
+		static integer	gonzo_death_state;
+		static integer  victory_timer;
+		static integer  wrong_way_timer;
+		static integer  cinema_zoom_out_timer;
+		static integer  base_warn_timer;
+
+		static real play_RAT_A;
+		static real START_SOUTH_MOVE;
+		static real FADE_OUT_BASE;
+		static real SWITCH_TO_ZOOM_1;
+		static real SWITCH_TO_ZOOM_2;
+		static real SWITCH_TO_ZOOM_3;
+		static real FADE_OUT_ZOOM;
+		static real play_IAN_A;
+		static real play_GON_A;
+		static real play_RAT_B;
+		static real play_GON_B;
+		static real play_IAN_B;
+		static real play_GON_C;
+		static real play_IAN_C;
+		static real END_CINEMA;
+
+		static Boolean gonzo_warn1_done;
+		static Boolean gonzo_warn2_done;
+
+		static integer times_alarm_played_1;
+		static integer times_alarm_played_2;
+
+function init;
+	var
+		integer i;
+
+	code
+		playermech = getplayervehicle(epl_player0);	
+
+		player_group = GroupObjectID(10);
+		south_group = GroupObjectID(21);
+		nw_group = GroupObjectID(22);
+		north_group = GroupObjectID(23);
+		base_buildings_group = GroupObjectID(11);
+		all_enemies_group = GroupObjectID(24);
+
+		gonzo_warn1_done = false;
+		gonzo_warn2_done = false;
+
+		gonzo_death_state = 0;
+
+		cinema_timer = gti_Timer_21;
+		mission_timer = gti_Timer_29;
+		gonzo_death_timer = gti_timer_30;
+		cinema_zoom_out_timer = gti_Timer_14;
+		base_warn_timer = gti_Timer_2;
+
+		times_alarm_played_1 = 0;
+		times_alarm_played_2 = 0;
+
+		StartTimer(wrong_way_timer);
+		SetTimer(wrong_way_timer,100);
+
+		// player group (Group 1)
+		GroupAddObject(player_group,playermech);
+		GroupAddObject(player_group,eve_Gonzalez);
+
+		GroupAddObject(base_buildings_group,ebu_bivouac);
+		GroupAddObject(base_buildings_group,ebu_bivouac_0002);
+		GroupAddObject(base_buildings_group,ebu_bivouac_0003);
+		GroupAddObject(base_buildings_group,ebu_prisoner_barracks);
+		GroupAddObject(base_buildings_group,ebu_vehicle_hangar);
+		GroupAddObject(base_buildings_group,ebu_basehq);
+		GroupAddObject(base_buildings_group,etu_calliope_0003);
+		GroupAddObject(base_buildings_group,etu_sp_turret);
+		GroupAddObject(base_buildings_group,etu_calliope_0002);
+		GroupAddObject(base_buildings_group,etu_calliope_0001);
+		GroupAddObject(base_buildings_group,etu_sp_turret_0001);
+		GroupAddObject(base_buildings_group,etu_sp_turret_0002);
+		GroupAddObject(base_buildings_group,etu_sp_turret_0003);
+		GroupAddObject(base_buildings_group,etu_calliope);
+		GroupAddObject(base_buildings_group,etu_sp_turret_0000);
+		GroupAddObject(base_buildings_group,eve_Shadowcat);
+
+		GroupAddObject(south_group,eve_Objective_Scud_1);
+		GroupAddObject(south_group,eve_fueltruck_0);
+		GroupAddObject(south_group,eve_fueltruck_1);
+		GroupAddObject(south_group,eve_humvee_0);
+		GroupAddObject(south_group,eve_swiftwind_2);
+		GroupAddObject(south_group,eve_swiftwind_3);
+		GroupAddObject(south_group,eve_Vedette_0);
+		GroupAddObject(south_group,eve_Vedette_1);
+		GroupAddObject(south_group,eve_Vedette_2);
+		GroupAddObject(south_group,eve_humvee_1);
+
+		GroupAddObject(north_group,eve_Second_Enemy_Osiris);
+		GroupAddObject(north_group,eve_Objective_Scud_2);
+		GroupAddObject(north_group,eve_Artillery_Loader_2);
+		GroupAddObject(north_group,eve_Artillery_Loader_1);
+		GroupAddObject(north_group,eve_Srm_Carrier_1);
+		GroupAddObject(north_group,eve_Srm_Carrier_2);
+
+		cinema_cut = 0;
+		victory_cut = 0;
+
+endfunction;
+
+function ShootPlayerIfBaseBuildingsShot;
+	code
+		if (GetGlobalTrigger(11) == true) then
+			if (TimeGreater(base_warn_timer,6)) then
+				if (GroupNumDead(base_buildings_group) > 1) then
+					SetGlobalTrigger(12,true);
+				endif;
+
+				if (Not IsDead(eve_Shadowcat)) then
+					if (IsShot(eve_Shadowcat)) then
+						SetGlobalTrigger(12,true);
+					endif;
+				endif;
+			endif;
+		else
+			if (GroupNumDead(base_buildings_group) > 0) then
+				StartTimer(base_warn_timer);
+				SetGlobalTrigger(11,true);
+			endif;
+
+			if (Not IsDead(eve_Shadowcat)) then
+				if (IsShot(eve_Shadowcat)) then
+					StartTimer(base_warn_timer);
+					SetGlobalTrigger(11,true);
+				endif;
+			endif;
+		endif;
+endfunction;
+
+function PlayBaseAlarm;
+	code
+		if (GetGlobalTrigger(11) == true) then
+			if (Not TimeGreater(base_warn_timer,6)) then
+				if (times_alarm_played_1 < 8) then
+					PlayVoiceOver("VO\OP1\MI2\ALARM",TALKER_IAN);
+					times_alarm_played_1 = times_alarm_played_1 + 1;
+				endif;
+			endif;
+		endif;
+
+		if (GetGlobalTrigger(12) == true) then
+			if (IsWithin(playermech,eve_field_base,1100)) then
+				if (times_alarm_played_2 < 20) then
+					PlayVoiceOver("VO\OP1\MI2\ALARM",TALKER_IAN);
+					times_alarm_played_2 = times_alarm_played_2 + 1;
+				endif;
+			endif;
+		endif;
+endfunction;
+
+function TriggerSouthGroupFlee;
+	code
+		if (GroupNumDead(south_group) > 0) then
+			SetGlobalTrigger(20,true);
+		endif;
+endfunction;
+
+function DoGonzoWarnings;
+	code
+		if (IsDead(eve_Gonzalez)) then
+			return;
+		endif;
+
+		if (GetGlobalTrigger(77) == true) then
+			return;
+		endif;
+
+		if (gonzo_warn1_done == false) then
+			if (IsWithin(eve_Enemy_Osiris,eve_Gonzalez,800)) then
+				PlayVoiceOverOnce("VO\OP1\MI2\H",TALKER_GON);
+				gonzo_warn1_done = true;
+			endif;
+		else
+			if (gonzo_warn2_done == false) then
+				if (IsWithin(north_group,eve_Gonzalez,800)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\D",TALKER_GON);
+					gonzo_warn2_done = true;
+				endif;
+			endif;
+		endif;
+endfunction;
+
+function FollowAndShake(ObjectID who);
+	var
+
+	code
+		Targetfollowobject(who);
+		camerafollowobject(who);
+		SetCameraFootShake(who,100);
+endfunction;
+
+function WarnIfTooFar;
+	var
+	code
+		if (IsDead(eve_Gonzalez)) then
+			return;
+		endif;
+
+		if (GetGlobalTrigger(77) == true) then
+			return;
+		endif;
+
+		if (Not (IsWithin(playermech,ena_Nav_Alpha,1200))) then
+			if (Not (IsWithin(playermech,ena_Nav_Beta,1100))) then
+				PlayVoiceOverOnce("VO\OP1\MI2\G",TALKER_GON);
+			endif;
+		endif;
+endfunction;
+
+function UpdateGonzoDeath;
+	var
+	code
+		if (Not IsDead(eve_Gonzalez)) then
+			return;
+		endif;
+
+		if (GetGlobalTrigger(77) == true) then
+			trans YouKilledKennyYouBastard;
+		endif;
+
+		if (gonzo_death_state == 0) then
+			StartTimer(gonzo_death_timer);
+			gonzo_death_state = 1;
+			PlayVoiceOver("VO\Generic\Ejecting",TALKER_GON);
+
+			return;
+		endif;
+
+		switch (gonzo_death_state)
+			case 1:
+				if (TimeGreater(gonzo_death_timer,2.0)) then
+					specifytalker(TALKER_GON,eve_gonzalez);
+
+					PlayVoiceOverOnce("VO\OP1\MI2\D",TALKER_IAN);
+					gonzo_death_state = gonzo_death_state + 1;
+					ResetTimer(gonzo_death_timer);
+				endif;
+			endcase;
+
+			case 2:
+				if (TimeGreater(gonzo_death_timer,2.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\C",TALKER_RAT);
+					gonzo_death_state = gonzo_death_state + 1;
+					ResetTimer(gonzo_death_timer);
+				endif;
+			endcase;
+
+			case 3:
+				if (TimeGreater(gonzo_death_timer,10.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\A",TALKER_SUP);
+					gonzo_death_state = gonzo_death_state + 1;
+					ResetTimer(gonzo_death_timer);
+				endif;
+			endcase;
+
+			case 4:
+				if (TimeGreater(gonzo_death_timer,5.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\D",TALKER_RAT);
+					gonzo_death_state = gonzo_death_state + 1;
+					ResetTimer(gonzo_death_timer);
+				endif;
+			endcase;
+
+			case 5:
+				if (TimeGreater(gonzo_death_timer,5.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\E",TALKER_IAN);
+					gonzo_death_state = gonzo_death_state + 1;
+					ResetTimer(gonzo_death_timer);
+				endif;
+			endcase;
+
+			case 6:
+				if (TimeGreater(gonzo_death_timer,3.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\E",TALKER_RAT);
+					gonzo_death_state = gonzo_death_state + 1;
+					ResetTimer(gonzo_death_timer);
+				endif;
+			endcase;
+
+			case 7:
+				if (TimeGreater(gonzo_death_timer,5.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\F",TALKER_IAN);
+					gonzo_death_state = gonzo_death_state + 1;
+					ResetTimer(gonzo_death_timer);
+				endif;
+			endcase;
+		endswitch;
+endfunction;
+
+function WarnIfGoingTheWrongWay;
+	var
+	
+	code
+		if (GetGlobalTrigger(77) == true) then
+			return;
+		endif;
+
+		if (TimeGreater(wrong_way_timer,60)) then
+			if (ReachedNav(playermech,ena_Nav_Dont_Go_Here) == true) then
+				PlayVoiceOver("VO\OP1\MI2\G",TALKER_GON);
+				ShowAllRevealedObjectives;
+				ResetTimer(wrong_way_timer);
+			endif;
+		endif;
+endfunction;
+
+function GenericStateStuff;
+	var
+	code
+		ShootPlayerIfBaseBuildingsShot;
+		PlayBaseAlarm;
+		DoGonzoWarnings;
+		UpdateGonzoDeath;
+		WarnIfGoingTheWrongWay;
+endfunction;
+
+
+state startState;
+	code	
+		playerai(epl_player0,true);
+		trans opening;
+endstate;
+
+
+state deadState;
+	code
+endstate;
+
+state MasterAlpha;
+	var
+		integer nav_distance;
+
+	code
+		playerai(epl_player0,false);
+
+		StartTimer(mission_timer);
+		ResetTimer(mission_timer);
+
+		GenericStateStuff;
+
+		RevealObjective(eob_Destroy_Enemy_Units_at_Nav_Alpha);
+		SetNavPoint(ena_Nav_Alpha);
+		PlayVoiceOverOnce("VO\Generic\Startup2",Talker_Bet);
+		PlayVoiceOverOnce("VO\Generic\Startup3",Talker_Bet);
+		PlayVoiceOverOnce("VO\Generic\Startup6",Talker_Bet);
+
+		trans MasterBeta;
+endstate;
+
+state MasterBeta;
+	code
+		GenericStateStuff;
+
+		// davelueh add if isdead here to check for vo play.
+		if (IsDead(eve_objective_scud_1)) then
+			PlayVoiceOverOnce("VO\OP1\MI2\K",Talker_Ian);
+			PlayVoiceOverOnce("VO\OP1\MI2\F",Talker_Gon);
+		endif;
+
+		if (TimeGreater(mission_timer,600)) then
+			ShowAllRevealedObjectives;
+			WarnIfTooFar;
+			ResetTimer(mission_timer);
+		endif;
+
+		if (ReachedNav(playermech,ena_Nav_Alpha)) then
+			PlayVoiceOverOnce("VO\Generic\NavAlpha",Talker_BET);
+			SetNavPoint(ena_Nav_Beta);
+		endif;
+
+		if (ReachedNav(playermech,ena_Nav_Beta)) then
+			PlayVoiceOverOnce("VO\Generic\NavBeta",Talker_BET);
+		endif;
+
+		
+		if (GroupAllDead(south_group) == true) then
+			if (IsDead(eve_Enemy_Osiris)) then
+				SetNavPoint(ena_Nav_Beta);
+				SetGlobalTrigger(67,true);
+				SuccessObjective(eob_Destroy_Enemy_Units_at_Nav_Alpha);
+				RevealObjective(eob_Destroy_All_Enemies_at_Nav_Beta);
+				ResetTimer(mission_timer);
+				trans FinalWait;
+			endif;
+		endif;
+
+		if (GroupAllDead(north_group) == true) then
+			SetNavPoint(ena_Nav_Alpha);
+
+			RevealObjective(eob_Destroy_All_Enemies_at_Nav_Beta);
+			SuccessObjective(eob_Destroy_All_Enemies_at_Nav_Beta);
+
+			trans DoAlphaAfterBetaKilled;
+		endif;
+
+		if (isdead(playermech)) then
+			EndMission(false,9);
+			cinema_cut = 0;
+
+			trans lost;
+		endif;
+
+endstate;
+
+state DoAlphaAfterBetaKilled;
+	code
+		GenericStateStuff;
+
+		if (TimeGreater(mission_timer,600)) then
+			ShowAllRevealedObjectives;
+			WarnIfTooFar;
+			ResetTimer(mission_timer);
+		endif;
+
+		if (GroupAllDead(south_group) == true) then
+			if (IsDead(eve_Enemy_Osiris)) then
+				trans Victory;
+			endif;
+		endif;
+
+		if (ReachedNav(playermech,ena_Nav_Beta)) then
+			PlayVoiceOverOnce("VO\Generic\NavBeta",Talker_BET);
+		endif;
+
+		
+		if (isdead(playermech)) then
+			EndMission(false,9);
+		endif;
+endstate;
+
+state FinalWait;
+	code
+		GenericStateStuff;
+
+		if (GroupAllDead(north_group) == true) then
+			trans Victory;
+		endif;
+
+		if (TimeGreater(mission_timer,600)) then
+			ShowAllRevealedObjectives;
+			WarnIfTooFar;
+			ResetTimer(mission_timer);
+		endif;
+
+		if (ReachedNav(playermech,ena_Nav_Beta)) then
+			PlayVoiceOverOnce("VO\Generic\NavBeta",Talker_BET);
+		endif;
+
+		
+		if (isdead(playermech)) then
+			EndMission(false,9);
+		endif;
+endstate;
+
+state Victory;
+	code
+		Destroy(north_group);
+		Destroy(south_group);
+		
+		//Add in "Gifted Goodies to player here
+		AddMechInstanceSalvage("Osiris");
+		//AddMechInstanceSalvage("Cougar");				 WOAH----easy Paul		 = Mike T 10-16
+		//AddMechInstanceSalvage("Shadow Cat");		 Let's not give away the farm
+		AddWeaponSalvage("SRM4",2);
+		AddWeaponSalvage("LRM10",1);
+		AddWeaponSalvage("UltraAC2",1);
+		AddWeaponSalvage("ERSmallLaser",1);
+
+		StartMusic("Music\Victory2",0.5,0.5,50);
+
+		if (IsDead(eve_Gonzalez)) then
+			trans Victory_Without_Gonzalez_State;
+		else
+			trans Victory_With_Gonzalez_State;
+		endif;
+endstate;
+
+state opening;
+	var
+
+	code
+		if (cinemaskip) then
+			cinema_cut = 0;
+			KillTimer(cinema_timer);
+			SetCompositingEnabled(true);
+			SetAlwaysIgnoreObstacles(FALSE);
+			CinemaEnd;
+			SetGlobalTrigger(0,true);
+			playerai(epl_player0,false);
+
+			SetGlobalTrigger(7,true);
+			SetGlobalTrigger(9,true);
+			SetGlobalTrigger(10,true);
+			SetGlobalTrigger(15,true);
+			SetGlobalTrigger(16,true);
+			SetGlobalTrigger(66,true);
+
+			SetAudioFXEnabled(true);
+
+			trans MasterAlpha;
+		endif;
+
+ 		switch (cinema_cut)
+
+			case 0:
+				play_RAT_A = 4.5;
+				START_SOUTH_MOVE = play_RAT_A + 3.5;
+				FADE_OUT_BASE = play_RAT_A + 4.5;
+				SWITCH_TO_ZOOM_1 = play_RAT_A + 5.5;
+				SWITCH_TO_ZOOM_2 = SWITCH_TO_ZOOM_1 + 5.0;
+				SWITCH_TO_ZOOM_3 = SWITCH_TO_ZOOM_2 + 5.0;
+				FADE_OUT_ZOOM = play_RAT_A + 21.0;
+				play_IAN_A = play_RAT_A + 22.0;
+				play_GON_A = play_IAN_A + 5.0;
+				play_RAT_B = play_GON_A + 7.0;
+				play_GON_B = play_RAT_B + 2.0;
+				play_IAN_B = play_GON_B + 5.0;
+				play_GON_C = play_IAN_B + 2.5;
+				play_IAN_C = play_GON_C + 2.0;
+				END_CINEMA = play_IAN_C + 4.8;
+
+				StartMusic("Music\Core",0.5,0.5,50);
+
+				CinemaStart;
+				SetAlwaysIgnoreObstacles(TRUE);
+				SetCompositingEnabled(false);
+
+				StartTimer(cinema_timer);
+
+				SetActiveCamera (eca_East_Base);
+				FadeToBlack(0.0);
+				FadeFromBlack(3.0);
+
+				cinema_cut = cinema_cut + 1;
+			endcase;
+
+			case 1:
+				if (TimeGreater(cinema_timer,play_RAT_A)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\A",TALKER_RAT);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 2:
+				if (TimeGreater(cinema_timer,START_SOUTH_MOVE)) then
+					SetGlobalTrigger(7,true);
+				endif;
+
+				if (TimeGreater(cinema_timer,FADE_OUT_BASE)) then
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 3:
+				if (TimeGreater(cinema_timer,SWITCH_TO_ZOOM_1)) then
+					SetActiveCamera (eca_CameraShip);
+					SetAudioFXEnabled(false);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 4:
+				if (TimeGreater(cinema_timer,SWITCH_TO_ZOOM_2)) then
+					SetActiveCamera (eca_CameraShip_0000);
+					SetCameraFOV(55.0,0.5);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 5:
+				if (TimeGreater(cinema_timer,SWITCH_TO_ZOOM_3)) then
+					SetActiveCamera (eca_CameraShip_0001);
+					SetCameraFOV(55.0,0.5);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 6:
+				if (TimeGreater(cinema_timer,FADE_OUT_ZOOM)) then
+					FadeToBlack(1.0);
+					SetAudioFXEnabled(true);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 7:
+				if (TimeGreater(cinema_timer,play_IAN_A)) then
+					FadeToBlack(0.0);
+					FadeFromBlack(1.0);
+
+					FollowAndShake(playermech);
+
+					TargetOffset(-10.0,8.0,0.0,0.0,false);
+					CameraOffset(120.0,30.0,290.0,0.0,true);
+					CameraOffset(42.0,4.0,130.0,14.0,true);
+
+					PlayVoiceOverOnce("VO\OP1\MI2\A",TALKER_IAN);
+
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 8:
+				if (TimeGreater(cinema_timer,play_GON_A)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\A",TALKER_GON);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 9:
+				if (TimeGreater(cinema_timer,play_RAT_B)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\B",TALKER_RAT);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 10:
+				if (TimeGreater(cinema_timer,play_GON_B)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\B",TALKER_GON);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 11:
+				SetGlobalTrigger(9,true);
+
+				FollowAndShake(eve_Gonzalez);
+
+				TargetOffset(0.0,8.0,0.0,0.0,false);
+				CameraOffset(15.0,2.8,30.0,0.0,false);
+
+				if (TimeGreater(cinema_timer,play_IAN_B)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\B",TALKER_IAN);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 12:
+				SetGlobalTrigger(10,true);
+
+				FollowAndShake(playermech);
+
+				TargetOffset(0.0,6.0,0.0,0.0,false);
+				TargetOffset(0.0,8.0,0.0,5.0,false);
+				CameraOffset(0.0,3.1,40.0,0.0,true);
+				CameraOffset(0.0,1.4,13.0,6.0,true);
+
+				if (TimeGreater(cinema_timer,play_GON_C)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\C",TALKER_GON);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 13:
+				SetGlobalTrigger(15,true);
+
+				if (TimeGreater(cinema_timer,play_IAN_C)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\C",TALKER_IAN);
+					cinema_cut = cinema_cut + 1;
+				endif;
+			endcase;
+
+			case 14:
+				if (TimeGreater(cinema_timer,END_CINEMA)) then
+					ResetTimer(cinema_timer);
+					KillTimer(cinema_timer);
+
+					playerai(epl_player0,FALSE);
+					SetCompositingEnabled(true);
+					SetAlwaysIgnoreObstacles(FALSE);
+					CinemaEnd;
+
+					SetGlobalTrigger(16,true);
+					SetGlobalTrigger(66,true);
+
+					trans MasterAlpha;
+				endif;
+			endcase;
+			
+		endswitch;
+endstate;
+
+state Victory_Without_Gonzalez_State;
+	code
+		if (cinemaskip) then
+			victory_cut = 0;
+			KillTimer(victory_timer);
+			SetCompositingEnabled(true);
+			playerai(epl_player0,false);
+			SuccessObjectiveAll(0);
+			SetAlwaysIgnoreObstacles(FALSE);
+		endif;
+
+		switch (victory_cut)
+		
+			case 0:	
+				CinemaStart;
+				SetAlwaysIgnoreObstacles(TRUE);
+				SetCompositingEnabled(false);
+				playerai(epl_player0,true);
+				SetActiveCamera (eca_CameraShip);
+
+				SetGlobalTrigger(55,true);
+
+				Cinema_ZoomOut(playermech,cinema_zoom_out_timer,14.0);
+
+				StartTimer(victory_timer);
+				PlayVoiceOver("VO\OP1\MI2\I",TALKER_IAN);
+				victory_cut = 1;
+			endcase;
+
+			case 1:
+				Cinema_ZoomOut(playermech,cinema_zoom_out_timer,14.0);
+
+				if (TimeGreater(victory_timer,7.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\F",TALKER_RAT);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 2:
+				SetActiveCamera (eca_Salvage);
+
+				if (TimeGreater(victory_timer,5.0)) then
+					SetGlobalTrigger(56,true);
+				endif;
+
+				if (TimeGreater(victory_timer,15.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\A",TALKER_REC);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 3:
+				if (TimeGreater(victory_timer,4.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\G",TALKER_RAT);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 4:
+				SetActiveCamera (eca_Panorama_Camera);
+				SetGlobalTrigger(57,true);
+				SetCameraFOV(55.0,0.0);
+				SetCameraFOV(90.0,17.0);
+
+				if (TimeGreater(victory_timer,5.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\A",TALKER_EPS);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 5:
+				if (TimeGreater(victory_timer,4.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\H",TALKER_RAT);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 6:
+				if (TimeGreater(victory_timer,6.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\J",TALKER_IAN);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 7:
+				SetCompositingEnabled(true);
+				playerai(epl_player0,false);
+				SuccessObjectiveAll(5);
+			endcase;
+
+		endswitch;
+endstate;
+
+state Victory_With_Gonzalez_State;
+	code
+		if (cinemaskip) then
+			victory_cut = 0;
+			KillTimer(victory_timer);
+			SetCompositingEnabled(true);
+			playerai(epl_player0,false);
+			SuccessObjectiveAll(0);
+			SetAlwaysIgnoreObstacles(FALSE);
+		endif;
+
+		switch (victory_cut)
+
+			case 0:	
+				CinemaStart;
+				SetAlwaysIgnoreObstacles(TRUE);
+				SetCompositingEnabled(false);
+				playerai(epl_player0,true);
+				SetActiveCamera (eca_CameraShip);
+
+				SetGlobalTrigger(55,true);
+
+				Cinema_ZoomOut(playermech,cinema_zoom_out_timer,14.0);
+
+				StartTimer(victory_timer);
+				PlayVoiceOver("VO\OP1\MI2\J",TALKER_GON);
+				victory_cut = 1;
+			endcase;
+		
+			case 1:	
+				Cinema_ZoomOut(playermech,cinema_zoom_out_timer,14.0);
+
+				if (TimeGreater(victory_timer,2.0)) then
+					PlayVoiceOver("VO\OP1\MI2\G",TALKER_IAN);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+			
+			case 2:
+				if (TimeGreater(victory_timer,10.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\F",TALKER_RAT);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 3:
+				SetActiveCamera (eca_Salvage);
+
+				if (TimeGreater(victory_timer,5.0)) then
+					SetGlobalTrigger(56,true);
+				endif;
+
+				if (TimeGreater(victory_timer,15.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\A",TALKER_REC);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 4:
+				if (TimeGreater(victory_timer,4.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\G",TALKER_RAT);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 5:
+				SetActiveCamera (eca_Panorama_Camera);
+				SetGlobalTrigger(57,true);
+				SetCameraFOV(55.0,0.0);
+				SetCameraFOV(90.0,14.0);
+
+				if (TimeGreater(victory_timer,5.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\A",TALKER_EPS);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 6:
+				if (TimeGreater(victory_timer,4.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\K",TALKER_GON);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 7:
+				if (TimeGreater(victory_timer,3.0)) then
+					PlayVoiceOverOnce("VO\OP1\MI2\H",TALKER_IAN);
+					PlayVoiceOverOnce("VO\GENERIC\ROGER1",TALKER_GON);
+					victory_cut = victory_cut + 1;
+					ResetTimer(victory_timer);
+				endif;
+			endcase;
+
+			case 8:
+				SetCompositingEnabled(true);
+				playerai(epl_player0,false);
+				SuccessObjectiveAll(5);
+ 		
+
+			endcase;
+
+		endswitch;
+endstate;
+
+state lost;
+
+		code
+
+		SetAlwaysIgnoreObstacles(FALSE);
+		
+		switch cinema_cut
+		
+			case 0:	
+				StartMusic("Music\Defeat",0.5,0.5,50);
+
+				cinema_cut = cinema_cut + 1;			
+			endcase;
+			
+			case 1:
+			
+			endcase;
+			
+		endswitch;
+	
+endstate;
+
+state YouKilledKennyYouBastard;
+	code
+		if (isdead(playermech)) then
+			EndMission(false,9);
+			SetAlwaysIgnoreObstacles(FALSE);
+			cinema_cut = 0;
+			trans Nothing;
+		endif;
+
+		if (WhoDestroyed(eve_gonzalez) == playermech) then
+			EndMission(false,9);
+			SetAlwaysIgnoreObstacles(FALSE);
+			cinema_cut = 0;
+			trans Nothing;
+		endif;
+endstate;
+
+state Nothing;
+	code
+endstate;
+
+
+endfsm.

@@ -1,0 +1,96 @@
+
+//------------------------------------------------------------------
+fsm SirPeter : integer;
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start attacking?
+		static integer			withdrawRange;		// At what range do I withdraw from combat?
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+		static integer			mood;				// My default mood.
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		attackRange		= 300;
+		withdrawRange	= attackRange * 3 / 2;
+		piloting		= 50;
+		gunnery			= 80;
+		minDelay		= 1.0;
+		maxDelay		= 2.0;
+		eliteLevel		= 60;
+		attackThrottle	= 100;
+		mood			= NEUTRAL_START;
+
+		Shutdown(ME);
+
+endfunction;
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+
+		if (GetGlobalTrigger(57) == true) then
+			Startup(ME);
+			trans PaceState;
+		endif;
+
+		if (GetGlobalTrigger(12) == true) then
+			Startup(ME);
+			trans KillPlayerState;
+		endif;
+endstate;
+
+state KillPlayerState;
+	code
+		SetAutoTargeting(ME,FALSE);
+		SetTarget(ME,getplayervehicle(epl_player0));
+		OrderAttackTactic(TACTIC_CIRCLE_OF_DEATH,TRUE);
+endstate;
+
+state PaceState;
+	code
+		OrderMoveToRigid(epa_Shadowcat_Path,40,move_seesaw,true,false);
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.
+

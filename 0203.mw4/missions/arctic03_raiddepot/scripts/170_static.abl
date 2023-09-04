@@ -1,0 +1,169 @@
+
+//*********************************************************************************
+
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Turret must be changed to some other unique identifier
+fsm Static1 : integer;
+
+// This is the generic script for turrets of all sorts.
+// Memory integer 9 is reserved for settings in case multiple turret groups are using the same brain
+
+// Behavior: The turret sits and shoots, and that's it.
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer		attackrange; // At what range will I attack someone?
+	static integer		gunnery; 	// What is my chance to hit?
+	static real				mindelay;		//minimum amount of time I will wait between shots
+	static real				maxdelay;		//maximum amount of time I will wait between shots
+	static integer 		elitelevel; // How smart am I?
+																//Turrets do not use Elite Level to choose tactics.  However,
+																//they do use Elite level to set up opportunity fire.
+	static integer		isshotradius;  //how close must an enemy shot come to me before I notice it
+	
+	static ObjectID mytower; // Tower which controls this turret.
+														// -1 means I have no control tower
+	
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+
+															// defaults are below
+	attackrange = 950;					//350
+	gunnery = 40;							//30
+	mindelay = 0.0;							//1.0
+	maxdelay = 1.0;             //2.0
+	elitelevel = 55;            //30
+	mytower = ebu_tower1;				       //-1	(-1 means I have no control tower)
+	isshotradius = 40;				 //40
+	
+	switch (GetMemoryInteger(me,9))
+
+		case 0:
+		
+		//attackrange = 350;	
+		//gunnery = 30;					
+		//mindelay = 1.0;			
+		//maxdelay = 2.0;
+		//elitelevel = 30;
+		//mytower = -1;				
+    //isshotradius = 40;				
+		
+		endcase;
+		
+	endswitch;
+
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setskilllevel(me,-1,gunnery,elitelevel);
+		setsensorvisibility(me,false);
+		trans look;
+
+endstate;
+
+state deadState;
+	code
+	  orderDie;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state look;
+	var
+		ObjectID foe;
+
+	code
+	
+		OrderMoveLookout; 	
+		
+		if (mytower <> -1) then
+			if (IsDead(mytower)) then
+				trans towergone;
+			endif;
+		endif;
+		
+		if (setmytarget(attackrange)) then
+			setsensorvisibility(me,true);
+			trans attack;
+	 	endif;
+
+		
+endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+state attack;
+	code
+		//if alert is true....do these guys whack harder?
+		
+		if (LeaveAttackState(attackrange)) then
+			orderstopattacking;
+			SetTarget(ME,NO_UNIT);
+			setsensorvisibility(me,false);
+			trans look;
+		endif;
+		
+		orderAttack(TRUE);
+		if (mytower <> -1) then
+			if (IsDead(mytower)) then
+				trans towergone;
+			endif;
+		endif;
+endstate;
+
+state towergone;
+	code	
+		SetTarget(me,NO_UNIT);
+		OrderStopAttacking;
+		SetTargetDesirability(me,-1);
+		SetSensorVisibility(me,false);
+		clearmoveorder(me);	
+endstate;
+
+endfsm.
+//******************************************************************
+

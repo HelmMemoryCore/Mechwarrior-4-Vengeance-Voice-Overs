@@ -1,0 +1,213 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm Choppers : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_Sentry:
+//   Stands still.  Moves to attack anything that comes near.
+//
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			attackRange;		// At what range do I start shooting?
+		static integer			withdrawRange;		// At what range do I withdraw from combat completely?
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+		static integer			findTypes;			// What kind of enemies to look for
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+		static integer			mytime;
+
+
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		attackRange		= 600;
+		withdrawRange	= attackRange * 2;
+
+		// driver settings
+		piloting		= 62;
+		gunnery			= 65;
+		minDelay		= 0.1;
+		maxDelay		= 0.3;
+		eliteLevel		= 75;
+		attackThrottle	= 80;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		findTypes		= FT_DEFAULT;
+		mytime = 5;
+		
+		switch (GetMemoryInteger(me,9))
+
+		case 1:
+		
+		mytime = 85;
+		
+		endcase;
+		
+		case 2:
+		
+		mytime = 110;
+		
+		endcase;
+		
+		case 3:
+		
+		mytime = 29;
+		
+		endcase;
+		
+		case 4:
+		
+		mytime = 47;
+		
+		endcase;
+		
+		case 5:
+		
+		mytime = 60;
+		
+		endcase;
+		
+		case 6:
+		
+		mytime = 10;
+		
+		endcase;
+		
+		case 7:
+		
+		mytime = 10;
+		
+		endcase;
+		
+	endswitch;
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+				
+		trans parked;
+
+endstate;
+
+state parked;
+	code
+	
+		if (isshot(me)) then
+			fighting = true;
+		endif;
+	
+		if (fighting) then
+			if (timegreater(gti_timer_10,mytime)) then
+				if (orderTakeOff(20)) then
+					trans gettoplayer;
+				endif;
+			endif;
+		endif;
+			 	
+endstate;
+
+//------------------------------------------------------------------
+//	WaitState: wait for something to shoot
+//------------------------------------------------------------------
+
+state gettoplayer;
+	code
+		
+		ordermovetoobject(playermech,600);
+
+		if (FindEnemy(attackRange,findTypes)) then
+			trans AttackState;
+		endif;		
+endstate;
+
+//------------------------------------------------------------------
+//	AttackState: look for something to shoot
+//------------------------------------------------------------------
+
+state AttackState;
+	code
+		if (LeaveAttackState(withdrawRange)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans gettoplayer;
+		endif;
+
+		OrderAttack(true);
+
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

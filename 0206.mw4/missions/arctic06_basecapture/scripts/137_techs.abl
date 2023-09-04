@@ -1,0 +1,211 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm Techs : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_UnarmedConvoy:
+//   Follows a path and but breaks off to run from enemies.
+
+// NOTE: this script requires a CombatAI (or MechAI) to work properly!!!
+
+//------------------------------------------------------------------
+
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			fleeRange;			// At what range do I start running?
+		static integer			withdrawRange;		// After I've started to flee, at what range can I forget about my enemy and return to the convoy?
+		static integer			groupNumber;		// What's my group -- i.e. I will use GroupObjectID(groupNumber) to identify my group
+		static integer			speed;				// The speed at which I move along the path
+		static integer			formationType;		// What kind of formation am I in?
+		static integer			formationDensity;	// How densely are we packed?
+		static integer			path;				// My path
+		static integer			moveType;			// How I move along the path
+
+		static integer			piloting;			// Piloting skill
+		static integer			gunnery;			// Gunnery skill/chance to hit
+		static real				minDelay;			// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				maxDelay;			// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+													// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;		// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;				// My default mood.
+		static integer			MyPark;
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		fleeRange		= 500;
+		withdrawRange	= fleeRange * 3 / 2;
+		groupNumber		= 0;
+		path			= epa_FirstPath;
+		moveType		= move_nocycle;
+		speed			= 600;
+		formationType	= 0;
+		formationDensity= formtype_dense;
+
+		// driver settings
+		piloting		= 50;
+		gunnery			= 30;
+		minDelay		= 1.5;
+		maxDelay		= 3.0;
+		eliteLevel		= 30;
+		attackThrottle	= 80;
+		isShotRadius	= 120;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+
+		switch (GetMemoryInteger(me,9))
+			case 1:
+			
+			MyPark = ena_Park1;
+			
+			endcase;
+			
+			case 2:
+			
+			MyPark = ena_Park2;
+			
+			endcase;
+
+
+			case 3:
+			
+			MyPark = ena_Park3;
+			
+			endcase;
+
+		endswitch;
+			
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,isShotRadius);
+		SetEntropyMood			(ME,mood);
+		SetCurMood				(ME,mood);
+		SetSkillLevel			(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle		(ME,attackThrottle);
+				
+		trans FollowPathState;
+
+endstate;			
+
+//------------------------------------------------------------------
+//	FollowPathState: follow our path, but keep an eye out for enemies
+//------------------------------------------------------------------
+
+state FollowPathState;
+	code
+
+		if (path <> -1) then
+			OrderFormationMove(GroupObjectId(11),path,35,moveType,formationType,formationDensity,false);
+		else
+			OrderMoveLookOut;
+		endif;
+
+		if ConvoyGo == true then
+			trans	GO;
+		endif;
+
+	
+	if ConvoyStop == true then
+		ClearMoveOrder(groupobjectid(11));
+		trans wait;
+	endif;
+	
+	
+endstate;
+
+state wait;
+	code
+		
+		if ConvoyGo == true then
+			trans	GO;
+		endif;
+
+
+endstate;
+
+state Go;
+	code
+
+// OrderFormationMove(GroupObjectId(11),epa_APCpath,speed,moveType,formationType,formationDensity,false);
+	
+	
+	if OrderMoveTo(epa_APCpath,speed,Move_NoCycle,false,false) == true then
+		Trans Park;
+	endif;
+
+ endstate;
+
+ state Park;
+	code
+		if OrderMoveToObject(mypark,600) then
+			ClearMoveOrder(me);
+		endif;
+
+		if iswithin(me,mypark,10) then
+			ClearMoveOrder(me);
+		endif;
+	endstate;	
+
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+
+endfsm.
+

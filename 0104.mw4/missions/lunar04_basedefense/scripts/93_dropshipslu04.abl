@@ -1,0 +1,224 @@
+//------------------------------------------------------------------
+
+fsm DropshipsLU04 : integer;
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+  var		
+		
+		static integer			piloting;		 	 	// Piloting skill
+		static integer			attackRange; 	 	// The range at which I start attacking if in the original patrol
+		static integer			gunnery;		 	 	// Gunnery skill/chance to hit
+		static real					minDelay;		 	 	// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real					maxDelay;		 	 	// Maximum amount of time I will wait between shots once a weapon is reloaded
+		
+		static integer			path;						// My original path
+		static integer			moveType;				// How I move along the path
+		static boolean			canLeavePath;		// Can I leave the path if attacked? (TRUE by default)
+		static integer			speed;					// The speed at which I move along the path
+		static integer			attackThrottle;		// My attack throttle
+		
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;						// My default mood.
+
+		static integer			takeOffDistance;	// My take-off distance if I'm an airplane (ignored if not an airplane)
+		
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+
+
+function Init;
+	
+	code
+		// script-specific variables
+		attackRange			= 700;
+		Path 				= epa_DropshipPath;
+		moveType		= move_NoCycle;
+		canLeavePath	= False;
+		speed			= 100;
+
+		takeOffDistance	= 150;
+
+		// driver settings
+		piloting		= 100;
+		gunnery			= 70;
+		minDelay		= 1.0;
+		maxDelay		= 2.5;
+		eliteLevel		= 80;
+		attackThrottle	= 80;
+		attackSound		= -1; // no sound
+		deathSound		= -1; // no sound
+		mood			= NEUTRAL_START;
+		//findTypes		= FT_DEFAULT;
+
+	
+endfunction;
+
+
+ state StartState;
+
+	code
+		
+		SetFiringDelay					(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire		(ME,true);
+		SetEntropyMood					(ME,mood);
+		SetCurMood							(ME,mood);
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+				
+						trans PowerUp;
+
+endstate;
+
+
+state PowerUp;
+	code
+
+//**************************************	
+//** Let the APU's Give me Juice**
+//*************************************	
+
+	Switch (GetMemoryInteger(me,9))
+	
+		case 0:
+			//PlaySoundOnce(eso_OP1MI4_RAT_C);
+			If (GetGlobalTrigger(4) == True) then							 	//First Dropship is leaving
+				trans DropLaunch;
+			endif;
+		endcase;
+		
+		case 1:
+			//PlaySoundOnce(eso_OP1MI4_RAT_D);
+			If (GetGlobalTrigger(1) == True) then							 	//Objective Dropship
+				trans OBDropLaunch;
+			endif;
+		endcase;	
+	
+	endswitch;
+				
+			
+endstate;
+
+state AttackState;
+	code
+		
+		if (LeaveAttackState(1000)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			//trans LandingPad;
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+		
+		OrderAttack(false);		
+endstate;
+
+state OBDropLaunch;
+	code
+/*	
+		if OrderDoorOpen then
+			//print("Door Opening");
+//      if BoardDropShip(GroupObjectId(3),eve_OB_Dropship) then
+//				print("Boarding");
+//				if OrderDoorClose then
+//				Print("DoorClose");
+//			SetGlobalTrigger(12,true);
+//				endif;
+			//endif;
+		endif;
+		
+		if OrderDoorClose then
+		//
+		endif;
+		
+	if (GetGlobalTrigger(21) == true) then
+		if (orderTakeOff(300) == true) then
+			if OrderMoveResumePatrol(path,speed,movetype,true,false) then
+					//shutdown(me);
+					//TeleportToHell(me);
+			endif;
+		endif;
+	endif;
+	
+	OrderAttack(false);	
+	*/
+	trans OBDropLaunch2;
+	
+endstate;
+
+state OBDropLaunch2;
+	code
+	setglobaltrigger(21,true);
+	
+	//orderdoorclose;
+	if (DoorCloseStart == True) then
+	  trans OBDropLaunch3;
+	endif;
+	
+endstate;
+
+state OBDropLaunch3;
+	code
+		
+	if (GetGlobalTrigger(21) == true) then
+		if (orderTakeOff(300) == true) then
+			if OrderMoveResumePatrol(path,speed,movetype,true,false) then
+			endif;
+		endif;
+	endif;
+
+endstate;
+
+state DropLaunch;
+	code
+	
+		if (orderTakeOff(300) == true) then
+			if OrderMoveResumePatrol(path,speed,movetype,true,false) then
+	  		//else;
+	  		//shutdown(me);
+	  		//TeleportToHell(me);
+			endif;
+		endif;
+
+	OrderAttack(false);	
+	
+endstate;
+
+
+state DeadState;
+	code
+		
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+		
+		orderDie;
+
+endstate;
+
+
+endfsm.

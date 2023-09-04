@@ -1,0 +1,256 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Patrol must be changed to some other unique identifier
+fsm SidePatrols : integer;
+
+//This unit patrols a specific path and attacks anything that comes near it.
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; // When do I start shooting?
+																
+	static integer			piloting; 	// piloting skill (1-5),
+	static integer			gunnery; // hit chance,
+	static real					mindelay;		//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;		//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;			 // What speed so I move at?
+	static integer 			elitelevel; // % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																	// and other things that would normally be determined by combat experience
+	static boolean			resumed;  	//Have I hit the resume patrol command?
+
+ 	static integer			isshotradius;	//how far away from me will I detect an enemy shot.
+	static integer			movetype;		//how will it move down the path?
+
+	static Boolean 			attacksoundplayed;
+	static integer 			attacksound; // plays when it first attacks
+	static integer 			deathsound; // plays when it dies
+	
+	static integer			mood;	//What is my normal mood?
+	
+	static Boolean			reachedendofpath;	//Have I gotten to the end of the path?
+																			//Note: This only gets set if movetype is set to move_nocycle.
+	static integer			path;		 //what path am I following?
+	static Boolean 			attackersdistractit;	// if FALSE, it won't leave the path, even when things
+		// are shooting it. It will shoot back. Defaults to true
+// Once unit reaches the end of the path, of course, it attacks freely.
+
+	static integer			mytime;
+	
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+																					// defaults are below
+	//These are the variables that are normally changed by the designer
+	//in order to change behavior
+	attackrange = 500;											// 500
+	piloting = 3;														//3
+	gunnery = 30;												//30
+	mindelay = 1.5;													//1.5
+	maxdelay = 3.0;													//3.0
+	elitelevel = 30;												//30
+	speed = 600;														//600 (max speed)	
+	isshotradius = 80;												//80 	
+	attacksound = -1;                   //-1 (no sound)
+	deathsound = -1;                    //-1 (no sound)
+	path = -1;													 //-1 (no path)
+	movetype = move_circle;									//move_circle
+	attackersdistractit = TRUE;					 //true
+	mood = neutral_start;								//neutral_start
+	mytime = 90;
+			
+ 	//These variables should not be changed by the designer without good reason
+	reachedendofpath = FALSE;						 //false
+	resumed = true;												//false
+	attacksoundplayed = FALSE;									//false
+
+	
+	//Use this to set different values for different units using the same brain	
+	switch (GetMemoryInteger(me,9))
+
+
+		case 1:
+		
+		attackrange = 600;				
+		piloting = 45;							
+		gunnery = 47;						
+		mindelay = 0.2;							
+		maxdelay = 0.7;									
+		elitelevel = 60;						
+		speed = 600;							 	
+		isshotradius = 80;						 	
+		path = epa_grasspath;
+		movetype = move_circle;
+		mytime = 120;
+		
+		endcase;
+		
+		case 2:
+		
+		attackrange = 500;				
+		piloting = 47;							
+		gunnery = 68;						
+		mindelay = 0.2;							
+		maxdelay = 0.7;									
+		elitelevel = 65;						
+		speed = 600;							 	
+		isshotradius = 80;						 	
+		path = epa_townpath;
+		movetype = move_circle;
+		mytime = 190;
+		
+		endcase;
+
+		
+	endswitch;
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+		
+		if ((getmemoryinteger(me,9)) == 1) then
+			trans takeoff;
+		else
+			trans patrol;
+		endif;
+		
+endstate;			
+
+state deadstate;
+  code
+		if (deathsound <> -1) then	
+			PlaySoundOnce(deathsound);
+		endif;		
+						
+		orderDie;
+endstate;
+
+state takeoff;
+  code
+	
+		if (ordertakeoff(60)) then	
+			trans patrol;
+		endif;		
+						
+endstate;
+
+	state patrol;
+
+  var
+    ObjectID foe;
+		ObjectID techs;
+
+		code
+
+	//head down the path.  If this has already been done
+	// or if there is no path set then look around.
+	
+		if (blockdown <> TRUE) then
+			orderMoveto(path,speed,movetype,true,true);
+		endif;
+		
+		
+		//head towards the convoy when the roadblock is down
+		
+		if (blockdown == true) then
+			if (timegreater(gti_timer_10,mytime)) then
+				techs = eve_techs1;
+			
+				if (isdead(eve_techs1)) then
+					if (isdead(eve_techs2)) then
+						techs = eve_techs3;
+					else
+						techs = eve_techs2;
+					endif;
+				endif;
+				
+				ordermovetoobject(techs,speed);
+				
+			endif;
+		endif;
+
+			
+		//attack anyone who shoots my group if I'm in a group
+		//otherwise attack anyone who shoots at me
+		if (setmytarget(attackrange)) then
+			trans attack;
+	 	endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+	  var
+			boolean	check;
+		
+		code
+		
+		
+		if (LeaveAttackState(attackrange*3/2)) then
+			orderstopattacking;				
+			trans patrol;
+		endif;		
+		
+		//the ever popular attack order
+    orderAttack (attackersdistractit);
+		
+		//play the attack sound if one exists
+		if ((attacksound <> -1) and (attacksoundplayed == FALSE)) then	
+			attacksoundplayed = true;
+			PlaySoundOnce(attacksound);
+		endif;					
+					
+	endstate;
+
+
+endfsm.
+//******************************************************************
+

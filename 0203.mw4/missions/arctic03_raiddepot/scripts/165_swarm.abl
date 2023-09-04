@@ -1,0 +1,248 @@
+// In pairs.....
+//power up staggered
+//perhaps 2 on a ambush with the HELI_POPUP tactic
+//
+
+//*********************************************************************************
+
+fsm Swarm : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+	static integer	gunnery;
+	static integer	attackrange;
+	static real			mindelay;
+	static real			maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+	static integer	attacksound;
+	static boolean	attacksoundplayed;	
+	static integer	mood;
+	static integer	speed;
+	static integer	Tactic;
+	static boolean  AmIAwake;
+	static boolean Startspinup;
+	static locpoint			home;
+
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+		GetLocation(me,home);
+		attacksoundplayed = false;
+		
+		switch (GetMemoryInteger(me,9))
+			case 0:
+				attackrange = 950;				
+				piloting = 40;							
+				gunnery = 50;						
+				mindelay = 1.0;							
+				maxdelay = 2.0;									
+				elitelevel = 55;
+				attacksound = -1;
+				mood = BRUTAL_END;
+				speed = 70;
+				tactic = TACTIC_HELI_POPUP;
+				AmIawake = TRUE;
+			endcase;
+			case 1:
+				attackrange = 950;				
+				piloting = 60;							
+				gunnery = 40;						
+				mindelay = 1.5;							
+				maxdelay = 2.5;									
+				elitelevel = 55;
+				attacksound = -1;
+				mood = BRUTAL_START;
+				speed = 70;
+				tactic = TACTIC_HELI_POPUP;
+				AmIawake = TRUE;
+			endcase;
+			case 2:
+				attackrange = 950;				
+				piloting = 60;							
+				gunnery = 40;						
+				mindelay = 1.5;							
+				maxdelay = 3.5;									
+				elitelevel = 55;
+				attacksound = -1;
+				mood = NEUTRAL_START;
+				speed = 70;
+				tactic = TACTIC_CIRCLE_HOVER;
+				AmIawake = FALSE;
+				startspinup = false;
+			endcase;
+			case 3:
+				attackrange = 950;				
+				piloting = 40;							
+				gunnery = 50;						
+				mindelay = 1.5;							
+				maxdelay = 2.5;									
+				elitelevel = 55;
+				attacksound = -1;
+				mood = NEUTRAL_START;
+				speed = 70;
+				tactic = TACTIC_CIRCLE_HOVER;
+				AmIawake = FALSE;
+			endcase;
+
+		endswitch;
+	endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+			setskilllevel(me,piloting,gunnery,elitelevel);
+			setfiringdelay(me,mindelay,maxdelay);
+			setignorefriendlyfire(me,true);
+			setentropymood(me,mood);
+			setcurmood(me,mood);
+			shutdown(me);
+			trans wait;
+	endstate;
+	
+	state deadState;
+  code
+//Do I want to do some random thing in here....with the "Kinda like trap shooting!" and something else??
+//		if (deathsound <> -1) then	
+//			PlaySoundOnce(deathsound);
+//		endif;								
+		orderDie;
+	endstate;
+
+	state	wait;
+		code
+			if Alert == TRUE then
+				startup(me);
+				trans rumble;
+			endif;
+//something else in here to wake them up!!!!!!!!!			
+			if amiawake == true then
+				startup(me);
+				trans rumble;
+			endif;		
+	endstate;																																	
+	
+	state rumble;
+		code
+
+				if startspinup == false then
+					starttimer(gti_timer_2);
+					startspinup = true;
+				endif;
+
+			
+		switch (GetMemoryInteger(me,9))
+			
+			case 0,1:
+					 		if (FindEnemy(attackRange,FT_DEFAULT)) then
+								trans Attack;
+							endif;
+
+			endcase;
+			
+			case 2:
+				if timegreater(2,30) then
+				if (ordertakeoff(20) == true) then
+					if ordermovetoobject(playermech,600) then
+					 		if (FindEnemy(attackRange,FT_DEFAULT)) then
+								trans Attack;
+							endif;
+					endif;
+				endif;
+				endif;
+			endcase;
+ 			
+			case 3:
+				if timegreater(2,60) then
+					if (ordertakeoff(20) == true) then
+					 		if (FindEnemy(attackRange,FT_DEFAULT)) then
+								trans Attack;
+							endif;
+					endif;
+				endif;
+			
+			
+			endcase;
+ 		endswitch;
+	endstate;
+	
+state Attack;
+	code
+		if (LeaveAttackState(800)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans HOMEBOUND;
+		endif;
+
+		OrderAttackTactic(tactic,true);
+																																
+
+
+		if ((isShot (me)) and (rand(0,3) <= 1)) then
+  		setTarget(me,whoShot(me));
+		endif;
+
+	endstate;
+	
+	state HOMEBOUND;
+		code
+	
+		if (FindEnemy(attackRange,FT_DEFAULT)) then
+			trans Attack;
+		endif;
+
+		if OrderMoveToLocPoint(HOME,600,false,true) == true then
+			if OrderLand == true then
+				trans backhome;
+			endif;
+		endif;
+		
+	endstate;
+	
+	state BackHome;
+		code
+		
+		if (FindEnemy(attackRange,FT_DEFAULT)) then
+			ordertakeoff(20);
+			trans Attack;
+		endif;
+	
+																																
+		endstate;
+		
+																																		
+endfsm.
+//******************************************************************
+
+

@@ -1,0 +1,218 @@
+
+//*********************************************************************************
+
+fsm CapitalScript : integer;		
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+     const
+
+		#include_ <content\ABLScripts\mwconst.abi>
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+     type
+
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+	static integer	gunnery;
+	static integer	attackrange;
+	static real			mindelay;
+	static real			maxdelay;
+	static integer	elitelevel;
+	static integer	piloting;
+	static integer	attacksound;
+	static integer	mood;
+	static integer	speed;
+	static integer	Wheretogo;
+	static boolean	Wakeup;
+	static boolean  AttackSoundPlayed;
+	static integer	MyTarget;
+	static integer	MyTarget2;
+	static integer	MyTarget3;
+	static integer	MyTarget4;
+	static LocPoint	MySpot;
+	Static Integer AttackBoats;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+	function init;
+	 code
+		
+		wakeup = false;
+		AttackSoundPlayed = false;
+		AttackBoats = (CastOff + rand(5,35));
+		SetAutoTargeting(ME,FALSE);
+				
+		switch (GetMemoryInteger(me,9))
+			case 0:
+				attackrange = 1200;				
+				piloting = 40;							
+				gunnery = 50;						
+				mindelay = 0.0;							
+				maxdelay = 0.0;									
+				elitelevel = 90;
+				attacksound = -1;
+				mood = BRUTAL_END;
+				speed = 600;
+				wheretogo = epa_Bombard;
+				MyTarget = ebu_Target7;
+				MyTarget2 = ebu_Target4;
+				MyTarget3 = ebu_Target4_0001;
+				MyTarget4 = ebu_Mech_hanger;
+			endcase;
+			case 1:
+				attackrange = 1200;				
+				piloting = 60;							
+				gunnery = 50;						
+				mindelay = 0.0;							
+				maxdelay = 0.0;									
+				elitelevel = 90;
+				attacksound = -1;
+				mood = BRUTAL_START;
+				speed = 600;
+				wheretogo = epa_bombard2;
+				MyTarget = ebu_Target5;
+				MyTarget2 = ebu_Target6;
+				MyTarget3 = ebu_Target1212;
+				MyTarget4 = ebu_Target8 ;
+
+			endcase;
+		endswitch;
+	endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+			setskilllevel(me,piloting,gunnery,elitelevel);
+			setfiringdelay(me,mindelay,maxdelay);
+			setignorefriendlyfire(me,true);
+			setentropymood(me,mood);
+			setcurmood(me,mood);
+			GetLocation(me,myspot);
+			DamnThe(me);
+			trans wait;
+	endstate;
+	
+	
+	state deadState;
+
+	code
+ 							
+		orderDie;
+	
+	endstate;
+
+	
+	state	wait;
+		code
+			
+				if timegreater(1,startbombard) then
+					teleport(me,myspot);
+					Startup(me);
+					PlayVoiceOverOnce("VO\OP5\MI3\DestroyerGo",talker_Fo2);
+					PlayVoiceOverOnce("VO\OP5\MI3\DestroyerGo",talker_IAN);
+					PlayVoiceOverOnce("VO\OP5\MI3\DestroyerGo",talker_REC);
+					If CaseyCheck == false then
+						PlayLanceMateSound("VO\OP5\MI3\DestroyerGo",1);
+						CaseyCheck= true;
+					endif;
+					StartTimer(gti_timer_2);
+					trans Move;
+				endif;
+			
+//		if (FindEnemy(attackRange,FT_BUILDING + FT_UNARMED + FT_DEFAULT)) then
+//			startup(me);
+//			gunnery = 45;
+//			trans Attack;
+//		endif;	
+		 	
+	endstate;																																	
+	
+	state Move;
+		code
+		if OrderMoveTo(wheretogo,600,Move_NoCycle,false,false) == true then
+			StartMusic("Music\Vista",3.0,3.5,50);
+			trans Shell;
+		endif;
+		
+		if (isShot (me)) then
+			setTarget(me,whoShot(me));
+			Trans Attack;
+		endif;	
+//		if (FindEnemy(attackRange,FT_DEFAULT)) then
+//			gunnery = 45;
+//			trans Attack;
+//		endif;
+  endstate;
+		
+	state attack;
+		code
+		
+		
+		if timegreater(1,AttackBoats) then
+			Gunnery = 1;
+			SetTarget(me,GroupObjectID(8));
+		endif;
+		
+		if (LeaveAttackState(attackrange*3/2)) then
+			OrderStopAttacking;
+			SetTarget(ME,NO_UNIT);
+			trans Shell;
+		endif;
+
+		OrderAttack(false);
+		
+		if (isShot (me)) then
+			setTarget(me,whoShot(me));
+			Gunnery = 90;
+		endif;				
+	endstate;		
+	
+	state shell;
+		code
+
+			If isdead(mytarget4)==false then
+				SetTarget(me,mytarget4);
+			endif;
+							
+			if isdead(mytarget3)==false then
+				SetTarget(me,mytarget3);
+			endif;
+		
+			if isdead(mytarget2)==false then
+				SetTarget(me,mytarget2);
+			endif;
+			
+			if isdead(mytarget)==false then
+					SetTarget(me,mytarget);
+			endif;
+			
+			Gunnery = 50;
+			
+			trans attack;
+	endstate;	
+ 																															
+																																		
+endfsm.
+//******************************************************************
+

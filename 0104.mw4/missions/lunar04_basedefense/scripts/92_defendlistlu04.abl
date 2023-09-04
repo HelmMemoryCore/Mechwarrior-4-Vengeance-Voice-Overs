@@ -1,0 +1,395 @@
+
+//------------------------------------------------------------------
+// NOTE: The fsm name below MUST be changed in order for the
+// script to be considered a unique entity!
+
+fsm DefendListLU04 : integer;
+
+
+//------------------------------------------------------------------
+
+// Generic_AttackList:
+//   This script can be used to attack (or defend) a series of targets
+//   contained in a group.  The unit will use a specified tactic
+//   on the first living target in the group, and if that unit is
+//   destroyed, it will switch to the next one.  When there are no
+//   units left in the group, it will go on a rampage, attacking
+//   any enemies it can find.
+
+//------------------------------------------------------------------
+
+
+//------------------------------------------------------------------
+//     Constants
+//------------------------------------------------------------------
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+//------------------------------------------------------------------
+//     Types
+//------------------------------------------------------------------
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//     Variables
+//------------------------------------------------------------------
+
+	var
+		static integer			rampageAttackRange;		// When all my targets are destroyed, at what range do I start shooting?
+
+		static integer			myGroupID;			// The ID of my group ... i.e. this script will
+																			 	// call GroupObjectID(groupID)
+		static integer			tactic;				 	// The tactic to use to attack (or defend) my targets
+																	
+		static integer			piloting;		 		// Piloting skill
+		static integer			gunnery;		 		// Gunnery skill/chance to hit
+		static real				  minDelay;		 		// Minimum amount of time I will wait between shots once a weapon is reloaded
+		static real				  maxDelay;		 		// Maximum amount of time I will wait between shots once a weapon is reloaded
+		static integer 			eliteLevel;			// Elite level.  This helps determine tactics, defensive manuevers, opportunity fire
+																				// and other things.  It indicates a general level of combat experience.
+		static integer			attackThrottle;	// My attack throttle
+
+ 		static integer			isShotRadius;		// How far away from me will I detect an enemy shot?
+
+		static integer 			attackSound;		// The attack sound I play when I first attack
+		static integer 			deathSound;			// The sound I play when I die
+		
+		static integer			mood;						// My default mood.
+
+		static integer			friendlyFireFrustrationLevel;
+		static integer			frustration_timer;
+		static integer			attack_player_timer;
+
+		static locpoint			LocFL;
+		static locpoint			LocFR;
+		static locpoint			LocBL;
+		static locpoint			LocBR;
+		
+		static integer			path;					// My path
+		static integer			moveType;			// How I move along the path
+		static integer			speed;				// The speed at which I move along the path
+//------------------------------------------------------------------
+//     Init: my initialization function
+//------------------------------------------------------------------
+
+function Init;
+	code
+		// script-specific variables
+		rampageAttackRange	= 1200;
+
+		myGroupID						= 0;
+		tactic							= TACTIC_DEFEND;
+		
+		// driver settings
+	 	myGroupID						= 0;						// script-specific variables
+			
+		piloting						= 50;
+		gunnery							= 95;
+		minDelay						= 1.0;
+		maxDelay						= 1.5;
+		eliteLevel					= 80;
+		attackThrottle 			= 80;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= NEUTRAL_START;
+
+		friendlyFireFrustrationLevel	= 0;
+	
+	
+	//Use this to set different values for different units using the same brain
+	switch (GetMemoryInteger(me,9))
+
+		case 0:
+		
+	 	myGroupID						= 10;						// Casey "Lancemate"
+			
+		piloting						= 35;		//90
+		gunnery							= 60;   //65        //when too easy changed from 95
+		minDelay						= 0.5;
+		maxDelay						= 0.75;	//1.5
+		eliteLevel					= 60;		//95
+		attackThrottle 			= 80;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= NEUTRAL_START;
+		frustration_timer				= gti_Timer_23;
+		attack_player_timer				= gti_Timer_24;
+		
+		endcase;
+	 		
+		case 1:
+		
+	 	myGroupID						= 11;						// Jen "Lancemate"			
+		piloting						= 35;		//90
+		gunnery							= 55;				 		//when too easy changed from 85
+		minDelay						= 0.75;	//1
+		maxDelay						= 1.0;	//2
+		eliteLevel					= 60;		//95
+		attackThrottle 			= 80;
+		isShotRadius				= 120;
+		attackSound					= -1; // no sound
+		deathSound					= -1; // no sound
+		mood								= NEUTRAL_START;
+		frustration_timer				= gti_Timer_29;
+		attack_player_timer				= gti_Timer_30;
+		
+		endcase;
+	
+	endswitch;
+
+		path			= -1;
+		moveType		= move_nocycle;
+		speed			= 40;
+	
+	StartTimer(frustration_timer);
+	SetTimer(frustration_timer,100);
+	
+endfunction;
+
+function CheckIfPlayerShotMe : integer;
+	var
+		ObjectID who_shot;
+
+	code
+		
+//			If (GetGlobalTrigger(1) == True) then							 	//Board Dropship time
+//				trans BoardState;
+//			endif;
+		
+			If (TeleStart == True) then							 						//Board Dropship time
+				trans OnBoardState;
+			endif;
+		
+		if (Not TimeGreater(frustration_timer,8)) then
+			return (0);
+		endif;
+		
+		if (Not IsShot(ME)) then
+			return (0);
+		endif;
+
+		who_shot = WhoShot(me);
+
+		if (who_shot <> getplayervehicle(epl_player0)) then
+			return (0);
+		endif;
+
+		ResetTimer(frustration_timer);
+
+		if (friendlyFireFrustrationLevel == 0) then
+			if (GetMemoryInteger(me,9) == 1) then
+				PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_JEN);
+			endif;
+			
+			if (GetMemoryInteger(me,9) == 0) then
+				PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_CAS);
+			endif;
+			
+			friendlyFireFrustrationLevel = 1;
+		else
+			if (friendlyFireFrustrationLevel == 1) then
+				if (GetMemoryInteger(me,9) == 1) then
+					PlayVoiceOverOnce("VO\Generic\CheckFire2",TALKER_JEN);
+				endif;
+				
+				if (GetMemoryInteger(me,9) == 0) then
+					PlayVoiceOverOnce("VO\Generic\CheckFire2",TALKER_CAS);
+				endif;
+				
+				friendlyFireFrustrationLevel = 2;
+			else
+				if (friendlyFireFrustrationLevel == 2) then
+					if (GetMemoryInteger(me,9) == 1) then
+						PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_JEN);
+					endif;
+					
+					if (GetMemoryInteger(me,9) == 0) then
+						PlayVoiceOverOnce("VO\Generic\CheckFire1",TALKER_CAS);
+					endif;
+					
+					friendlyFireFrustrationLevel = 3;
+				else
+					PlayVoiceOverOnce("VO\Generic\KillIan1",TALKER_RAT);
+					StartTimer(attack_player_timer);
+					ResetTimer(attack_player_timer);
+					trans KillPlayerState;
+				endif;
+			endif;
+		endif;
+
+		return (1);
+
+endfunction;
+
+//------------------------------------------------------------------
+//	StartState: my initial state
+//------------------------------------------------------------------
+
+state StartState;
+
+	code
+		SetFiringDelay					(ME,minDelay,maxDelay);
+		SetIgnoreFriendlyFire			(ME,false);
+		SetIsShotRadius		 		 	(ME,isShotRadius);
+		SetEntropyMood		 		 	(ME,mood);
+		SetCurMood							(ME,mood);
+		SetSkillLevel						(ME,piloting,gunnery,eliteLevel);
+		SetAttackThrottle				(ME,attackThrottle);
+
+			getlocation(ena_NavFL,LocFL);
+			getlocation(ena_NavFR,LocFR);
+			getlocation(ena_NavBL,LocBL);
+			getlocation(ena_NavBR,LocBR);
+		
+		trans DefendFirstLivingTargetState;
+
+endstate;			
+
+//------------------------------------------------------------------
+//	AttackFirstLivingTargetState: get the first object in my group, set
+//  it as my target, and issue the attack order with my tactic
+//------------------------------------------------------------------
+
+state DefendFirstLivingTargetState;
+
+	var
+		ObjectID next_target;
+
+	code
+		CheckIfPlayerShotMe;
+		trans rampagestate;
+		
+		
+		// temp rem by davelueh as the defend isn't working, these guys just sit around...
+		
+	 /*
+		if (GetTarget(ME) == NO_UNIT) then
+			next_target = GroupGetFirstObject(GroupObjectID(myGroupID));
+
+			if (next_target == NO_UNIT) then
+				trans RampageState;
+			endif;
+
+			SetTarget(ME,next_target);
+		endif;
+
+		if (attackSound <> -1) then	
+			PlaySoundOnce(attackSound);
+		endif;
+
+		OrderAttackTactic(tactic,TRUE);
+		*/
+
+endstate;
+
+//------------------------------------------------------------------
+//	RampageState: no targets remain -- let's kick some ass!
+//------------------------------------------------------------------
+
+state RampageState;
+	code
+		CheckIfPlayerShotMe;
+
+		if (GetTarget(ME) == NO_UNIT) then
+			FindEnemy(rampageAttackRange,FT_DEFAULT);
+		endif;
+
+			OrderAttack(TRUE);
+		
+endstate;
+
+//------------------------------------------------------------------
+//	KillPlayerState: too much friendly fire -- get pissed and attack the player
+//------------------------------------------------------------------
+
+state KillPlayerState;
+	code
+		if (TimeGreater(attack_player_timer,6)) then
+			SetFiringDelay			(ME,0.0,0.0);
+			SetSkillLevel			(ME,100,500,100);
+
+			SetAutoTargeting(ME,FALSE);
+			SetTarget(ME,getplayervehicle(epl_player0));
+			OrderAttackTactic(TACTIC_CIRCLE_OF_DEATH,TRUE);
+		endif;
+endstate;
+
+//------------------------------------------------------------------
+//	DeadState: OK, I kicked the bucket.
+//------------------------------------------------------------------
+
+state DeadState;
+	code
+		if (deathSound <> -1) then	
+			PlaySoundOnce(deathSound);
+		endif;		
+
+		orderDie;
+
+endstate;
+
+state BoardState;
+	code
+	SetGlobalTrigger(21,true);
+	//shutdown(me);
+	teleporttohell(me);
+endstate;
+
+state OnBoardState;
+	code
+	
+	Switch (GetMemoryInteger(me,9))
+  		
+		case 0:																			 //Casey Shadowcat
+		teleport(me,LocFL);
+		path = epa_PathFL;
+		endcase;
+/*		
+		case was 1 now 3:																			 //Osiris_0000
+		teleport(me,LocFR);
+		path = epa_PathFR;
+		endcase;
+
+		case 2:																			 //Hellspawn
+		teleport(me,LocBL);
+		path = epa_PathBL;
+		endcase;
+*/	
+		case 1:																			 //Jen Shadowcat				 was 3 now 1
+		teleport(me,LocBR);
+		path = epa_PathBR;
+		endcase;
+
+	endswitch;
+	
+		moveType		= move_nocycle;
+		speed			= 40;
+		
+		trans OnBoardState2;
+	//shutdown(me);
+	//teleporttohell(me);
+endstate;
+
+state OnBoardState2;
+	code
+
+		if (path <> -1) then
+			if (OrderMoveToRigid(path,speed,movetype,true,false) == true) then
+				SetGlobalTrigger(20,true);
+				trans BoardState;
+			endif;
+		else
+			SetGlobalTrigger(20,true);
+			trans BoardState;
+		endif;
+		
+endstate;
+
+endfsm.
+

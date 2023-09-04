@@ -1,0 +1,236 @@
+
+//*********************************************************************************
+//The below line MUST be changed in order for the script to be considered
+//a unique entity.  The word Sentry must be changed to some other unique identifier
+fsm Kulin : integer;
+		
+
+
+// 		Behavior: Sits stationary and looks around. When an enemy comes within
+//   alertrange it moves towards the unit
+//	When the unit comes within attackrange it attacks
+//	Whenit kills the unit it can either go back to it's start point or not,
+//	depending on different settings in the brain.
+
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static integer			attackrange; // When do I start shooting?
+																
+	static integer			piloting; 	// piloting skill
+	static integer			gunnery; // hit chance,
+	static real					mindelay;		//minimum amount of time I will wait between shots once a weapon is reloaded
+	static real					maxdelay;		//maximum amount of time I will wait between shots once a weapon is reloaded
+	static integer 			speed;			 // What speed so I move at?
+	static integer 			elitelevel; // % elite chance, This helps determine tactics, defensive manuevers, opportunity fire
+																	// and other things that would normally be determined by combat experience
+
+  static integer			isshotradius;	//how far away from me will I detect an enemy shot.
+	
+	static integer			mood;	//What is my normal mood?
+			
+	static Boolean 			attacksoundplayed;	//Am I attacking?
+	
+	//if set to -1 the below sounds effectively do not exist
+	static integer 			attacksound; // plays when the unit first attacks
+	static integer 			deathsound; // plays when the unit dies
+	
+	static locpoint			mystart; //Where was the unit when the mission started
+	static boolean			movingtostart;	//Is the unit moving to the start point
+	static boolean			movetostart;	//should the unit move back to it's start point when it's done fighting?
+	static boolean			taunted;
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+
+																			// defaults are below
+	//These are the variables that are normally changed by the designer
+	//in order to change behavior
+	attackrange = 500;									//500
+	piloting = 70;												//50
+	gunnery = 85;											//30
+	mindelay = 0.1;											//1.5
+	maxdelay = 0.3;											//3.0
+	elitelevel = 80;										//30
+	speed = 600;												//600 (max speed)
+	isshotradius = 80;										//80	
+	attacksound = -1;                   //-1 (no sound)
+	deathsound = -1;                    //-1 (no sound)	
+	movetostart = false;								//False
+	mood = neutral_start;								//neutral_start
+
+	//These variables should not be changed by the designer without good reason
+	attacksoundplayed = FALSE;									//false
+	getlocation(me,mystart);		 				//DO NOT CHANGE THIS LINE!!!
+	movingtostart = false;							//false
+	
+	mystart[1] = -400;
+	taunted = true;
+	
+	//Use this to set different values for different units using the same brain
+	switch (GetMemoryInteger(me,9))
+
+		case 1:
+		
+		attackrange = 800;				
+		piloting = 75;							
+		gunnery = 105;						
+		mindelay = 0.1;							
+		maxdelay = 0.2;									
+		elitelevel = 90;						
+		speed = 600;							 	
+		isshotradius = 80;						 	
+		movetostart = false;
+		mood = agressive_start;	
+		taunted = false;
+		
+		endcase;
+		
+		case 2:
+		
+		attackrange = 800;										
+		speed = 600;							 	
+		isshotradius = 80;						 	
+		attacksound = -1;
+		deathsound = -1;
+		movetostart = false;
+		mood = neutral_start;	
+		
+		endcase;
+		
+	endswitch;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		SetFiringDelay(me,mindelay,maxdelay);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,isshotradius);
+		setentropymood(me,mood);
+		setcurmood(me,mood);
+		setskilllevel(me,piloting,gunnery,elitelevel);
+		//setsearchlight(me,on);
+		//startexecute(me);
+		//setalignment(me,enemy);
+
+		shutdown(me);
+		teleporttohell(me);
+		trans wait;
+		//trans tp;
+		
+endstate;			
+
+state deadState;
+  code
+		if (deathsound <> -1) then	
+			PlaySoundOnce(deathsound);
+		endif;
+		
+		orderDie;
+endstate;
+
+state wait;
+  code
+
+if (basetaken) then
+	teleport(me,mystart);
+	startup(me);
+	trans sit;
+endif;
+
+endstate;
+
+
+
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+		
+		ordermovetoobject(playermech,600);
+		
+		if (setmytarget(attackrange)) then
+			if ((gettarget(me)) == playermech) then
+				starttimer(gti_timer_20);
+			endif;
+			trans attack;
+	 	endif;
+			
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+		
+		code
+		
+		//Get out of the attack state if I should	
+		if (LeaveAttackState(attackrange*3/2)) then
+			orderstopattacking;
+			//see if I want to go back to my start point and set things accordingly
+			if (movetostart == true) then			 				
+				movingtostart = true;
+			endif;				
+			trans sit;
+		endif;
+		
+			//Attack
+			OrderAttack(true);
+			
+		//play the attack sound if one exists
+		if ((attacksound <> -1) and (attacksoundplayed == FALSE)) then	
+			attacksoundplayed = true;
+			PlaySoundOnce(attacksound);
+		endif;
+		
+		if (not taunted) then
+			if (timegreater(gti_timer_20,20)) then
+				playvoiceover("VO\OP4\MI7\yousuck",talker_cjk);
+				taunted = true;
+			endif;
+		endif;
+		
+	endstate;
+	
+endfsm.
+//******************************************************************
+

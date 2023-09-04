@@ -1,0 +1,123 @@
+
+//*********************************************************************************
+
+fsm Swifts : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	static boolean	reached;
+	static locpoint	point1;
+	static locpoint	point2;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	reached = false;
+	
+			Point1[0] = -1064;
+			Point1[1] = 87;
+			Point1[2] = 924;
+
+			Point2[0] = -1074;
+			Point2[1] = 87;
+			Point2[2] = 924;
+
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		
+    setskilllevel(me,100,60,60);
+		SetTargetDesirability(me,1);
+		TeleportToHell(me);
+		trans sit;
+		
+	endstate;
+
+	state	sit;
+		code
+		
+		if SwiftGo == TRUE	then
+			teleport(eve_Swift1,point1);
+			teleport(eve_Swift2,point2);
+//					if (sounds_played[2] == FALSE) then
+//						sounds_played[2] = TRUE;
+//						PlaySoundOnce(eso_Swift);
+//					endif;
+			startup(me);
+			trans go;
+		endif;
+	endstate;
+
+	
+	state GO;
+	code
+	
+	
+
+if reached == false then
+	if (OrderFormationMove(GroupObjectID(7),epa_swiftpath,600,MOVE_NOCYCLE,FORMATION_LINE,FORMTYPE_NORMAL,FALSE)==TRUE)
+		then starttimer(gti_timer_7);
+		reached = true;
+	endif;
+endif;
+
+if cargochoppers == TRUE then
+	if (OrderFormationMove(GroupObjectID(7),epa_swiftescape,600,MOVE_NOCYCLE,FORMATION_LINE,FORMTYPE_NORMAL,FALSE)==TRUE)
+		then shutdown(me)	
+ 	endif;
+endif;
+
+if GroupAllDead(GroupObjectID(8)) == TRUE then
+	if (OrderFormationMove(GroupObjectID(7),epa_swiftescape,600,MOVE_NOCYCLE,FORMATION_LINE,FORMTYPE_NORMAL,FALSE)==TRUE)
+		then shutdown(me)	
+ 	endif;
+endif;
+
+	
+	endstate;
+
+  state deadState;
+		code
+			orderDie;
+  endstate;
+
+
+endfsm.
+//******************************************************************
+
+
+

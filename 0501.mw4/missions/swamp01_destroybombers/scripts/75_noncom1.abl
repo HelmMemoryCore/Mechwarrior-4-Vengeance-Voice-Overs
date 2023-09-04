@@ -1,0 +1,121 @@
+
+//*********************************************************************************
+
+fsm noncom1 : integer;
+
+// Used for group 1 and group 7
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+      var
+
+  static objectId path;
+  static integer group;
+
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+	
+			// Using group functions to assign correct group
+		if (GetMemoryInteger(me,2) == 1)	then
+  		path = epa_noncompath1;
+		endif;
+		
+		if (GetMemoryInteger(me,2) == 2)	then
+  		path = epa_noncompath2;
+		endif;
+		
+		if (GetMemoryInteger(me,2) == 3)	then
+  		path = epa_noncompath3;
+		endif;
+		
+		if (GetMemoryInteger(me,2) == 4)	then
+  		path = epa_noncompath4;
+		endif;
+		
+		if (GetMemoryInteger(me,2) == 5)	then
+  		path = epa_noncompath5;
+		endif;
+		
+		if (GetMemoryInteger(me,2) == 6)	then
+  		path = epa_noncompath6;
+		endif;		
+		
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+    //setEntropyMood(me,NEUTRAL_START);
+		setskilllevel(me,35,25,30);
+    trans patrol;
+//		setattackthrottle(me,75);
+		
+endstate;
+
+state deadState;
+  code
+	  orderDie;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     patrol state : description
+//
+//------------------------------------------------------------------
+state patrol;
+
+
+	code
+		orderMoveto (path,30,3,true,false);
+		
+		if (isWithin (me,playermech,75)) then
+				clearmoveorder(me);
+				trans Run;
+		endif;
+ 					
+endstate;
+
+state Run;
+
+
+	code
+		orderMoveto (epa_runpath,250,3,true,false);
+
+ 					
+endstate;
+
+endfsm.
+//******************************************************************
+

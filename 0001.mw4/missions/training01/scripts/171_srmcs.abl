@@ -1,0 +1,65 @@
+
+fsm SRMCs : integer;
+
+
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+	var
+
+function Init;
+	code
+
+endfunction;
+
+state StartState;
+
+	code
+		SetFiringDelay			(ME,3.0,10.0);
+		SetIgnoreFriendlyFire	(ME,true);
+		SetIsShotRadius			(ME,100);
+		SetEntropyMood			(ME,8);
+		SetCurMood				(ME,8);
+		SetSkillLevel			(ME,100,0,0);
+		SetAttackThrottle		(ME,60);
+
+		SetSensorVisibility(ME,FALSE);
+
+		trans SitState;
+
+endstate;
+
+state SitState;
+	var
+		LocPoint point;
+
+	code
+		if (GetGlobalTrigger(31) == true) then
+			SetSensorVisibility(ME,TRUE);
+
+			GetLocation(ena_Nav_SRMcenter,point);
+
+			SetCombatLeash(ME,point,80);
+			SetTarget(ME,GetPlayerVehicle(epl_player0));
+			OrderAttackTactic(TACTIC_CIRCLE,true);
+
+			trans AttackState;
+		endif;
+endstate;
+
+state AttackState;
+	code
+endstate;
+
+state DeadState;
+	code
+		orderDie;
+endstate;
+
+
+endfsm.
+

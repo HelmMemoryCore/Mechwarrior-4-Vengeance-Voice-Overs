@@ -1,0 +1,100 @@
+//*********************************************************************************
+
+fsm CargoChoppers2 : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+	state startState;
+		code
+		setskilllevel(me,100,60,60);
+		shutdown(me);
+		trans sit;
+		
+	endstate;
+	
+	state sit;
+		code
+//do i need this?
+// if BIGALERT == TRUE then
+//if timergreater(1,600) then
+//Flythefuckaway
+
+if timegreater(7,30) then
+	startup(me);
+	setalignment(me,friendly);
+	if (ordertakeoff(30) == TRUE) then
+		SetTargetDesirability(me,-1);
+		OrderFormationMove(GroupObjectID(8),epa_cargopath,600,MOVE_NOCYCLE,FORMATION_11WEDGE,FORMTYPE_NORMAL,FALSE);
+	if timegreater(7,45) then
+		cargochoppers = true;
+//		setnavpoint(ena_escapepoint);
+		Killtimer(gti_timer_7);
+			if (sounds_played[1] == FALSE) then
+				sounds_played[1] = TRUE;
+				if isdead(eve_cargo1) == false then
+//					PlaySoundOnce(eso_BD1_A);
+					PlayVoiceOverOnce("VO\OP2\MI3\Lift",Talker_BD1);
+				endif;
+				if isdead(eve_cargo2) == false then
+//				PlaySoundOnce(eso_BD2_A);
+					PlayVoiceOverOnce("VO\OP2\MI3\Lift",Talker_BD2);
+				endif;
+			endif;
+	endif;
+endif;
+endif;
+		
+ 	
+	
+	endstate;
+
+  state deadState;
+		code
+			orderDie;
+  endstate;
+
+
+endfsm.
+//******************************************************************
+
+
+
+

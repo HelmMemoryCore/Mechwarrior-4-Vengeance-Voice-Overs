@@ -1,0 +1,164 @@
+
+//*********************************************************************************
+
+fsm ConvoyTank : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+  var
+		static integer my_group_num,truck_x,truck_z;
+		
+//------------------------------------------------------------------
+//
+//     Init Function    (automatically run first time through)
+//
+//------------------------------------------------------------------
+function init;
+
+	code
+endfunction;
+
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,55,55,30);
+		setEntropyMood (me,NEUTRAL_START);
+// 	startexecute(me);
+		setfiringdelay(me,2.0,4.0);
+		setignorefriendlyfire(me,true);
+		my_group_num = GroupGetFirstGroup(me);
+		
+		truck_z = 0;
+		if (getmemoryinteger(me,1) == 0) then
+			truck_x = 30;
+		else
+			truck_x = - 30;
+		endif;
+		
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+//------------------------------------------------------------------
+//
+//     Sit state : description
+//
+//------------------------------------------------------------------
+state sit;
+		var
+			ObjectID foe;
+			
+		code
+		/*
+		if (ProtectAGroup(my_group_num) == 1) then
+			trans Attack;
+		endif;
+			*/
+    if (isShot (GroupObjectId(my_group_num))) then
+  		if (getAlignment(WhoShot(GroupObjectId(my_group_num))) <> ENEMY) then
+				setTarget(me,WhoShot(GroupObjectId(my_group_num)));
+				trans attack;
+			endif;
+		endif;
+
+
+ 		
+		foe = FindObject(ME,FA_ENEMY,FT_DEFAULT,FC_BEST_TARGET,FF_WHO_SHOT,0);
+		if (foe <> no_unit) then
+			if (((isWithin (foe,(me),300)) and (convoy_alerted == TRUE)) or
+			(isWithin (foe,(me),200))) then
+				setTarget (me,foe);
+				trans attack;
+			endif;
+		endif;
+			
+	
+		switch (my_group_num)
+			case 13:
+				if (isDead(eve_Truck1) == FALSE) then
+					OrderMoveFollow(eve_Truck1,truck_x,truck_z);
+				else OrderMoveTo (epa_ConvoyPath,convoy_speed,MOVE_NOCYCLE,TRUE,FALSE);
+				endif;
+			endcase;
+			case 14:
+				if (isDead(eve_Truck2) == FALSE) then
+					OrderMoveFollow(eve_Truck2,truck_x,truck_z);
+				else OrderMoveTo (epa_ConvoyPath,convoy_speed,MOVE_NOCYCLE,TRUE,FALSE);
+				endif;
+			endcase;
+			case 15:
+				if (isDead(eve_Truck3) == FALSE) then
+					OrderMoveFollow(eve_Truck3,truck_x,truck_z);
+				else OrderMoveTo (epa_ConvoyPath,convoy_speed,MOVE_NOCYCLE,TRUE,FALSE);
+				endif;
+			endcase;
+			case 16:
+				if (isDead(eve_Truck4) == FALSE) then
+					OrderMoveFollow(eve_Truck4,truck_x,truck_z);
+				else OrderMoveTo (epa_ConvoyPath,convoy_speed,MOVE_NOCYCLE,TRUE,FALSE);
+				endif;
+			endcase;
+		endswitch;	
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+  var
+    ObjectID foe;
+
+
+		code
+		
+    player_has_been_seen = TRUE;
+		orderAttack (false);
+		
+		if (getTarget (me) < 1) then
+			trans sit;
+		endif;
+ 		
+		if (isDead (getTarget (me))) then
+			trans sit;
+		endif;
+			
+			
+	endstate;
+	
+
+						
+endfsm.
+//******************************************************************
+															

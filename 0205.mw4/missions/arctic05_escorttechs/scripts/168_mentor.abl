@@ -1,0 +1,158 @@
+
+//*********************************************************************************
+
+fsm sitandshoot : integer;
+
+//------------------------------------------------------------------
+//
+//     Constant Definitions
+//
+//------------------------------------------------------------------
+	const
+		#include_ <content\ABLScripts\mwconst.abi>
+
+
+//------------------------------------------------------------------
+//
+//     Type Definitions
+//
+//------------------------------------------------------------------
+	type
+		#include_ <content\ABLScripts\mwtype.abi>
+	
+
+//------------------------------------------------------------------
+//
+//     Variable Declarations
+//
+//------------------------------------------------------------------
+	var
+	
+	static integer		detect;
+	static integer		gunnery;
+	static integer		piloting;
+	static real				mindelay;
+	static real				maxdelay;
+	static integer		level;
+	static boolean		timerset;
+	static integer		mypath;
+
+//------------------------------------------------------------------
+//
+//     Local Functions
+//
+//------------------------------------------------------------------
+
+function init;
+	code
+	
+	detect = 200;
+	piloting = 75;
+	gunnery = 95;
+	timerset = false;
+	mypath = epa_mentorfirstpath;
+	
+ // if (getmemoryinteger(me,1) == 2) then
+ // 	detect = 450;
+ // endif;
+	
+endfunction;
+
+//------------------------------------------------------------------
+//
+//     Main Code
+//
+//------------------------------------------------------------------
+state startState;
+
+	code
+		setskilllevel(me,piloting,gunnery,90);
+		setEntropyMood (me,NEUTRAL_START);
+		setfiringdelay(me,0.1,0.4);
+		setignorefriendlyfire(me,true);
+		setisshotradius(me,15);
+		trans sit;
+endstate;			
+
+state deadState;
+  code
+		orderDie;
+endstate;
+
+	state sit;
+
+  var
+    ObjectID foe;
+
+		code
+
+	if (blockdown) then
+		detect = 575;
+		setisshotradius(me,65);
+		trans guard;
+	endif;
+					
+	if (FindEnemy(detect,FT_DEFAULT)) then			 //CHANGE OUTWARDS WHEN APPROPRIATE
+		trans Attack;
+	endif;
+			
+	ordermovelookout;
+				
+	endstate;
+	
+	//************************************
+	//Guard state: gone to when the roadblock is down
+	//************************************
+	
+	state guard;
+	
+  var
+    ObjectID foe;
+
+		code
+		
+		orderformationmove((groupobjectid(20)),mypath,45,move_nocycle,1,FORMTYPE_NORMAL,false);	
+			
+		if (FindEnemy(detect,FT_DEFAULT)) then
+			trans attack;
+	 	endif;
+ 	
+	endstate;
+
+//------------------------------------------------------------------
+//
+//     attack state : description
+//
+//------------------------------------------------------------------
+	state attack;
+	
+		code
+		
+		if (not blockdown) then
+			if (not turretshit) then
+				blockdown = true;
+				playvoiceover("VO\OP3\MI5\timer2reply",talker_gon);
+			endif;
+		endif;
+
+		if (LeaveAttackState(detect*2)) then
+			orderstopattacking;
+			if (not blockdown) then 			
+				trans sit;
+			else
+				trans guard;
+			endif;
+		endif;
+
+    orderAttack (false); 	
+		
+		if (blockdown) then
+			detect = 450;
+		endif;	
+					
+	endstate;
+
+
+endfsm.
+//******************************************************************
+
